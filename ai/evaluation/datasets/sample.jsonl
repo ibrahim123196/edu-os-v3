@@ -1,0 +1,10 @@
+# Replace these with questions against material you have actually uploaded.
+# Aim for 30-50 cases before trusting the numbers, and include at least a
+# quarter expect_abstain cases -- a retriever that never abstains scores well
+# on recall and is useless in a classroom.
+{"question": "What is the difference between mitosis and meiosis?", "expect_document": "Biology notes", "expect_pages": [12, 13, 14]}
+{"question": "How many daughter cells does meiosis produce?", "expect_document": "Biology notes", "expect_pages": [14]}
+{"question": "What happens during prophase I?", "expect_document": "Biology notes", "expect_pages": [15]}
+{"question": "Define crossing over.", "expect_document": "Biology notes", "expect_pages": [15, 16]}
+{"question": "Who won the 2011 Cricket World Cup?", "expect_abstain": true}
+{"question": "Explain the Nernst equation derivation.", "expect_abstain": true}

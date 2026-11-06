@@ -1,0 +1,44 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: eduos-db
+    environment:
+      POSTGRES_USER: eduos
+      POSTGRES_PASSWORD: eduos
+      POSTGRES_DB: eduos
+    ports:
+      - "5432:5432"
+    volumes:
+      - eduos-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The API creates the vector extension at startup, so it must not
+      # start until the server is genuinely accepting connections.
+      test: ["CMD-SHELL", "pg_isready -U eduos -d eduos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: eduos-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://eduos:eduos@db:5432/eduos
+      UPLOAD_DIR: /data/uploads
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - eduos-uploads:/data/uploads
+      # Cache the embedding model so a rebuild does not re-download it.
+      - eduos-models:/root/.cache
+
+volumes:
+  eduos-pgdata:
+  eduos-uploads:
+  eduos-models:

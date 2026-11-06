@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EduOS — study chat grounded in your own notes</title>
+<style>
+  /* Typefaces are system stacks on purpose: this has to load fast on a
+     metered connection, and a webfont download is a poor trade for a tool
+     students open every day. Serif for answers, sans for chrome, so reading
+     an explanation feels different from operating the app. */
+  :root {
+    --paper:   #e9ecf0;
+    --surface: #ffffff;
+    --ink:     #17202b;
+    --muted:   #5f6e7d;
+    --line:    #d3d9e0;
+    --verified:#0f6e4f;
+    --verified-wash: #e6f1ec;
+    --warn:    #8a5200;
+    --warn-wash: #f7efe2;
+    --focus:   #1c4f8f;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            "Helvetica Neue", Arial, sans-serif;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  a { color: var(--focus); }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  header.masthead {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .masthead h1 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .masthead p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .status-line {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .status-line strong { color: var(--ink); font-weight: 600; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 24px;
+    padding: 24px 28px 60px;
+    align-items: start;
+    max-width: 1240px;
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; padding: 16px; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 18px;
+  }
+  .panel + .panel { margin-top: 16px; }
+  .panel h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .panel .hint {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  label.field { display: block; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+  label.field span { display: block; margin-bottom: 4px; }
+
+  input[type=text], input[type=file], textarea, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+  }
+  textarea { resize: vertical; min-height: 84px; font-size: 15px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+
+  button {
+    font: inherit;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--surface);
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #23303f; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.quiet {
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--line);
+    padding: 5px 10px;
+    font-size: 12.5px;
+  }
+  button.quiet:hover:not(:disabled) { background: var(--paper); color: var(--ink); }
+
+  /* --- Document list --------------------------------------------------- */
+  ul.docs { list-style: none; margin: 0; padding: 0; }
+  ul.docs li {
+    border-top: 1px solid var(--line);
+    padding: 11px 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  ul.docs li:first-child { border-top: none; }
+  .doc-body { flex: 1; min-width: 0; }
+  .doc-title {
+    font-weight: 600;
+    font-size: 14px;
+    word-break: break-word;
+  }
+  .doc-meta { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .doc-error { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
+
+  .state {
+    font-size: 12px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .state.ready { color: var(--verified); border-color: var(--verified); }
+  .state.failed { color: var(--warn); border-color: var(--warn); }
+  .state.working { color: var(--focus); border-color: var(--focus); }
+
+  .empty {
+    color: var(--muted);
+    font-size: 13.5px;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  /* --- Answer ---------------------------------------------------------- */
+  .answer-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .verdict {
+    font-size: 12.5px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    background: var(--verified-wash);
+    color: var(--verified);
+  }
+  .verdict.thin { background: var(--warn-wash); color: var(--warn); }
+
+  .answer-body {
+    font-family: var(--serif);
+    font-size: 16.5px;
+    line-height: 1.72;
+    max-width: 68ch;
+    white-space: pre-wrap;
+  }
+
+  /* The one loud element on the page. A citation is the product's whole
+     claim, so it is built to be pressed. */
+  button.cite {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: 2px;
+    padding: 2px 5px;
+    margin: 0 1px;
+    border-radius: 3px;
+    border: 1px solid var(--verified);
+    background: var(--verified-wash);
+    color: var(--verified);
+  }
+  button.cite:hover, button.cite.active {
+    background: var(--verified);
+    color: var(--surface);
+  }
+
+  .sources { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .sources h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+  .source {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line);
+    border-radius: 4px;
+    padding: 11px 13px;
+    margin-bottom: 9px;
+  }
+  .source.active { border-left-color: var(--verified); background: var(--verified-wash); }
+  .source-head { font-size: 13px; font-weight: 600; }
+  .source-where { color: var(--muted); font-weight: 400; }
+  .source-text {
+    font-family: var(--serif);
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: #2c3846;
+    margin-top: 6px;
+  }
+
+  details.trace { margin-top: 20px; font-size: 13px; color: var(--muted); }
+  details.trace pre {
+    background: #f4f6f8;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px;
+    overflow: auto;
+    max-height: 340px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .notice {
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .notice.bad { background: var(--warn-wash); color: var(--warn); }
+
+  /* Shown when a typo was corrected, so the student can see what was
+     actually searched for rather than silently getting different results. */
+  .corrected {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .corrected b { color: var(--ink); font-weight: 600; }
+
+  .scope { margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .scope select { margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <h1>EduOS</h1>
+  <p>Ask questions about the material you uploaded. Every answer points back to the page it came from.</p>
+  <div class="status-line" id="statusLine">Checking the server…</div>
+</header>
+
+<div class="layout">
+
+  <!-- ------------------------------------------------ left rail -->
+  <div>
+    <section class="panel">
+      <h2>Add material</h2>
+      <p class="hint">PDF, .txt or .md. Scanned PDFs need OCR first.</p>
+
+      <div id="uploadNotice"></div>
+
+      <label class="field">
+        <span>File</span>
+        <input type="file" id="fileInput" accept=".pdf,.txt,.md,.markdown">
+      </label>
+      <label class="field">
+        <span>Title (optional)</span>
+        <input type="text" id="titleInput" placeholder="Biology notes, chapter 6">
+      </label>
+      <div class="row">
+        <label class="field">
+          <span>Subject</span>
+          <input type="text" id="subjectInput" placeholder="Biology">
+        </label>
+        <label class="field">
+          <span>Class</span>
+          <input type="text" id="gradeInput" placeholder="12">
+        </label>
+      </div>
+      <button id="uploadBtn">Upload</button>
+    </section>
+
+    <section class="panel">
+      <h2>Your material</h2>
+      <p class="hint" id="docsHint">Nothing uploaded yet.</p>
+      <ul class="docs" id="docList"></ul>
+    </section>
+  </div>
+
+  <!-- ------------------------------------------------ main column -->
+  <div>
+    <section class="panel">
+      <h2>Ask a question</h2>
+      <p class="hint">Answers come only from your uploaded material, not from general knowledge.</p>
+
+      <div class="scope">
+        Search in
+        <select id="scopeSelect">
+          <option value="">everything I have uploaded</option>
+        </select>
+      </div>
+
+      <textarea id="questionInput"
+        placeholder="Explain the difference between mitosis and meiosis."></textarea>
+      <div class="row" style="margin-top:10px; align-items:center;">
+        <button id="askBtn" style="flex:0 0 auto;">Ask</button>
+        <label style="flex:1; font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="traceToggle" style="width:auto;">
+          Show how the answer was retrieved
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" id="answerPanel" style="margin-top:16px;">
+      <div class="empty" id="answerEmpty">
+        Upload a chapter, then ask something you would actually be tested on.
+      </div>
+      <div id="answerWrap" hidden>
+        <div class="answer-head">
+          <div class="verdict" id="verdict"></div>
+          <div style="font-size:12.5px; color:var(--muted);" id="timing"></div>
+        </div>
+        <div class="corrected" id="corrected" hidden></div>
+        <div class="answer-body" id="answerBody"></div>
+        <div class="sources" id="sourcesWrap" hidden>
+          <h3>Where this came from</h3>
+          <div id="sourceList"></div>
+        </div>
+        <details class="trace" id="traceWrap" hidden>
+          <summary>Retrieval trace</summary>
+          <pre id="traceBody"></pre>
+        </details>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let documents = [];
+let pollTimer = null;
+
+const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+));
+
+async function api(path, options = {}) {
+  const res = await fetch(path, options);
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.detail || `Request failed (${res.status})`);
+  return body;
+}
+
+/* ---------------------------------------------------------- health */
+async function loadHealth() {
+  try {
+    const h = await api('/health');
+    const model = h.llm_ready ? h.llm_model : `${h.llm_provider} (not configured)`;
+    $('statusLine').innerHTML =
+      `<strong>${h.chunks_indexed}</strong> passages indexed from ` +
+      `<strong>${h.documents_ready}</strong> documents · embeddings ` +
+      `${escapeHtml(h.embedding_model)} · answers by ${escapeHtml(model)}`;
+  } catch (err) {
+    $('statusLine').textContent = 'The API is not responding. Is it running on port 8000?';
+  }
+}
+
+/* ------------------------------------------------------- documents */
+function stateClass(status) {
+  if (status === 'ready') return 'ready';
+  if (status === 'failed') return 'failed';
+  return 'working';
+}
+function stateLabel(status) {
+  return { pending: 'queued', processing: 'reading', ready: 'ready', failed: 'failed' }[status] || status;
+}
+
+function renderDocuments() {
+  const list = $('docList');
+  list.innerHTML = '';
+
+  if (!documents.length) {
+    $('docsHint').textContent = 'Nothing uploaded yet.';
+  } else {
+    const ready = documents.filter((d) => d.status === 'ready').length;
+    $('docsHint').textContent = `${ready} of ${documents.length} ready to search.`;
+  }
+
+  for (const doc of documents) {
+    const li = document.createElement('li');
+    const meta = doc.status === 'ready'
+      ? `${doc.page_count} page${doc.page_count === 1 ? '' : 's'} · ${doc.chunk_count} passages`
+      : `${(doc.byte_size / 1024).toFixed(0)} KB`;
+    const tags = [doc.subject, doc.grade ? `Class ${doc.grade}` : null].filter(Boolean).join(' · ');
+
+    li.innerHTML = `
+      <div class="doc-body">
+        <div class="doc-title">${escapeHtml(doc.title)}</div>
+        <div class="doc-meta">${escapeHtml(meta)}${tags ? ' · ' + escapeHtml(tags) : ''}</div>
+        ${doc.error ? `<div class="doc-error">${escapeHtml(doc.error)}</div>` : ''}
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+        <span class="state ${stateClass(doc.status)}">${stateLabel(doc.status)}</span>
+        <button class="quiet" data-remove="${doc.id}">Remove</button>
+      </div>`;
+    list.appendChild(li);
+  }
+
+  list.querySelectorAll('[data-remove]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await api(`/documents/${btn.dataset.remove}`, { method: 'DELETE' });
+        await loadDocuments();
+        loadHealth();
+      } catch (err) {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  renderScope();
+}
+
+function renderScope() {
+  const select = $('scopeSelect');
+  const previous = select.value;
+  select.innerHTML = '<option value="">everything I have uploaded</option>';
+  for (const doc of documents.filter((d) => d.status === 'ready')) {
+    const opt = document.createElement('option');
+    opt.value = doc.id;
+    opt.textContent = doc.title;
+    select.appendChild(opt);
+  }
+  select.value = previous;
+}
+
+async function loadDocuments() {
+  try {
+    documents = await api('/documents');
+    renderDocuments();
+
+    // Keep polling only while something is still being processed.
+    const busy = documents.some((d) => d.status === 'pending' || d.status === 'processing');
+    clearTimeout(pollTimer);
+    if (busy) {
+      pollTimer = setTimeout(() => { loadDocuments(); loadHealth(); }, 2000);
+    }
+  } catch (err) { /* header already reports an unreachable API */ }
+}
+
+/* ---------------------------------------------------------- upload */
+$('uploadBtn').addEventListener('click', async () => {
+  const file = $('fileInput').files[0];
+  const notice = $('uploadNotice');
+  notice.innerHTML = '';
+
+  if (!file) {
+    notice.innerHTML = '<div class="notice bad">Choose a file first.</div>';
+    return;
+  }
+
+  const form = new FormData();
+  form.append('file', file);
+  if ($('titleInput').value.trim()) form.append('title', $('titleInput').value.trim());
+  if ($('subjectInput').value.trim()) form.append('subject', $('subjectInput').value.trim());
+  if ($('gradeInput').value.trim()) form.append('grade', $('gradeInput').value.trim());
+
+  const btn = $('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+  try {
+    await api('/documents', { method: 'POST', body: form });
+    $('fileInput').value = '';
+    $('titleInput').value = '';
+    await loadDocuments();
+  } catch (err) {
+    notice.innerHTML = `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload';
+  }
+});
+
+/* ------------------------------------------------------------- ask */
+function renderAnswer(data) {
+  $('answerEmpty').hidden = true;
+  $('answerWrap').hidden = false;
+
+  const verdict = $('verdict');
+  if (data.grounded) {
+    verdict.className = 'verdict';
+    verdict.textContent =
+      `Answered from ${data.used_source_count} of your ` +
+      `${data.retrieved_count} matching passage${data.retrieved_count === 1 ? '' : 's'}`;
+  } else {
+    verdict.className = 'verdict thin';
+    verdict.textContent = 'Not enough in your material to answer this';
+  }
+  $('timing').textContent = `${Math.round(data.latency_ms)} ms`;
+
+  const corrected = $('corrected');
+  if (data.corrections && data.corrections.length) {
+    const pairs = data.corrections
+      .map((c) => `${escapeHtml(c.from)} \u2192 <b>${escapeHtml(c.to)}</b>`)
+      .join(', ');
+    corrected.hidden = false;
+    corrected.innerHTML = `Searched with a spelling fix: ${pairs}`;
+  } else {
+    corrected.hidden = true;
+  }
+
+  // Turn [S1] markers into buttons that reveal the passage they point at.
+  const html = escapeHtml(data.answer).replace(
+    /\[S(\d+)\]/g,
+    (_, n) => `<button class="cite" data-cite="S${n}" title="Show source ${n}">${n}</button>`
+  );
+  $('answerBody').innerHTML = html;
+
+  const wrap = $('sourcesWrap');
+  const list = $('sourceList');
+  list.innerHTML = '';
+  if (data.citations.length) {
+    wrap.hidden = false;
+    for (const c of data.citations) {
+      const where = [c.page_label, c.section].filter(Boolean).join(' · ');
+      const div = document.createElement('div');
+      div.className = 'source';
+      div.id = `src-${c.marker}`;
+      div.innerHTML = `
+        <div class="source-head">
+          ${c.marker.replace('S', '')}. ${escapeHtml(c.document_title)}
+          ${where ? `<span class="source-where"> — ${escapeHtml(where)}</span>` : ''}
+        </div>
+        <div class="source-text">${escapeHtml(c.snippet)}</div>`;
+      list.appendChild(div);
+    }
+  } else {
+    wrap.hidden = true;
+  }
+
+  $('answerBody').querySelectorAll('[data-cite]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(`src-${btn.dataset.cite}`);
+      if (!target) return;
+      document.querySelectorAll('.source.active').forEach((el) => el.classList.remove('active'));
+      document.querySelectorAll('button.cite.active').forEach((el) => el.classList.remove('active'));
+      target.classList.add('active');
+      btn.classList.add('active');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  const traceWrap = $('traceWrap');
+  if (data.trace) {
+    traceWrap.hidden = false;
+    $('traceBody').textContent = JSON.stringify(data.trace, null, 2);
+  } else {
+    traceWrap.hidden = true;
+  }
+}
+
+async function ask() {
+  const question = $('questionInput').value.trim();
+  if (!question) return;
+
+  const btn = $('askBtn');
+  btn.disabled = true;
+  btn.textContent = 'Looking…';
+
+  const scope = $('scopeSelect').value;
+  try {
+    const data = await api('/chat/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        document_ids: scope ? [scope] : [],
+        include_trace: $('traceToggle').checked,
+      }),
+    });
+    renderAnswer(data);
+  } catch (err) {
+    $('answerEmpty').hidden = true;
+    $('answerWrap').hidden = false;
+    $('verdict').className = 'verdict thin';
+    $('verdict').textContent = 'That request did not go through';
+    $('timing').textContent = '';
+    $('answerBody').textContent = err.message;
+    $('corrected').hidden = true;
+    $('sourcesWrap').hidden = true;
+    $('traceWrap').hidden = true;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Ask';
+  }
+}
+
+$('askBtn').addEventListener('click', ask);
+$('questionInput').addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask();
+});
+
+loadHealth();
+loadDocuments();
+</script>
+</body>
+</html>
