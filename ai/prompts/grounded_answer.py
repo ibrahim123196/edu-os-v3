@@ -37,6 +37,10 @@ then say plainly which part is missing.
 sentence and nothing else: "{insufficient}"
 - Never invent a source number. Only cite sources that appear in the request.
 - If two sources disagree, say so and cite both.
+- Sources are labelled as the student's own notes or as the course \
+textbook. Where both cover a point, follow the student's notes: that is what \
+their teacher set and what their exam will follow. If the textbook adds \
+something their notes do not have, use it and say where it came from.
 
 Teaching rules:
 - Write for a student revising the topic, not for an examiner.
@@ -82,7 +86,12 @@ def format_context(chunks: list[RetrievedChunk], max_chars: int = 14000) -> str:
 
     for i, chunk in enumerate(chunks, start=1):
         location = chunk.page_label
-        header = f"[S{i}] {chunk.document_title}"
+        origin = (
+            f" (course textbook, {chunk.publisher})"
+            if chunk.source_kind == "platform"
+            else " (the student's own notes)"
+        )
+        header = f"[S{i}] {chunk.document_title}{origin}"
         if location:
             header += f" — {location}"
         if chunk.section:

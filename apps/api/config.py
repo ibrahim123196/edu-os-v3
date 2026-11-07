@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     notation_top_k: int = 10
     min_context_score: float = 0.0  # abstain if nothing clears this
 
+    # How well the student's own notes must match before the built-in
+    # chapters are left out of the answer. Cosine similarity, so absolute
+    # and comparable across questions. Raise it to lean on the textbook more
+    # often, lower it to stay inside the student's own material.
+    own_material_threshold: float = 0.72
+
     # --- Generation -------------------------------------------------------
     llm_provider: Literal["anthropic", "openai", "echo"] = "anthropic"
     llm_model: str = "claude-sonnet-4-6"

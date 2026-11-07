@@ -1,0 +1,526 @@
+# Formula review — leph101.pdf
+#
+# Check each line against the PDF page named beside it.
+# For anything wrong, add an entry to content/corrections/leph101.json:
+#   {"page": 7, "find": "<paste the wrong text>", "replace": "<what it should say>", "note": "why"}
+#
+
+--- page 4 --------------------------------------------------
+  a system contains two point charges q_1 and q_2, the total
+  algebraically q_1 and q_2,i.e., charges add up like real numbers or they
+  are scalars like the mass of a body. If a system contains n charges q_1_n,
+  q_2, q_3, …, q_n, then the total charge of the system is q_1 + q_2 + q_3 + … + q
+
+--- page 5 --------------------------------------------------
+  q = ne
+  e = 1.602192 × 10^–19 C
+  and hence we use smaller units 1 m^18 C(micro coulomb) = 10 C or 1 mC
+  (milli coulomb) = 10^–3 C.
+  Thus, if a body contains n_1 electrons and n_2 protons, the total amount
+  of charge on the body is n_2 × e + n × (–e) = (n_2 – n_1) e. Since n_1 and n_2
+  are integers, their difference is also an integer. Thus the charge on any^1
+
+--- page 6 --------------------------------------------------
+  compared to the magnitude of charge e. Since e = 1.6 × 10_13 C, a charge
+  Example 1.1 If 10^9 electrons move out of a body to another body
+  the charge given out in one second is 1.6 × 10^9 × 10^9 C_9 = 1.6 × 10^–10 C.
+  to be 1 C ÷ (1.6 × 10^–10 C/s)_9 = 6.25 × 10^9 s = 6.25 × 10÷ (365 × 24 ×_24
+  3600) years = 198 years. Thus to collect a charge of one coulomb,
+  (= 6.02 × 10^23 molecules) of water is 18 g. Therefore the number of
+  molecules in one cup of water is (250/18) × 6.02 × 10^23.
+  (250/18) × 6.02 × 10× 10 × 1.6 × 10^–19 C= 1.34 × 10^7 C.
+  1.5 COULOMB’S^23 LAW
+
+--- page 7 --------------------------------------------------
+  point charges q_1, q_2 are separated by a distance r in vacuum,
+  F=k (q_1q_2)/(r^2) (1.1)
+  _9 Nm^2
+  C^2
+  see that for q_1_9 = q_2 = 1 C, r = 1 m
+  F = 9 × 10N
+
+--- page 8 --------------------------------------------------
+  9 × 10^9 N. One coulomb is evidently too big a unit to
+  k = 1/4pe_0 for later convenience, so that Coulomb’s
+  (1)/(4πε) _0 (q_1q_2)/(r^2)
+  F=(1.2)
+  e_0 is called the permittivity of free space . The value
+  of e_0 in SI units is
+  _0= 8.854 × 10^–12 C^2 N^–1m^–2
+  vectors of charges q_1 and q_2 be r_1 and r_2 respectively
+  [see Fig.1.3(a)]. We denote force on q_1 due to q_2 by
+  F_12 and force on q_2due to q_1 by F. The two point
+  charges q_1 and q_2 have been numbered 1 and 2 for^21
+  denoted by r_21:
+  r_21 = r_2 – r_1
+  In the same way, the vector leading from 2 to 1 is denoted by r_12:
+  r_12 = r_1 – r_2 = – r_21
+  The magnitude of the vectors r_21 and r_12 is denoted by r_21 and r_12,
+  respectively (r_12 = r_21). The direction of a vector is specified by a unit
+  r_21
+  r_21=, ==−
+  r_12
+  r_12,r_21r_12
+  r_12
+  r_21
+  Coulomb’s force law between two point charges q_1 and q_2 located at
+  r_1 and r_2,respectively is then expressed as
+  F_21= (1)/(4πε) _o (q_1q_2)/(r^2) _21r_21(1.3)
+  ·Equation (1.3) is valid for any sign of q_1 and q_2 whether positive or
+  negative. If q_1 and q_2 are of the same sign (either both positive or both
+  negative), F_21 is along rˆ_21, which denotes repulsion, as it should be for
+  like charges. If q_1 and q_2 are of opposite signs, F_21 is along – ɵr_21(= ɵr_12),
+
+--- page 9 --------------------------------------------------
+  ·The force F_12 on charge q_1 due to charge q_2, is obtained from Eq. (1.3),
+  F_12= (1)/(4πε) _0 (q_1q_2)/(r^2) _12rˆ_12=−F_21
+  ·Coulomb’s law [Eq. (1.3)] gives the force between two charges q_1 and
+  q_2 in vacuum. If the charges are placed in matter or the intervening
+  mutual attraction when they are 1 Å (= 10^-10 m) apart? (m_p = 1.67 ×
+  10^–27 kg, m_e = 9.11 × 10^–31 kg)
+  e^2
+  F_e=−
+  πε_0r^2
+  m_pm_e
+  F_G=−G
+  r^2
+  where m_p and m_e are the masses of a proton and an electron
+  (e)/(4πεGmm) _0^2_p_e2.410^39
+  (F_e)/(F) _G==×
+  (F_e)/(F) _G= (e)/(4πεGmm) _0^2_p_p= 1.3 × 10^36
+  between two protons is ~ 10 m inside a nucleus) are F_e ~ 230 N,
+  whereas, F_G ~ 1.9 × 10^–34 N.^-15
+
+--- page 10 --------------------------------------------------
+  e^2
+  =8.987 × 10^9 Nm^2/C^2 × (1.6 ×10^–19C)^2 / (10^–10m)^2
+  r^2
+  πε_0
+  Using Newton’s second law of motion, F = ma,the acceleration
+  a= 2.3×10N / 9.11 ×10kg = 2.5 × 10^22 m/s^2
+  2.3 × 10^–8 N / 1.67 × 10kg = 1.4 × 10^19 m/s^2
+
+--- page 11 --------------------------------------------------
+  F (qq′)/(r^2)
+  4πε_0
+  F′= ((q/2)(q′/2))/((r/2)^2) = ((qq′))/(r^2) =
+  4πε_04πε_0
+  system of n stationary charges q_1, q_2, q_3, ..., q_n in vacuum.
+  What is the force on q_1 due to q_2, q_3, ..., q_n? Coulomb’s law is
+  three charges q_1, q_2 and q_3, as shown in Fig. 1.5(a). The force
+  on one charge, say q_1, due to two other charges q_2, q_3 can
+  forces due to each one of these charges. Thus, if the force on q_1
+  due to q_2 is denoted by F_12, F_12 is given by Eq. (1.3) even
+  q_1q_2
+  rˆ_12
+  r_12^2
+  Thus,F_12 =
+  πε_0
+
+--- page 12 --------------------------------------------------
+  In the same way, the force on q_1 due to q_3, denoted by F_13, is given by
+  q_1q_3
+  r_13^2
+  F_13r_13
+  4πε_0
+  which again is the Coulomb force on q_1 due to q_3, even though other
+  charge q_2 is present.
+  Thus the total force F_1 on q_1 due to the two charges q_2 and q_3 is
+  (q_1q_3rˆ)/(r^2) _13_13
+  = (q_1q_2rˆ)/(r^2) _12_12+
+  F_1F_12F_13
+  4πε_04πε_0
+  The principle of superposition says that in a system of charges q_1,
+  q_2, ..., q_n, the force on q_1 due to q_2 is the same as given by Coulomb’s law,
+  i.e., it is unaffected by the presence of the other charges q_3, q_4, ..., q_n. The
+  total force F_1 on the charge q_1, due to all other charges, is then given by
+  the vector sum of the forces F_12, F_13, ..., F_1_n:
+  F_1 = F_12 + F_13 + ...+ F_1n= (q_1q_2ˆ)/(r^2r) _12_12+r_13
+  q_1q_3
+  q_1q_n
+  ...ˆ_1_n
+  r_13^2
+  r_1^2_n
+  πε_0
+  ∑_i=^n_2
+  q_1q_i
+  rˆ_1_i
+  r_1^2_i
+  4πε_0(1.5)
+  Example 1.5 Consider three charges q_1, q_2, q_3 each equal to q at the
+  AD = AC cos 30º = (3 /2 ) l and the distance AO of the centroid O
+  from A is (2/3) AD = (1/3 ) l. By symmatry AO = BO = CO.
+
+--- page 13 --------------------------------------------------
+  l^2
+  Force F_1on Q due to charge q at A =
+  4πε_0
+  Force F_2 on Q due to charge q at B =
+  l^2
+  4πε_0
+  Force F_3 on Q due to charge q at C =
+  l^2
+  4πε_0
+  The resultant of forces F_2 and F_3 is
+  l^2
+  4πε_0
+  = 4πε_0 (Qq()/(l^2) rˆ−rˆ)
+  and–q at C are F_12 along BA and F_13 along AC respectively, as shown
+  in Fig. 1.7. By the parallelogram law, the total force F_1onthecharge
+  F_1 =Frˆ_1 where rˆ_1 is a unit vector along BC.
+  same magnitude F= (q)/(4 π εl^2) ^2_0
+  The total force F_2 on charge q at B is thus F_2 =Frˆ_2, where rˆ_2 is a
+
+--- page 14 --------------------------------------------------
+  Similarly the total force on charge –q at Cis F_3 = 3Fnˆ , where nˆ is
+  F_1 + F_2 + F_3 = 0
+  place another point charge q at a point P, where OP = r, then the charge Q
+  () = (1)/(4πεr) _0ˆ (1)/(4πεr) _0ˆ(1.6)
+  Er^2r=^2r
+  r^2
+  F=r
+  4πε_0
+  F(r) = q E(r)(1.8)
+
+--- page 15 --------------------------------------------------
+  lim_q
+  →^0
+  Consider a system of charges q_1, q_2, ..., q_n with position vectors r_1,
+  r_2, ..., r_n relative to some origin O. Like the electric field at a point in
+  positions of charges q_1, q_2,..., q_n. We can use Coulomb’s law and the
+
+--- page 16 --------------------------------------------------
+  Electric field E_1 at r due to q_1 at r_1 is given by
+  q_1
+  rˆ_1P
+  πε_0
+  r_1^2_P
+  E_1 =
+  where rˆ_1P is a unit vector in the direction from q_1 to P,
+  and r_1P is the distance between q_1 and P.
+  In the same manner, electric field E_2 at r due to q_2 at
+  r_2 is
+  q_2
+  rˆ_2P
+  πε_0
+  r_2^2_P
+  E_2 =
+  where rˆ_2P is a unit vector in the direction from q_2 to P
+  and r_2P is the distance between q_2 and P. Similar
+  expressions hold good for fields E_3, E_4, ..., E_n due to
+  charges q_3, q_4, ..., q_n.
+  E(r) = E_1 (r) + E_2 (r) + … + E_n(r)
+  q_n
+  q_1
+  q_2
+  rˆ_1P+rˆ_2P+...+rˆ_nP
+  r_2^2_P
+  r_n^2_P
+  πε_0r_1^2_Pπε_0πε_0
+  ∑^n
+  q_i
+  _i=_1r_i^2_P
+  rˆ_i P(1.10)
+  πε_0
+  between two distant charges q_1, q_2 in accelerated motion. Now the greatest
+  is c, the speed of light. Thus, the effect of any motion of q_1 on q_2 cannot
+
+--- page 17 --------------------------------------------------
+  and Fields_1
+  (force on q_2) and the cause (motion of q_1). It is precisely here that the
+  c, reach q_2 and cause a force on q. The notion of field elegantly accounts
+  for the time delay. Thus, even though electric and magnetic fields can be^2
+  uniform electric field of magnitude 2.0 × 10^4 N C^–1 [Fig. 1.10(a)]. The
+  a_e = eE/m_e
+  where m_e is the mass of the electron.
+  is given by t_e= (2h)/(a) = (2h m_e)/(e E)
+  For e = 1.6 × 10^–19C, m_e = 9.11 × 10_e^–31 kg,
+  E = 2.0 × 10^4 N C^–1, h = 1.5 × 10^–2 m,
+  t_e = 2.9 × 10^–9s
+  a_p = eE/m_p
+  where m_p is the mass of the proton; m_p = 1.67 × 10^–27 kg. The time of
+
+--- page 18 --------------------------------------------------
+  t_p= (2h)/(a) _p= (2h m_p)/(e E) =.×
+  a_p= (e E)/(m) _p
+  = ((1.6×10C)×(2 0.×10N C))/(1 67.×10_−_27kg) ^−^19^4^−^1
+  =1 9.×10^12m s^–2
+  Example 1.8 Two point charges q_1 and q_2, of magnitude +10^–8 C and
+  Solution The electric field vector E_1A at A due to the positive charge
+  q_1 points towards the right and has a magnitude
+  (910^9Nm^2C^-2)(10^−^8C)
+  ×_2×
+  = = 3.6 × 10^4 N C^–1
+  E_1A
+  The electric field vectorE_2A at A due to the negative charge q_2 points
+  of the total electric field _4E_A at A is_–1
+  E_A = E_1A + E_2A = 7.2 × 10 N C
+  E_A is directed toward the right.
+
+--- page 19 --------------------------------------------------
+  The electric field vector E_1B^−^8 at B due to the positive charge q_1 points
+  E_1B ((9×10NmC)×(10C)= 3.6 × 10)/((0.05 m)_2) ^9^2^–2
+  =^4 N C^–1
+  The electric field vector E_2B^− at B due to the negative charge ^8q_2 points
+  E_2B ((9×10NmC)×(10C)= 4 × 10)/((0.15 m)_2) ^9^2^–2
+  =^3 N C^–1
+  The magnitude of the total electric field at B is_4
+  E_B= E_1B – E_2B = 3.2 × 10 N C^–1
+  E_B is directed towards the left.
+  q_1 and q_2 is
+  The magnitude of each electric field vector at point C, due to charge^−^8
+  E_1CE_2C ((9×10NmC)×(10C) = 9 × 10)/((0.10 m)_2) ^9^2^–2
+  ==^3 N C^–1
+  E_C=E_1_ccos+E_2_ccos= 9 × 10^3 N C^–1
+  E_C points towards the right.
+
+--- page 20 --------------------------------------------------
+  the angle subtended by Dl at O can be approximated as Dq= Dl/r.
+  DW= DS/r^2. We know that in a given solid angle the number of radial
+  field lines is the same. In Fig. 1.13, for two points P_1 and P_2 at distances
+  r_1 and r_2_2from the charge, the element of area subtending the solid angle
+  DW is r_1DW at P_1 and an element of area r_2^2DW at P_2, respectively. The
+  number of field lines, cutting unit area element is therefore n/(r_1^2DW) at
+  P_1 and n/(r_2^2DW) at P_2, respectively. Since n and DW are common, the
+  strength of the field clearly has a 1/r^2 dependence.
+  *with a sphere of radius toDS/R^2R. The solid angle of the cone is defined to be equal
+
+--- page 22 --------------------------------------------------
+  proportional to E DS cosq. When q = 90°, field
+  Df = E.DS = E DS cosq(1.11)
+
+--- page 23 --------------------------------------------------
+  projection of area normal to E, or E^DS, i.e., component of E along the
+  unit of electric flux is N C^–1 m^2.
+  therefore falls off, at large distance, faster than like 1/r^2 (the dependence
+  fields E_–_q due to the charge –q and E_+_q due to the charge q, by the
+  E_−_q=−p
+  4πε_0(ra)^2
+  E_+_q=p
+  4π ε_0(ra)^2
+
+--- page 24 --------------------------------------------------
+  E=E_+_q+E_−_q=p
+  π ε_0()^2()^2
+  (4ar)/((r^2−a^2)^2) p(1.14)
+  = (q)/(4π ε) _o
+  (4q a)/(4πεr^3p) _0ˆ(r >> a)(1.15)
+  E (q)/(4πεr) _0 (1)/(^2+a^2)
+  _+_q=
+  E (q)/(4πεr) _0 (1)/(^2+a^2)
+  _–_q=
+  magnitude p = q × 2a and
+  The directions of E_+_q and E_–_q are as shown in
+  E = – (E _+_q + E _–_qq pˆ
+  (−2q a)/(4π ε(r^2+a^2)^3/^2p) (1.17)
+  At large distances (r >> a_o), this reduces to
+  (−2qa)/(4π εr^3p) _oˆ()(1.18)
+  p = q × 2apˆ(1.19)
+  E= (2p)/(4πεr^3) _o(r >> a)(1.20)
+  E=−4πε_or^3(r >> a)(1.21)
+
+--- page 25 --------------------------------------------------
+  falls off not as 1/r^2 but as1/r^3. Further, the magnitude and the direction
+  p = q × 2a is finite. Such a dipole is referred to as a point dipole. For a
+  lie at the same place. Therefore, their dipole moment is zero. CO_2 and
+  CH_4 are of this type of molecules. However, they develop a dipole moment
+  field. Such molecules are called polar molecules. Water molecules, H_2O,
+  *as the centre of mass:rcm= (_i.)/(∑_q) ∑_i^q^i_i^r^i
+
+--- page 26 --------------------------------------------------
+  (10C)/(= 4π(8.854×10^−^12C^2N^−^1m^−^2)) ^−^5× (1)/((15−0.25)^2×10^−^4m^2)
+  = 4.13 × 10_6 N C_–1 along BP
+  = (10C)/(4π(8.854×10^−^12C^2N^−^1m^−^2)) ^–5× (1)/((15+0.25)^2×10^−^4m^2)
+  = 3.86 × 10_6 N C_–1 along PA
+  = 2.7 × 10^5 N C^–1 along BP.
+  E (2p)/(4πεr^3)
+  where p = 2a q_0 is the magnitude of the dipole moment.
+  p =10^–5 C × 5 × 10^–3 m = 5 × 10^–8 C m
+  E (2×5×10C m)/(=4π(8.854×10^−^12C^2N^−^1m^−^2)) ^−^8×
+  ^3×
+  (15)10^−^6m^3
+  = 2.6 × 10^5 N C^–1
+  (10C)/(=4π(8.854×10^−^12C^2N^−^1m^−^2)) ^−^5×
+  [15^2+(0.25)^2]×10^−^4m^2
+  = 3.99 × 10_6 N C_–1 along BQ
+  (10C)/(=4π(8.854×10^−^12C^2N^−^1m^−^2)) ^−^5× (1)/([15^2+(0.25)^2]×10^−^4m^2)
+  = 3.99 × 10_6 N C_–1 along QA.
+  (0.25)/(= 2 × 15+(0.25)) ^23.9910^6N C^–1along BA
+  ^2××
+  = 1.33 × 10_5 N C_–1 along BA.
+
+--- page 27 --------------------------------------------------
+  E (p)/(4πεr^3) _0
+  (5×10Cm)/(4π(8.854×10^−^12C^2N^–1m^–2)) ^−^8× (1)/((15)^3×10^−^6m^3)
+  = 1.33 × 10_5 N C^–1.
+  Magnitude of torque = q E × 2 a sinq
+  t = p × E(1.22)
+
+--- page 28 --------------------------------------------------
+  q_1, q_2, ..., q_n. One reason why we restricted to discrete charges is that the
+  σ= (∆Q)/(∆S) (1.23)
+  units for s are C/m^2.
+  λ= (∆Q)/(∆l) (1.24)
+  ρ= (∆Q)/(∆V) (1.25)
+  constituents. The units for r are C/m^3.
+
+--- page 29 --------------------------------------------------
+  ∆E=r(1.26)
+  (1)/(4πε) _0ˆ'
+  r'^2
+  (1)/(4πε) ˆ
+  E≅_0_allΣ_∆_Vr(1.27)
+  r'^2
+  ∆φ=Ei∆S= (q)/(4πεr^2) _0ri∆S(1.28)
+  along the radius vector at that point, the area element DS _and rˆ have
+  4πε_0r^2
+
+--- page 30 --------------------------------------------------
+  φ=_allΣ_∆_S∆S
+  πε_0r^2
+  φ= (q)/(4πεr^2) _o_allΣ_∆_S∆S= (q)/(4πεr^2S)
+  Now S, the total area of the sphere, equals 4_0pr^2. Thus,
+  φ=×4πr^2= (q)/(ε) _0(1.30)
+  4πε_0r^2
+  = q/e_0(1.31)
+  q = total charge enclosed by S.
+  flux f through the surface is f = f_1 + f_2 + f_3, where f_1 and f_2 represent
+  cylinder and f_3 is the flux through the curved cylindrical part of the
+  perpendicular to E, so by definition of flux,f_3 = 0. Further, the outward
+  f_1 = –ES_1, f_2 = +ES_2
+  S_1 = S_2 = S
+
+--- page 31 --------------------------------------------------
+  Example 1.10_1/2 The electric field components in Fig. 1.24 are_1/2
+  E_x = ax, E_y = E_z = 0, in which a = 800 N/C m. Calculate (a) the
+  that a = 0.1 m.
+  ± p/2. Therefore, the flux f = E.DS is separately zero for each face
+  E_L = ax^1/2 = aa^1/2
+  (x = a at the left face).
+  E_R= ax^1/2 = a (2a)^1/2
+  (x = 2a at the right face).
+  fL= EL.DS = ∆SEL⋅nˆL=ELDS cosq= –ELDS, since q= 180°
+  = –E_La^2
+  fR= ER.DS = ERDS cosq = ERDS, since q = 0°
+  = E_Ra^2
+
+--- page 32 --------------------------------------------------
+  = fR + fL = ERa^2 – ELa^2 = a^2 (ER – EL) = aa^2 [(2a)^1/2 – a^1/2]
+  = aa^5/22– 1
+  ^5/2()
+  = 1.05 N m^2 C^–1
+  We have f = q/e_0 or q = fe_–12_0. Therefore,
+  q = 1.05 × 8.854 × 10 C = 9.27 × 10^–12 C.
+  the negative x direction for negative x. It is given that E = 200 ˆi N/C
+  along the x-axis so that one face is at x = +10 cm and the other is at
+  f_L= E.DS = – 200 ˆii∆S
+  = + 200 DS, since _2ˆii∆S= – DS
+  = + 200 × p (0.05) = + 1.57 N m^2 C^–1
+  f_R = E.DS = + 1.57 N m^2 C^–1.
+  DS and hence E.DS = 0. Therefore, the flux out of the side of the
+  f= 1.57 + 1.57 + 0 = 3.14 N m^2 C^–1
+  q = e_0f
+
+--- page 33 --------------------------------------------------
+  Consider a pair of line elements P_1 and P_2
+
+--- page 34 --------------------------------------------------
+  E × 2prl = ll/e_0
+  2_0r
+  E=n(1.32)
+  (λ)/(2πεr) _0ˆ
+  vector, i.e., as A = Aaˆ , the scalar A is an algebraic number. It can be
+
+--- page 35 --------------------------------------------------
+  2 EA = sA/e_0
+  or, E = s/2e_0
+  E=n(1.33)
+  ε_0
+  Gaussian surface is E × 4 p r^2. The charge enclosed is
+  s × 4 p R^2. By Gauss’s law
+  × 4 p r^2= (σ)/(ε) _04πR^2
+  σR^2q
+  ε_0r^24πε_0r^2
+  where q = 4 pR^2s is the total charge on the spherical shell.
+  E=r(1.34)
+  πε_0r^2
+
+--- page 36 --------------------------------------------------
+  E × 4 p r^2. However, in this case, the Gaussian surface encloses no
+  E × 4 p r^2 = 0
+  i.e.,E = 0 (r < R )(1.35)
+  this result confirms the 1/r^2 dependence in Coulomb’s law.
+  (4πRρ)/(3) ^3=0–Ze
+  πR^3
+  f = E (r) × 4 pr^2
+
+--- page 37 --------------------------------------------------
+  i.e., q=Z e+ (4πrρ)/(3) ^3
+  r^3
+  R^3
+  4ε_0r^2R^3
+  E (r) × 4 p r^2 = 0 or E (r) = 0; r > R
+  At r = R, both cases give the same result: E = 0.
+  q = n e, where n = 0, ±1, ±2, ±3, .... Proton and electron have charges
+
+--- page 38 --------------------------------------------------
+  charges q_1 and q_2 is proportional to the product q_1q_2 and inversely
+  proportional to the square of the distance r_21 separating them.
+  F_21 due to q_1= (k(q q_1_2))/(r^2) _21rˆ_21
+  = force on q_2
+  where rˆ_21 is a unit vector in the direction from q_1 to q_2 and k =
+  4πε_0
+  the constant e_0 is
+  e_0 = 8.854 × 10^–12 C^2 N^–1 m^–2
+  The approximate value of k_9 is
+  k = 9 × 10 N m^2 C^–2
+  (ke)/(Gmm) _e^2_p≅2.4×10^39
+  an assembly of charges q_1, q_2, q_3, ..., the force on any charge, say q_1, is
+  the vector sum of the force on q_1 due to q_2, the force on q_1 due to q_3,
+  a magnitude |q|/4pe_0r^2; it is radially outwards from q, if q is positive,
+
+--- page 39 --------------------------------------------------
+  E= (1)/((a^2+r^2)^3/2)
+  4πε_o
+  ≅ (−p,)/(4πεr^3) _oforr>>a
+  E= (2pr)/(4πε(r^2−a^2)^2) _0
+  ≅ (2p)/(4πεr^3) _0forr>>a
+  The 1/r^3 dependence of dipole electric fields should be noted in contrast
+  to the 1/r^2 dependence of electric field due to a point charge.
+  Df = E.DS
+  DS = DS nˆ
+  1/e_0 times the total charge enclosed by S. The law is especially useful
+  E=n
+  (λ)/(2πεr) _0ˆ
+  E=n
+  ε_0
+
+--- page 40 --------------------------------------------------
+  E= (q)/(4πεr^2) _0rˆ(r≥R)
+  E = 0 (r < R)
+  the radius of the shell. q is the total charge of the shell: q = 4pR^2s.
+  Vector area elementD S[L^2]m^2DS = DSnˆ
+  Electric fluxf[ML^3 T^–3A^–1]V mDf = E.DS
+
+--- page 41 --------------------------------------------------
+  by (1C = 1 A s). In this case, the value of _9k is no longer arbitrary; it is
+  approximately 9 × 10 N m^2 C^–2.
+  of reasonable size for magnetic effects, 1 C = 1 A s, is too big a unit for
+  the configuration, its field falls off faster than 1/r^2, typical of field
+
+--- page 42 --------------------------------------------------
+  1.3Check that the ratio ke^2/G m_em_p is dimensionless. Look up a Table
+  1.6Four point charges qA = 2 mC, qB = –5 mC, qC = 2 mC, and qD = –5 mC are
+  1.8Two point charges qA = 3 mC and qB = –3 mC are located 20 cm apart
+  1.9A system has two charges qA = 2.5 × 10^–7 C and _–9qB = –2.5 × 10^–9^–7 C
+  with the direction of a uniform electric field of magnitude 5 × 10^4 NC^–1.
+
+--- page 43 --------------------------------------------------
+  1.14Consider a uniform electric field E = 3 × 10^3î N/C. (a) What is the
+  box is 8.0 × 10^3 Nm^2/C. (a) What is the net charge inside the box?
+  1.19A point charge causes an electric flux of –1.0 × 10^3 Nm^2/C to pass
+  the electric field 20 cm from the centre of the sphere is 1.5 × 10^3 N/C
+
+--- page 44 --------------------------------------------------
+  surface charge density of 80.0 mC/m^2. (a) Find the charge on the_4
+  signs and of magnitude 17.0 × 10 C/m^2. What is E: (a) in the outer

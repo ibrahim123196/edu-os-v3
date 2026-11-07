@@ -1,0 +1,278 @@
+# Formula review — leph104.pdf
+#
+# Check each line against the PDF page named beside it.
+# For anything wrong, add an entry to content/corrections/leph104.json:
+#   {"page": 7, "find": "<paste the wrong text>", "replace": "<what it should say>", "note": "why"}
+#
+
+--- page 2 --------------------------------------------------
+  Radio waves were discovered by Hertz, and produced by J.C.Bose and_th
+  G. Marconi by the end of the 19 century. A remarkable scientific and_th
+
+--- page 3 --------------------------------------------------
+  E = Q rˆ / (4pe_0)r^2(4.1)
+  F = qE = q Qrˆ / (4pe_0) r^2(4.2)
+  F = q [ E (r) + v × B (r)] ºFelectric +Fmagnetic(4.3)
+
+--- page 4 --------------------------------------------------
+  equation F = q [ v × B] =q v B sin qnˆ , where qis
+  Dimensionally, we have [B] = [F/qv] and the unit
+  drift velocity v_d (see Chapter 3). In the presence of an external magnetic
+  F = (nlA)qv_d´ B
+  where q is the value of the charge on a carrier. Now nq v_d is the current
+  density j and |(nqv_d)|A is the current I (see Chapter 3 for the discussion
+  F = [(nq v_d )lA] × B = [ jAl ] ´B
+  on it by considering it as a collection of linear strips dl_j and summing
+  FIdl_j×B
+  _j
+
+--- page 5 --------------------------------------------------
+  m g = I lB
+  B= (m g)/(I l)
+  = (0.2×9.8)/(2×1.5) =0.65T
+
+--- page 6 --------------------------------------------------
+  then a force of m v^2 / r, acts perpendicular to the path towards
+  m v ^2/r = q v B, which gives
+  r = m v/ qB(4.5)
+  w = 2pn = q B/ m[4.6(a)]
+  The time taken for one revolution is T= 2p/
+
+--- page 7 --------------------------------------------------
+  p = v||T = 2pmv||/ q B[4.6(b)]
+  9 × 10 kg and charge 1.6 × 10_–4^–19 C) moving at a speed of 3 ×10^7 m/s in
+  frequency? Calculate its energy in keV. ( 1 eV = 1.6_–19 × 10^–19 J).
+  r = m v / (qB) = 9 ×10^–31 kg _–2× 3 × 10^7 m s^–1 / ( 1.6 × 10 C × 6 × 10^–4 T)
+  = 28 × 10 m = 28 cm
+  n = v / (2 _2 pr) = 17×10^6 s^–1 _–31= 17×10Hz =17 MHz.
+  E = (½ )mv_–16 = (½ ) 9 × 10 kg × 9 × 10^6 ^14 m^2/s^2 = 40.5 ×10^–17 J
+  ≈ 4×10J = 2.5 keV.
+  (∝I dl×r)/(r^3)
+  = (µ_0)/(4π) (I dl×r)/(r^3)
+  where m_0/4p is a constant of proportionality. The above expression
+
+--- page 8 --------------------------------------------------
+  d (µ_0I)/(4π) (dlsinθ)/(r^2)
+  (µ_0)/(4π) =10^−^7Tm/A[4.7(c)]
+  We call µ_0 the permeability of free space (or vacuum).
+  There is an interesting relation between ε_0, the permittivity of free
+  space; µ_0, the permeability of free space; and c, the speed of light in vacuum:
+  )= (1)/(9×10^9) (^−^7)= (1)/((3×10^8)^2) = (1)/(c^2)
+  ε_0µ_0=(4πε_0 (µ_0)/(4π) 10
+  the product µ_0ε_0is fixed in magnitude. Choosing the value of either ε_0 or
+  µ_0, fixes the value of the other. In SI units, µ_0is fixed tobe equal to
+  a large current I = 10 A (Fig. 4.8). What is the magnetic field on the yaxis at a distance of 0.5 m. ∆x= 1 cm.
+
+--- page 9 --------------------------------------------------
+  B= (µ_0)/(4π) [using Eq. (4.7)]
+  r^2
+  dl=∆x=10^−^2m, I = 10 A, r = 0.5m = y, µ_0/4π=10^−^7 (T m)/(A)
+  θ = 90° ; ^−sin^7θ = 1^−^2
+  B= (10×10×10)/(25×10_−_2= 4) × 10^–8 T
+  dl×r=∆xˆi ×y^ˆ_j=^y^∆^x(^ˆ^i ×^ˆ^j)=_y_∆_x_k^ˆ
+  ˆi×ˆj=kˆ;ˆj×kˆ=ˆi;kˆ×ˆi=ˆj
+  µ_0Id× r
+  4r^3
+  Now r^2 = x^2 + R^2 . Further, any element of the loop
+  (µ_0)/(4π() (Idl)/(x^2+R^2))
+
+--- page 10 --------------------------------------------------
+  plane formed by dl and r. It has an x-component dB_xand a component
+  x-direction can be obtained by integrating dB_x = dB cos θover the loop.
+  cosθ= (R)/((x^2+R^2)^1/2) (4.10)
+  (µ_0Idl)/(4π() (R)/(+)^3/2)
+  B_x
+  x^2R^2
+  (µ_0I Rˆ)/((+)^3/2i) ^2
+  x^2R^2
+  B_xi
+  of the loop. Here x= 0, and we obtain,
+  B_0= (µ_0Iˆ)/(2Ri) (4.12)
+
+--- page 11 --------------------------------------------------
+  Therefore, dl × r= 0. Straight segments do not contribute to
+  element to have the same radius R = 10 cm = 0.1 m. The number of
+  turns N = 100. The magnitude of the magnetic field is,
+  ^−^4=6 28.×10^−^4T
+  B= (µ_0NI)/(2R) = (4π ×10×10×1)/(2×10^–1) ^–7^2=2π ×10
+  magnetic field, B_t,at this element and multiply it by the
+
+--- page 12 --------------------------------------------------
+  length of that element dl [Note: B_tdl=B.dl].All such
+  states that this integral is equal to µ_0 times the total
+  “B._d^l = µ0I[4.13(a)]
+  boundary is traversed in the loop integral “_B._d^l. Then
+  is tangential. Let I_e be the current enclosed by the loop.
+  BL =µ_0I_e[4.13(b)]
+  B × 2πr = µ_0 I,
+  B = µ_0 I/ (2πr)(4.14)
+
+--- page 13 --------------------------------------------------
+  _B 4.7
+
+--- page 14 --------------------------------------------------
+  L = 2 πr
+  I_e = Current enclosed by the loop = I
+  B (2πr) = µ_0I
+  B= (µ_0I)/(2π r) [4.15(a)]
+  Now the current enclosed I_eis not I, but is less than this value.
+  I_e=I (πr)/(πa^2) ^2= (Ir)/(a^2) ^2
+  I r^2
+  B(2r)=µ_0
+  a^2
+  B= (µ_0I)/(2πa^2) r
+  B = µ_0I/2R [Eq. (4.12)] for the field at the centre of the loop. However,
+
+--- page 16 --------------------------------------------------
+  ab be B. Thus, the relevant length of the Amperian loop is, L = h.
+  of turns is nh. The enclosed current is, I_e= I (n h), where I is thecurrent
+  BL = µ_0I_e, B h =µ_0I (n h)
+  B = µ_0 n I(4.16)
+  n= (500)/(0.5) =1000 turns/m
+  The length l= 0.5 m and radius r = 0.01 m. Thus,l/a = 50 i.e., l>>a.
+  B = µ_0n I
+  = 4π × 10^–7× 10^3 × 5
+  currents I_a and I_b and separated by a
+  distance d. B_a is the magnetic field
+
+--- page 17 --------------------------------------------------
+  by a distance d and carrying (parallel) currents I_a and I_b, respectively.
+  The conductor ‘a’ produces, the same magnetic field B_a at all points
+  B_a= (µ_0I_a)/(2πd)
+  The conductor ‘b’ carrying a current I_b will experience a sideways
+  force due to the field B_a. The direction of this force is towards the
+  conductor ‘a’ (Verify this). We label this force as F_ba, the force on a
+  F_ba=I_bLB_a
+  = (µ_0I_aI_b)/(2πdL)
+  considerations similar to above we can find the force F_ab, on a segment of
+  length L of ‘a’ due to the current in ‘b’. It is equal in magnitude to F_ba,
+  F_ba = –F_ab(4.18)
+  Let f_ba represent the magnitude of the force F_ba per unit length. Then,
+  f_ba= (µ_0I_aI_b)/(2πd) (4.19)
+
+--- page 18 --------------------------------------------------
+  SolutionF = Il ×B
+  F =IlB sinθ
+  f = F/l= I B sinθ
+  f =I B
+  = 1 × 3 × 10 = 3 × 10^–5 N m^–1
+  θ = 0^o
+  f = 0
+
+--- page 19 --------------------------------------------------
+  and exerts a force F_1 on it which is directed into the
+  F_1 = I b B
+  Similarly, it exerts a force F_2 on the arm CD and F_2
+  F_2 = I b B = F
+  Thus, the net force^1 on the loop is zero. There is a
+  torque on the loop due to the pair of forces F_1and F_2.
+  τ=F_1+F_2 (a)/(2)
+  =IbB+IbB=I(ab)B
+  where A = ab is the area of the rectangle.
+  force or torque. The forces on arms AB and CD are F_1 and F_2. They too
+  F_1 = F_2 = I b B
+  τ=F_1sinθ+F_2sinθ
+
+--- page 20 --------------------------------------------------
+  m = I A(4.22)
+  (Electric dipole of dipole moment p_e in an electric
+  τ=p_e×E
+  As is clear from Eq. (4.22), the dimensions of the_2
+  magnetic moment are [A][L] and its unit is Am^2.
+  the loop. The forces F_1 and F_2 acting
+  m= N I A(4.24)
+  by 90°? The moment of inertia of the coil is 0.1 kg m^2.
+
+--- page 21 --------------------------------------------------
+  = (µ_0NI)/(2R)
+  Here, N = 100; I = 3.2 A, and R = 0.1 m. Hence,
+  ×^−^5×
+  (using π × 3.2 = 10)
+  210^−^1
+  m = NI A = NI πr^2 = 100 × 3.2 × 3.14 × 10^–2 = 10 A m^2
+  (c)τ= _m × B [from Eq. (4.23)]
+  = _m B _sin θ
+  Initially, θ = 0. Thus, initial torque τ_i = 0. Finally, θ = π/2 (or 90º).
+  Thus, final torque τ_f= m B = 10 × 2 = 20 N m.
+  (dω)/(dt) ==ω ω
+
+--- page 22 --------------------------------------------------
+  (µ_0I R)/((x+R)^3/2) ^2^2
+  2^2
+  the loop. Forx >> R, we may drop the R^2 term in the denominator. Thus,
+  = (µ_0IR)/(2x^3) ^2
+  Note that the area of the loop A = πR^2. Thus,
+  B= (µ_0IA)/(2πx^3)
+  m =IA. Hence,
+  B≃ (µ_0m)/(2 πx^3)
+  µ_02
+  4πx^3
+  µ_0→1/ε_0
+
+--- page 23 --------------------------------------------------
+  m→p_e (electrostatic dipole)
+  E (2p_e)/(4πεx^3) _0
+  E≃ (p_e)/(4πεx^3) _0
+  where x is the distance from the dipole. If we replace p à m and µ_0→1/ε_0
+  µ_0
+  B (m;)/(x^3) x>>R[4.25(b)]
+  m = I A, which is the analogue of electric dipole moment p. Note, however,
+
+--- page 24 --------------------------------------------------
+  the field is radial by design, we have taken sin θ = 1 in_p
+  φ= (NAB)/(k)
+  overcome these difficulties, one attaches a small resistance r_s, called shunt
+  RG r_s / (RG + r_s) ≃ r_s if RG >> r_s
+  If r_s has small value, in relation to the resistance of the rest of the
+  circuit R_c, the effect of introducing the measuring instrument is also small
+  shunt resistance r_s of
+  (φ)/(I) = (NAB)/(k) (4.27)
+
+--- page 25 --------------------------------------------------
+  R_G + R ≃R : large
+  (φ)/(V) = (NAB)/(k) = (NAB)/(k)
+  (1)/(R) (4.28)
+  (I)/(V)
+  (φ)/(I) →2
+  (φ)/(V) → (φ)/(V)
+  (a) is a galvanometer with a resistance R_G = 60.00 Ω; (b) is a
+  shunt resistance r_s = 0.02 Ω; (c) is an ideal ammeter with zero
+
+--- page 26 --------------------------------------------------
+  R_G+3=63Ω. Hence, I = 3/63 = 0.048 A.
+  (R_Gr_s)/(R+r) _G_s= (60Ω×0.02Ω)/((60+0.02)Ω) ≃ 0.02Ω
+  0.02Ω+3Ω=3.02Ω. Hence, I = 3/3.02 = 0.99 A.
+  I = 3/3 = 1.00 A
+  F = q (v × B+E)
+  F = Il × B
+  ν_c= (q B)/(2πm)
+  d= (µ_0I)/(4π) (dl×r)/(r^3)
+
+--- page 27 --------------------------------------------------
+  B= (µ_0IR)/(2(x^2+R^2)^3/2) ^2
+  B= (µ_0I)/(2R)
+  C. Then the Ampere’s law states that ∫ÑCB.^d^l=µ0I where I refers to
+  BL = µ_0I_e
+  where I_e is the net current enclosed by the closed circuit.
+  B= (µ_0I)/(2πR)
+  B = µ_0nI
+  m = N IA
+  it is: F = 0
+  introducing a shunt resistance r_s, of small value in parallel. It can be
+
+--- page 28 --------------------------------------------------
+  Permeability of freeµ_0Scalar[MLT^–2A^–2]T m A^–14π × 10^–7 T m A^–1
+  Magnetic MomentmVector[L^2A]A m^2 or J/T_–1
+  Torsion ConstantkScalar[M L^2T^–2] N m radAppears in MCG
+  F = q (v × B + E)
+
+--- page 29 --------------------------------------------------
+  4.10Two moving coil meters, M_1 and M_2 have the following particulars:
+  R_1= 10Ω, N_1_–3= 30,
+  A_1 = 3.6 × 10 m^2, B_1 = 0.25 T
+  R_2 = 14Ω, N_2_–3 = 42,
+  A_2 = 1.8 × 10 m^2, B_2 = 0.50 T
+  sensitivity of M_2 and M_1.
+  4.11In a chamber, a uniform magnetic field of 6.5 G (1 G = 10^–4 T) is
+  4.8 × 10^6m s^–1 normal to the field. Explain why the path of the
+  (e = 1.5 × 10^–19 C, m_e = 9.1×10 kg)

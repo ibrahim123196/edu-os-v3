@@ -56,7 +56,7 @@ def init_db() -> None:
     under real data, replace this with Alembic migrations in
     infrastructure/migrations/.
     """
-    from apps.api import models  # noqa: F401  (register mappers)
+    from apps.api import curriculum, models  # noqa: F401  (register mappers)
 
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
@@ -74,6 +74,23 @@ def init_db() -> None:
                 "notation_score double precision NOT NULL DEFAULT 0"
             )
         )
+        conn.execute(
+            text(
+                "ALTER TABLE documents ADD COLUMN IF NOT EXISTS "
+                "pipeline_version integer NOT NULL DEFAULT 0"
+            )
+        )
+        for column, spec in (
+            ("chapter_id", "uuid"),
+            ("source_kind", "varchar(40) NOT NULL DEFAULT 'student_upload'"),
+            ("license", "varchar(40) NOT NULL DEFAULT 'unknown'"),
+            ("publisher", "varchar(200)"),
+            ("edition", "varchar(80)"),
+            ("source_url", "varchar(1000)"),
+        ):
+            conn.execute(
+                text(f"ALTER TABLE documents ADD COLUMN IF NOT EXISTS {column} {spec}")
+            )
         # HNSW gives good recall/latency for cosine distance without tuning
         # lists the way IVFFlat requires.
         conn.execute(

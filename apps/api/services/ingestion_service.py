@@ -20,6 +20,9 @@ from sqlalchemy import delete
 
 from ai.embeddings.provider import get_embedding_provider
 from ai.ingestion.chunking import chunk_pages
+from ai.ingestion import PIPELINE_VERSION
+from ai.ingestion.boilerplate import strip_boilerplate
+from ai.ingestion.corrections import apply_corrections, load_corrections
 from ai.ingestion.extract import EmptyDocument, UnsupportedFileType, extract
 from ai.ingestion.notation import notation_score
 from ai.retrieval.spelling import rebuild_vocabulary
@@ -50,9 +53,27 @@ def ingest_document(document_id) -> None:
         db.commit()
         path = Path(doc.storage_path)
         subject, grade = doc.subject, doc.grade
+        doc_filename = doc.filename
 
     try:
         pages = extract(path)
+
+        # Running headers and footers ("Reprint 2026-27", "8 Physics") repeat
+        # on every page. Left in, they break sentences mid-flow, get mistaken
+        # for section headings, and fill the spelling vocabulary with words no
+        # student will ever ask about.
+        pages, furniture = strip_boilerplate(pages)
+        if furniture:
+            log.info("Stripped %d repeated header/footer lines", len(furniture))
+
+        # Hand-corrections for platform content. Extraction gets most of a
+        # textbook right; the remainder is fixed once, by a person, and is
+        # then correct for every student who reads it.
+        corrections = load_corrections(Path(doc_filename).stem)
+        if corrections:
+            result = apply_corrections(pages, corrections)
+            pages = result.pages
+            log.info("Corrections for %s: %s", doc_filename, result.summary)
 
         chunks = chunk_pages(
             pages,
@@ -102,7 +123,17 @@ def ingest_document(document_id) -> None:
             doc.page_count = max((p.number for p in pages), default=0)
             doc.chunk_count = len(chunks)
             doc.status = IngestStatus.ready
+            doc.pipeline_version = PIPELINE_VERSION
             doc.ingested_at = datetime.now(timezone.utc)
+
+            # The chunks above are still pending in the session, and this
+            # session has autoflush off. rebuild_vocabulary reads
+            # document_chunks with raw SQL, so without an explicit flush it
+            # queries a table that does not yet contain them and builds an
+            # empty word list -- which is exactly what happened: 111 passages
+            # indexed, zero terms, and spelling correction silently doing
+            # nothing with no error anywhere.
+            db.flush()
 
             # New passages mean new words the student might misspell.
             rebuild_vocabulary(db)

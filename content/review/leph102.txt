@@ -1,0 +1,432 @@
+# Formula review — leph102.pdf
+#
+# Check each line against the PDF page named beside it.
+# For anything wrong, add an entry to content/corrections/leph102.json:
+#   {"page": 7, "find": "<paste the wrong text>", "replace": "<what it should say>", "note": "why"}
+#
+
+--- page 2 --------------------------------------------------
+  counter the repulsive electric force F^extE (i.e, F_ext= –FE).
+  W_RP =
+  ∆U=UP−UR=WRP(2.2)
+  _RP .)
+
+--- page 3 --------------------------------------------------
+  (UP+α)−(UR+α)=UP−UR
+  W_∞P=UP−U_∞=UP(2.3)
+  from infinity to a point = electrostatic potential (V ) at that point.
+
+--- page 4 --------------------------------------------------
+  point P, against the repulsive force of (Q×1rˆ)/(4πεr'^2) _0′(2.5)
+  4πε_0r'^2
+  =−_∞^r′= (Q)/(4πεr′) _0_∞^r= (Q)/(4πεr) _0
+  (Q)/(∫_4_π_εr′^2dr) _0
+  V(r)= (Q)/(4πεr) _0(2.8)
+
+--- page 5 --------------------------------------------------
+  (Q/4pe_0) m^-1] (blue curve) and field with r [in units
+  of (Q/4pe_0) m^-2] (black curve) for a point charge Q.
+  electrostatic field (1/r^2 ) varies with r.
+  = 4 × 10^4 V
+  (b)W = qV = 2 × 10^–9C × 4 × 10^4V
+
+--- page 6 --------------------------------------------------
+  1/r^2 (typical of field due to a single charge)
+  but as 1/r^3. We, now, determine the electric
+  r_1
+  r_2
+  4πε_0(2.9)
+  where r_1 and r_2 are the distances of the
+  r_1^2=r^2+a^2−2arcosq
+  r_2^2=r^2+a^2+2ar cosq(2.10)
+  ^2
+  (−2acosθ+)/(r) (a)/(r^2)
+  r_1^2r^2
+  ≅r^2−
+  r_2^2r^2
+  ^−^1/^2
+  r_1r
+  ^−^1/^2
+  r_2r
+  Using Eqs. (2.9) and (2.13) and p = 2qa, we get
+  V= (2acosθ)/(r^2) = (pcosθ)/(4πεr^2) _0
+  4πε_0
+  Now, p cos q = p.rˆ
+
+--- page 7 --------------------------------------------------
+  =4πε_0 (p.rˆ)/(r^2) ; (r >> a) (2.15)
+  From Eq. (2.15), potential on the dipole axis (q = 0, p ) is given by
+  V=± (p)/(r^2) (2.16)
+  4πε_0
+  (Positive sign for q = 0, negative sign for q = p.) The potential in the
+  equatorial plane (q = p/2) is zero.
+  (ii)The electric dipole potential falls off, at large distance, as 1/r^2, not as
+  refer to the Fig. 2.5 for graphs of 1/r^2 versus r and 1/r versus r,
+  Consider a system of charges q_1, q_2,…, q_n with position vectors r_1, r_2,…,
+  r_n relative to some origin (Fig. 2.6). The potential V_1 at P due to the charge
+  q_1 is
+  q_1
+  V_1= (1)/(4πεr) _0_1P
+  where r_1P is the distance between q_1 and P.
+  Similarly, the potential V_2 at P due to q_2 and
+  V_3 due to q_3 are given by
+  q_2
+  V_2= (1)/(4πεr) ,
+  q_3
+  V_3= (1)/(4πεr) _0_3P
+  where r_2P and _0_2Pr_3P are the distances of P from
+  charges q_2 and q_3, respectively; and so on for the
+  V = V_1 + V_2 + ... + V_n(2.17)
+
+--- page 8 --------------------------------------------------
+  q_n
+  q_1
+  q_2
+  r_1_P
+  r_2_P
+  r_n_P
+  πε_0
+  V= (q)/(r) (r≥R)[2.19(a)]
+  4πε_0
+  V= (1)/(4πεR) _0[2.19(b)]
+  4πε_0 (3×10−)/(x×10^–^2) ^–^8=
+  (2×10)/((15−x)×10^–^2) ^–^80
+  which gives x = 9 cm.
+
+--- page 9 --------------------------------------------------
+  x = 45 cm
+  of a small negative charge between Q and P is positive._B
+  Similarly, (P.E.)_A > (P.E.)
+
+--- page 10 --------------------------------------------------
+  πε_o
+  V= (q)/(r)
+
+--- page 11 --------------------------------------------------
+  |E|d l = V – (V +dV)=– dV
+  Consider first the simple case of two charges q_1and q_2 with position vector
+  r_1 and r_2 relative to some origin. Let us calculate the work done
+  the charges q_1 and q_2 initially at infinity and determine the work done by
+  first the charge q_1 is brought from infinity to the point r_1. There is no
+  bringing q_1 from infinity to r_1 is zero. This charge produces a potential in
+  q_1
+  V_1 (1)/(4πεr) _0_1_P
+  where r_1Pis the distance of a point P in space from the location of q_1.
+  From the definition of potential, work done in bringing charge q_2 from
+  infinity to the point r_2 is q_2 times the potential at r_2 due to q_1:
+  q_2 = (q_1q_2)/(r) _12
+  πε_0
+
+--- page 12 --------------------------------------------------
+  where r_12 is the distance between points 1 and 2.
+  the potential energy of a system of two charges q_1 and q_2 is
+  = (q_1q_2)/(r) _12
+  πε_0(2.22)
+  system of charges q_1 and q_2 is
+  Obviously, if q_2 was brought first to its present location and
+  q_1 brought later, the potential energy U would be the same.
+  Equation (2.22) is true for any sign of q_1and q_2. If q_1q_2 > 0, potential
+  energy is positive. This is as expected, since for like charges (q_1q_2 > 0),
+  distance apart. For unlike charges (q_1 q_2 < 0), the electrostatic force is
+  charges q_1,q_2 and q_3 located at r_1,r_2, r_3, respectively. To bring q_1 first
+  from infinity to r_1, no work is required. Next we bring q_2 from infinity to
+  r_2. As before, work done in this step is
+  q_2V_1(r_2)= (q_1q_2)/(r) (2.23)
+  4πε_0
+  The charges q_1 and _12q_2 produce a potential, which at any point P is
+  q_1
+  q_2
+  V_1,_2
+  r_1_P
+  πε_0_2_P
+  Work done next in bringing q_3 from infinity to the point r_3 is q_3 times
+  V_1, 2 at r_3
+  (r_3)=+ (q_2q_3)/(r) _23
+  q_1q_3
+  q_3V_1,_2
+  r_13
+  πε_0
+  =+ (q_1q_3+)/(r) _13 (q_2q_3)/(r) _23
+  q_1q_2
+  r_12
+  πε_0
+
+--- page 13 --------------------------------------------------
+  put together this arrangement. (b) A charge q_0 is brought to the centre
+  q^2
+  _0d
+  44_0d
+  q (+q+)/(4πεd2) _0 (−q)/(4πεd) _0
+  (−q)/(4πεd) _0^21
+  (+q)/(4πεd) _0
+  q (+q+)/(4πεd) _0
+  _0d
+  (−q)/(4πεd) _0^22
+
+--- page 14 --------------------------------------------------
+  (−q)/(4πεd) _0^2(0)(1)1+2
+  (−q()/(4πεd) _0^2)
+  (b) The extra work necessary to bring a charge q_0 to the point E when
+  the four charges are at A, B, C and D is q_0 × (electrostatic potential at
+
+--- page 15 --------------------------------------------------
+  Thus, if an electron with charge q = e = 1.6×10 C is accelerated by
+  a potential difference of _–19DV = 1 volt, it would gain energy of qDV = 1.6 ×
+  1 eV=1.6 × 10J. The units based on eV are most commonly used in_3_–10
+  atomic, nuclear and particle physics, (1 keV = 10_–13eV = 1.6 × 10J, 1 MeV_12
+  = 10^6eV = 1.6 × 10_–7J, 1 GeV = 10^9eV = 1.6 × 10J and 1 TeV = 10^–16eV
+  Next, we ask: what is the potential energy of a system of two charges q_1
+  and q_2 located at r_1and r_2, respectively, in an external field? First, we
+  calculate the work done in bringing the charge q_1 from infinity to r_1.
+  Work done in this step is q_1V(r_1), using Eq. (2.27). Next, we consider the
+  work done in bringing q_2 to r_2. In this step, work is done not only against
+  the external field E but also against the field due to q_1.
+  Work done on q_2 against the external field
+  = q_2 V (r_2)
+  Work done on q_2 against the field due to q_1
+  = (q_1q_2)/(4πεr) _o_12
+  where r_12 is the distance between q_1 and q_2. We have made use of Eqs.
+  the work done on q_2 against the two fields (E and that due to q_1):
+  Work done in bringing q_2 to r_2
+  =q_2Vr_2
+  () (+q_1q_2)/(4πεr) _o_12(2.28)
+  q_1q_2
+  =q V_1(r_1)+q_2V(r_2)+ (2.29)
+  4πε_0r_12
+
+--- page 16 --------------------------------------------------
+  external electric field E= A (1/r^2); A = 9 × 10^5 NC^–1 m^2.What would
+  17(2)10^−^12
+  (a)U= (q q_1_2)/(r) =9×10^9×
+  4ε_00.18
+  (b)W = U_2 – U_1 = 0 – U = 0 – (–0.7) = 0.7 J.
+  _q_1V(^r_1)_+_q_2V(^r_2)= (A7µC+)/(0.09m) (A−µ2C)/(0.09m)
+  (r_1)+(r_2) (+q q_1_2)/(4πεr) _0_12= (A7µC+)/(0.09 m) (A−µ2C−)/(0.09m)
+  q V_1q_2V0.7 J
+  =70−20−0.7=49.3 J
+  Consider a dipole with charges q_1 = +q and q_2 = –q placed in a uniform
+  t = t = t = t = t = p × E(2.30)
+  antiparallel to E).Suppose an external torque t_ext is
+  q_0 to angle q_1at an infinitesimal angular speed and
+  =_pE(^cos_θ_0_−^cos_θ_1)(2.31)
+  choice is to take q_0 = p / 2. (An explanation for it is provided towards the
+
+--- page 17 --------------------------------------------------
+  q^2
+  U′θ=q[Vr_1−Vr_2]−(2.33)
+  4πε_0×2a
+  Here, r_1and r_2denote the position vectors of +q and –q. Now, the
+  potential difference between positions r_1 and r_2equals the work done
+  in bringing a unit positive charge against field from r_2to r_1.The
+  displacement parallel to the force is 2a cosq. Thus, [V(r_1)–V (r_2)] =
+  q^2q^2
+  4πε_0×2a4πε_0×2a
+  We can now understand why we took q_0=p/2. In this case, the work
+  opposite and cancel out, i.e., q [V (r_1) – V (r_2)]=0.
+  of magnitude 10^6 V m^–1. The direction of the field is suddenly changed
+  Solution Here, dipole moment of each molecules = 10^–29 C m
+  total dipole moment of all the molecules, p^23 = 6 × 10^23 _–6× 10^–29 C m
+  Initial potential energy, U_i = –pE cos q = –6×10_–6 ×10^6 cos 0° = –6 J
+  Final potential energy (when q = 60°), U_f = –6 × 10× 10^6 cos 60° = –3 J
+  Change in potential energy = –3 J – (–6J) = 3 J
+
+--- page 18 --------------------------------------------------
+  This follows from results 1 and 2 above. Since E = 0 inside the conductor
+
+--- page 19 --------------------------------------------------
+  E=nˆ(2.35)
+  ε_0
+  ε_0
+  ε_0
+
+--- page 21 --------------------------------------------------
+  are oxygen (O) and hydrogen (H_2)
+  molecules which, because of their^2
+  (H_2O) are examples of polar molecules.
+
+--- page 22 --------------------------------------------------
+  P=ε_0χ_eE(2.37)
+  where c_e is a constant characteristic of the dielectric and is known as the
+  It is possible to relate c_e to the molecular properties of the substance,
+  dielectric slab placed in a uniform external field E_0 parallel to two of its
+
+--- page 23 --------------------------------------------------
+  surfaces with induced surface charge densities, say s_p
+  and –s_p. Clearly, the field produced by these surface charges
+  ±s_p arises from bound (not free charges) in the dielectric.
+  (Fig. 2.24). The conductors have charges, say Q_1 and Q_2, and potentials
+  V_1 and V_2. Usually, in practice, the two conductors have charges Q
+  and – Q, with potential difference V = V_1 – V_2 between them. We shall
+  C= (Q)/(V) (2.38)
+
+--- page 24 --------------------------------------------------
+  capacitance is 1 farad (=1 coulomb volt) or 1 F = 1 C V^–1. A capacitor
+  strength; for air it is about 3 × 10_4^6 Vm^–1. For a separation between
+  units are its sub-multiples 1 mF = 10 F, 1 nF = 10^–9 F, 1 pF = 10^–12 F,
+  plates (d^2 << A), we can use the result on electric
+  charge density s = Q/A and plate 2 has a surface
+  2ε_02ε_0
+
+--- page 25 --------------------------------------------------
+  2ε_02ε_0
+  E=+= (σ)/(ε) _0= (Q)/(εA) _0(2.41)
+  2ε_02ε_0
+  (2.35).] However, for d^2 << A, these effects can be ignored in the regions
+  V=E d= (Qd)/(A) (2.42)
+  ε_0
+  C= = (ε_0A)/(d) (2.43)
+  typical values like ^−^12A = 1 m^2, ^–2d = 1 mm, we get
+  =^2=×
+  C (8.85×10CNm×1m)/(10^−^3m) ^2^–1_–18.8510^−^9F(2.44)
+  (You can check that if 1F= 1C V = 1C (NC^–1m)^–1 = 1 C^2 N^–1m^–1.)
+  plates needed to have C = 1F for a separation of, say 1 cm:
+  A= (Cd)/(ε) _0= (1F×10m)/(8.85×10^−^12C^2N^–1m^–2) ^−^2
+  10^9m^2
+  s = Q/A). When there is vacuum between the plates,
+  E_0= (σ)/(ε) _0
+
+--- page 26 --------------------------------------------------
+  and the potential difference V_0 is
+  V_0 = E_0d
+  The capacitance C_0 in this case is
+  C_0= (Q)/(V) _0=ε_0 (A)/(d) (2.46)
+  densities s_p and –s_p. The electric field in the dielectric then corresponds
+  to the case when the net surface charge density on the plates is ±(s – s_p).
+  E= (σ−σ_P)/(ε) _0(2.47)
+  σ−σ_P
+  V=E d=d(2.48)
+  ε_0
+  For linear dielectrics, we expect s_p to be proportional to E_0, i.e., to s.
+  Thus, (s – s_p)is proportional to s and we can write
+  σ−σ_P= (σ)/(K) (2.49)
+  V= (σd)/(εK) _0= (Qd)/(AεK) _0(2.50)
+  C= (Q)/(V) = (ε_0KA)/(d) (2.51)
+  The product e_0K is called the permittivity of the medium and is
+  e = e_0 K(2.52)
+  For vacuum K = 1 and e = e_0; e_0 is called the permittivity of the vacuum.
+  K= (ε)/(ε) _0(2.53)
+  K= (C)/(C) _0(2.54)
+
+--- page 27 --------------------------------------------------
+  Solution Let E_0 = V_0/d be the electric field between the plates when
+  there is no dielectric and the potential difference is V_0. If the dielectric
+  is now inserted, the electric field in the dielectric will be E = E_0/K.
+  1E_03
+  V=E_0(d)+(d)
+  =E_0d(+)=V_0
+  free charge Q_0 on the plates remains unchanged. The capacitance
+  4KQ_0
+  C= (Q_0)/(V) == (4K)/(K+3C) _0
+  K+3V_0
+  capacitance C_1, C_2,…, C_n to obtain a system with
+  Figure 2.26 shows capacitors C_1 and C_2
+  The left plate of C_1 and the right plate of C_2
+  follows that the right plate ofC_1 has charge –Q
+  and the left plate of C_2 has charge Q. If this was
+  in the conductor connecting C_1and C_2. Charge
+  would flow until the net charge on both C_1 and
+  C_2 is zero and there is no electric field in the
+  conductor connecting C_1 and C_2.Thus, in the
+
+--- page 28 --------------------------------------------------
+  V_1 and V_2 across C_1 and C_2,respectively.
+  V = V_1 + V_2 =
+  C_1C_2
+  QC_1C_2
+  C= (Q)/(V) (2.57)
+  (1)/(C) =+(2.58)
+  C_1C_2
+  V=V_1+V_2+...+V_n=++...+ (Q)/(C) _n(2.59)
+  C_1C_2
+  (1)/(C) =+++...+(2.60)
+  C_1C_2C_3C_n
+  (±Q_1) on capacitor 1 and the plate charges (±Q_2) on the
+  Q_1 = C_1V, Q_2 = C_2V(2.61)
+  Q = Q_1 + Q_2(2.62)
+  Q = CV = C_1V + C_2V(2.63)
+  C = C_1 + C_2(2.64)
+  Q = Q_1 + Q+ ... + Q_n(2.65)
+  i.e., CV = C^2 _1V + C_2V + ... C_nV(2.66)
+  C = C_1 + C_2 + ... C_n(2.67)
+
+--- page 29 --------------------------------------------------
+  (a)In the given network, C_1, C_2 and C_3 are connected in series. The
+  C_1C_2C_3
+  (1)/(C′) =++
+  For C_1 = C_2 = C_3 = 10 mF, C¢ = (10/3) mF. The network has C¢ and C_4
+  C = C¢ + C_4 =
+  +10mF =13.3mF
+  (b)Clearly, from the figure, the charge on each of the capacitors, C_1,
+  C_2 and C_3 is the same, say Q. Let the charge on C_4 be Q¢. Now, since
+  the potential difference across AB is Q/C_1, across BC is Q/C_2, across
+  CD is Q/C_3 , we have
+  C_1C_2C_3
+  Also, Q¢/C_4 = 500 V.
+  Q=500V×µF=1.7×10^−^3C and
+  Q′=500V×10µF=5.0×10^−^3C
+
+--- page 30 --------------------------------------------------
+  δW=V′δQ′=δQ′(2.68)
+  δ’ (Q′)/(2) ^2^Q
+  = (Q)/(2C) ^2
+  ^QQ
+  _0CC
+  We can write the final result, in different ways^0
+  W= (Q)/(2C) ^2=CV^2=QV(2.69)
+  1Q^2
+  = ((Aσ)×)/(2) ^2
+  (d)/(εA) _0
+  E= (σ)/(ε) _0(2.71)
+  1/2ε_0E^2×A d(2.72)
+  U = ()
+
+--- page 31 --------------------------------------------------
+  u =(1/2)e_0E^2(2.73)
+  Q = CV = 900 × 10 F × 100 V = 9 × 10^–8 C
+  = (1/2) CV^2 = (1/2) _–8QV
+  = (1/2) × 9 × 10C × 100 V = 4.5 × 10^–6 J
+
+--- page 32 --------------------------------------------------
+  =2×Q'V'=QV=2.25×10^−^6J
+  V(r)= (Q)/(r)
+  πε_o
+  V(r)= (p.rˆ)/(r^2)
+  4πε_o
+  4.For a charge configuration q_1, q_2, ..., q_n with position vectors r_1,
+  r_2, ... r_n, the potential at a point P is given by the superposition principle
+  q_1q_2q_n
+  πε_0r_1Pr_2Pr_n_P
+  where r_1P is the distance between q_1 and P, as and so on.
+
+--- page 33 --------------------------------------------------
+  energy of two charges q_1, q_2 at r_1, r_2 is given by
+  U= (q_1q_2)/(r) _12
+  πε_0
+  where r_12 is distance between q_1 and q_2.
+  E=nˆ where nˆ is the unit vector along the outward normal to the
+  ε_0
+  capacitance is defined by C = Q/V, where Q and –Q are the charges on the
+  1 F = 1 C V^–1. For a parallel plate capacitor (with vacuum between the
+  C = ε_0 (A)/(d)
+  C_0 when there is no medium (vacuum),
+  C = KC_0
+  (1)/(C) =+++...
+  C_1C_2C_3
+  C = C_1 + C_2 + C_3 + ...
+  where C_1, C_2, C_3... are individual capacitances.
+
+--- page 34 --------------------------------------------------
+  Q^2
+  ==^2=
+  electric field is (1/2)e_0E^2.
+  Potential or V[M^1 L^2 T^–3 A^–1]VPotential difference is
+  CapacitanceC[M^–1 L^–2 T^–4 A^2]F
+  shell. It is zero inside and ε_0nˆ outside. Electric potential is, however
+  continuous across the surface, equal to q/4pe_0R at the surface.
+
+--- page 35 --------------------------------------------------
+  capacitance of 8 pF (1pF = 10 F). What will be the capacitance if
+  has an area of 6 × 10^–3 m^2 and the distance between the plates is 3 mm.
+
+--- page 36 --------------------------------------------------
+  2.8, a 3 mm thick mica sheet (of dielectric constant = 6) were inserted

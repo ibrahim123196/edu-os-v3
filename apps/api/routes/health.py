@@ -25,6 +25,7 @@ def health(db: Session = Depends(get_db)):
     database = "ok"
     documents_ready = 0
     chunks_indexed = 0
+    platform_documents = 0
     try:
         db.execute(text("SELECT 1"))
         documents_ready = db.scalar(
@@ -33,6 +34,14 @@ def health(db: Session = Depends(get_db)):
             .where(Document.status == IngestStatus.ready)
         )
         chunks_indexed = db.scalar(select(func.count()).select_from(DocumentChunk))
+        platform_documents = db.scalar(
+            select(func.count())
+            .select_from(Document)
+            .where(
+                Document.status == IngestStatus.ready,
+                Document.source_kind == "platform",
+            )
+        )
     except Exception as exc:
         database = f"error: {exc}"
 
@@ -53,4 +62,5 @@ def health(db: Session = Depends(get_db)):
         llm_ready=llm_ready,
         documents_ready=documents_ready or 0,
         chunks_indexed=chunks_indexed or 0,
+        platform_documents=platform_documents or 0,
     )

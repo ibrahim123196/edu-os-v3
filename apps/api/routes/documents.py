@@ -19,6 +19,8 @@ from fastapi import (
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ai.ingestion import PIPELINE_VERSION
+from apps.api.curriculum import SourceKind
 from ai.ingestion.extract import SUPPORTED_SUFFIXES
 from apps.api.config import settings
 from apps.api.db import get_db
@@ -83,9 +85,15 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="That file is empty.")
 
     checksum = compute_checksum(destination)
+    # Same file AND same pipeline. Matching on the checksum alone meant that
+    # after a pipeline change, re-uploading a file returned the stale record
+    # and skipped processing -- the document showed "ready" while its new
+    # fields sat empty.
     duplicate = db.scalar(
         select(Document).where(
-            Document.checksum == checksum, Document.status == IngestStatus.ready
+            Document.checksum == checksum,
+            Document.status == IngestStatus.ready,
+            Document.pipeline_version == PIPELINE_VERSION,
         )
     )
     if duplicate is not None:
@@ -113,8 +121,21 @@ async def upload_document(
 
 
 @router.get("", response_model=list[DocumentOut])
-def list_documents(db: Session = Depends(get_db)):
-    return db.scalars(select(Document).order_by(Document.created_at.desc())).all()
+def list_documents(
+    include_platform: bool = False, db: Session = Depends(get_db)
+):
+    """The student's own uploads.
+
+    Platform content -- the NCERT chapters loaded once for everybody -- is
+    excluded. It is background knowledge the assistant draws on, not a file
+    the student manages, and listing it beside their own uploads invited
+    them to delete the shared corpus. `include_platform` exists for
+    administrative tooling.
+    """
+    query = select(Document).order_by(Document.created_at.desc())
+    if not include_platform:
+        query = query.where(Document.source_kind == SourceKind.student_upload.value)
+    return db.scalars(query).all()
 
 
 @router.get("/{document_id}", response_model=DocumentOut)
@@ -152,6 +173,13 @@ def delete_document(document_id: uuid.UUID, db: Session = Depends(get_db)):
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="No such document.")
+    if document.source_kind == SourceKind.platform.value:
+        # Shared across every student; removing it is a corpus operation,
+        # not something one person's Remove button should do.
+        raise HTTPException(
+            status_code=403,
+            detail="Built-in course material cannot be removed.",
+        )
 
     Path(document.storage_path).unlink(missing_ok=True)
     db.delete(document)  # chunks cascade

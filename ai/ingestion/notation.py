@@ -49,6 +49,9 @@ _LATEX = re.compile(r"\\(?:frac|sqrt|sum|int|cdot|times|alpha|beta|gamma|delta|p
 # Division written inline: v = d/t, mol/L, m/s^2
 _INLINE_FRACTION = re.compile(r"\b[A-Za-z0-9]{1,6}\s*/\s*[A-Za-z0-9]{1,6}\b")
 
+# Fractions rebuilt from page geometry: (|q _1 q _2 |)/(r ^2)
+_REBUILT_FRACTION = re.compile(r"\([^()]{1,80}\)\s*/\s*\([^()]{1,80}\)")
+
 _MATH_SYMBOLS = set("∝≈≠≤≥≡∫∑∏√±∓×÷°∞∂∇⟨⟩ħ")
 _GREEK = set("ΔΘΛΞΠΣΦΨΩαβγδεζηθικλμνξπρστυφχψω")
 _SUPERSCRIPT = set("⁰¹²³⁴⁵⁶⁷⁸⁹⁻ⁿ")
@@ -89,6 +92,8 @@ def _line_signals(line: str) -> set[str]:
         found.add("reaction")
     if _LATEX.search(line):
         found.add("latex")
+    if _REBUILT_FRACTION.search(line):
+        found.add("equation")
     if _CHEMICAL.search(line):
         found.add("chemical")
     if _ASCII_POWER.search(line) or any(c in _SUPERSCRIPT or c in _SUBSCRIPT for c in line):

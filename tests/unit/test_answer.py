@@ -107,7 +107,8 @@ def test_page_range_spanning_two_pages_is_labelled_as_a_range():
 
 def test_context_numbers_sources_and_labels_pages():
     context = format_context(CHUNKS)
-    assert "[S1] Biology notes — Page 12" in context
+    assert "[S1] Biology notes" in context
+    assert "Page 12" in context
     assert "[S3]" in context
 
 

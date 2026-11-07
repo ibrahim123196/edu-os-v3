@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from sqlalchemy.orm import Session
 
@@ -32,11 +32,16 @@ from ai.prompts.grounded_answer import (
     SYSTEM_PROMPT,
     build_messages,
 )
-from ai.retrieval.hybrid import RetrievalFilters, hybrid_search
+from ai.retrieval.hybrid import (
+    RetrievalFilters,
+    hybrid_search,
+    reciprocal_rank_fusion,
+)
 from ai.retrieval.intent import detect as detect_intent
 from ai.retrieval.query import prepare_query
 from ai.retrieval.rerank import get_reranker
 from apps.api.config import settings
+from apps.api.curriculum import SourceKind
 
 log = logging.getLogger(__name__)
 
@@ -85,19 +90,57 @@ def ask(
         "intent_signals": list(intent.signals),
     }
 
-    # --- 2. Retrieval ------------------------------------------------------
+    # --- 2. Retrieval -----------------------------------------------------
+    #
+    # The student's own notes come first. They are what their teacher set
+    # and what the exam will follow -- a school's material may use different
+    # notation or stress different cases than the textbook. The built-in
+    # chapters exist for what those notes do not cover, so they are a
+    # fallback rather than a competitor.
+    #
+    # Two stages, not one ranking with a thumb on the scale. Searching both
+    # pools together and boosting the student's material still lets a
+    # confident textbook passage beat a merely good one from their own
+    # notes, which is the wrong answer to "explain what my teacher taught".
     t0 = time.perf_counter()
     embedding = get_embedding_provider().embed_query(prepared.semantic)
-    candidates = hybrid_search(
+
+    own = hybrid_search(
         db,
         query=prepared.lexical,
         query_embedding=embedding,
-        filters=filters,
+        filters=replace(filters, source_kinds=[SourceKind.student_upload.value]),
         wants_notation=intent.wants_notation,
     )
+
+    # Is the student's own material good enough on its own? Cosine
+    # similarity is used rather than the fused or reranked score because it
+    # is absolute: fusion and reranking are both relative to the candidate
+    # set, so a pool of uniformly poor matches still produces a confident
+    # looking top result.
+    best_own = max((c.vector_score or 0.0 for c in own), default=0.0)
+    sufficient = bool(own) and best_own >= settings.own_material_threshold
+
+    candidates = own
+    used_fallback = False
+    if not sufficient:
+        used_fallback = True
+        platform = hybrid_search(
+            db,
+            query=prepared.lexical,
+            query_embedding=embedding,
+            filters=replace(filters, source_kinds=[SourceKind.platform.value]),
+            wants_notation=intent.wants_notation,
+        )
+        candidates = reciprocal_rank_fusion([own, platform], k=settings.rrf_k)
+
     trace["stages"]["retrieval"] = {
         "ms": round((time.perf_counter() - t0) * 1000, 1),
         "candidates": len(candidates),
+        "own_material": len(own),
+        "best_own_similarity": round(best_own, 4),
+        "own_material_sufficient": sufficient,
+        "used_builtin_fallback": used_fallback,
         "vector_hits": sum(1 for c in candidates if c.vector_rank),
         "keyword_hits": sum(1 for c in candidates if c.keyword_rank),
         "both": sum(1 for c in candidates if c.vector_rank and c.keyword_rank),
@@ -140,6 +183,7 @@ def ask(
                 "vector_rank": c.vector_rank,
                 "keyword_rank": c.keyword_rank,
                 "notation": round(c.notation_score, 3),
+                "source": c.source_kind,
             }
             for c in top
         ],

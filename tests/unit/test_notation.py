@@ -163,3 +163,28 @@ def test_notation_boost_does_not_override_topic():
         "formula for coulomb force", [newton, coulomb], 2, wants_notation=True
     )
     assert ranked[0] is coulomb
+
+
+def test_notation_bonus_cannot_outweigh_a_compressed_relevance_signal():
+    """Cross-encoder scores arrive clustered: one real query produced six
+    survivors between 0.951 and 0.995. A fixed bonus of up to 0.6 against a
+    0.04 spread meant any equation beat any prose, and a geometry worked
+    example won a question about Coulomb's law. Relevance must still lead."""
+    import math
+
+    # (raw logit, notation score)
+    on_topic_with_formula = (7.6, 0.83)
+    off_topic_formula_dense = (5.0, 1.0)
+
+    squashed = [1 / (1 + math.exp(-l)) for l, _ in
+                (on_topic_with_formula, off_topic_formula_dense)]
+    low, high = min(squashed), max(squashed)
+    span = high - low
+
+    def score(value, notation):
+        relevance = (value - low) / span if span > 1e-9 else 1.0
+        return 0.75 * relevance + 0.25 * notation
+
+    assert score(squashed[0], on_topic_with_formula[1]) > score(
+        squashed[1], off_topic_formula_dense[1]
+    )

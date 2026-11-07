@@ -35,6 +35,8 @@ class CitationOut(BaseModel):
     page_label: str
     section: str | None = None
     snippet: str
+    source_kind: str = "student_upload"
+    publisher: str | None = None
 
 
 class AskRequest(BaseModel):
@@ -76,3 +78,4 @@ class HealthResponse(BaseModel):
     llm_ready: bool
     documents_ready: int
     chunks_indexed: int
+    platform_documents: int = 0

@@ -231,6 +231,18 @@
   }
   .source.active { border-left-color: var(--verified); background: var(--verified-wash); }
   .source-head { font-size: 13px; font-weight: 600; }
+  /* Tells the student at a glance when an answer leaned on the textbook
+     rather than the notes their teacher gave them. */
+  .origin {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    margin-left: 6px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    white-space: nowrap;
+  }
   .source-where { color: var(--muted); font-weight: 400; }
   .source-text {
     font-family: var(--serif);
@@ -270,6 +282,18 @@
   .corrected b { color: var(--ink); font-weight: 600; }
 
   .scope { margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+
+  /* Course material loaded for every student. Stated, not listed: it is
+     background knowledge the assistant draws on, not files to manage. */
+  .builtin {
+    border-top: 1px solid var(--line);
+    margin-top: 14px;
+    padding-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .builtin strong { color: var(--ink); font-weight: 600; }
   .scope select { margin-top: 4px; }
 </style>
 </head>
@@ -316,6 +340,7 @@
       <h2>Your material</h2>
       <p class="hint" id="docsHint">Nothing uploaded yet.</p>
       <ul class="docs" id="docList"></ul>
+      <div class="builtin" id="builtin" hidden></div>
     </section>
   </div>
 
@@ -328,7 +353,7 @@
       <div class="scope">
         Search in
         <select id="scopeSelect">
-          <option value="">everything I have uploaded</option>
+          <option value="">my material and the built-in chapters</option>
         </select>
       </div>
 
@@ -390,9 +415,18 @@ async function loadHealth() {
     const h = await api('/health');
     const model = h.llm_ready ? h.llm_model : `${h.llm_provider} (not configured)`;
     $('statusLine').innerHTML =
-      `<strong>${h.chunks_indexed}</strong> passages indexed from ` +
-      `<strong>${h.documents_ready}</strong> documents · embeddings ` +
-      `${escapeHtml(h.embedding_model)} · answers by ${escapeHtml(model)}`;
+      `<strong>${h.chunks_indexed}</strong> passages searchable · ` +
+      `answers by ${escapeHtml(model)}`;
+
+    const builtin = $('builtin');
+    if (h.platform_documents > 0) {
+      builtin.hidden = false;
+      builtin.innerHTML =
+        `<strong>${h.platform_documents} NCERT chapters</strong> are built in ` +
+        `and always searched alongside anything you upload.`;
+    } else {
+      builtin.hidden = true;
+    }
   } catch (err) {
     $('statusLine').textContent = 'The API is not responding. Is it running on port 8000?';
   }
@@ -458,7 +492,7 @@ function renderDocuments() {
 function renderScope() {
   const select = $('scopeSelect');
   const previous = select.value;
-  select.innerHTML = '<option value="">everything I have uploaded</option>';
+  select.innerHTML = '<option value="">my material and the built-in chapters</option>';
   for (const doc of documents.filter((d) => d.status === 'ready')) {
     const opt = document.createElement('option');
     opt.value = doc.id;
@@ -560,9 +594,11 @@ function renderAnswer(data) {
       const div = document.createElement('div');
       div.className = 'source';
       div.id = `src-${c.marker}`;
+      const origin = c.source_kind === 'platform'
+        ? `<span class="origin">course textbook</span>` : '';
       div.innerHTML = `
         <div class="source-head">
-          ${c.marker.replace('S', '')}. ${escapeHtml(c.document_title)}
+          ${c.marker.replace('S', '')}. ${escapeHtml(c.document_title)}${origin}
           ${where ? `<span class="source-where"> — ${escapeHtml(where)}</span>` : ''}
         </div>
         <div class="source-text">${escapeHtml(c.snippet)}</div>`;

@@ -36,6 +36,11 @@ class RetrievedChunk:
     section: str | None
     chunk_index: int
     notation_score: float = 0.0
+    # "student_upload" or "platform". A student's own notes are what their
+    # teacher set and what they will be examined on, so they lead; the
+    # built-in chapters are there for what the notes do not cover.
+    source_kind: str = "student_upload"
+    publisher: str | None = None
 
     vector_rank: int | None = None
     notation_rank: int | None = None
@@ -61,11 +66,13 @@ class RetrievedChunk:
 
 @dataclass
 class RetrievalFilters:
-    """Curriculum routing. Empty means search everything the student owns."""
+    """Curriculum routing. Empty means search everything available."""
 
     document_ids: list[uuid.UUID] = field(default_factory=list)
     subject: str | None = None
     grade: str | None = None
+    # Which pools to search. None means both.
+    source_kinds: list[str] | None = None
 
 
 def _filter_sql(
@@ -84,6 +91,9 @@ def _filter_sql(
     if filters.grade:
         clauses.append("c.grade = :grade")
         params["grade"] = filters.grade
+    if filters.source_kinds is not None:
+        clauses.append("d.source_kind = ANY(:source_kinds)")
+        params["source_kinds"] = filters.source_kinds
     return " AND ".join(clauses)
 
 
@@ -105,6 +115,7 @@ def vector_search(
         f"""
         SELECT c.id, c.document_id, d.title, c.content, c.page_start, c.page_end,
                c.section, c.chunk_index, c.notation_score,
+               d.source_kind, d.publisher,
                1 - (c.embedding <=> CAST(:qvec AS vector)) AS similarity
         FROM document_chunks c
         JOIN documents d ON d.id = c.document_id
@@ -119,7 +130,8 @@ def vector_search(
             chunk_id=r[0], document_id=r[1], document_title=r[2], content=r[3],
             page_start=r[4], page_end=r[5], section=r[6], chunk_index=r[7],
             notation_score=float(r[8] or 0.0),
-            vector_rank=i + 1, vector_score=float(r[9]),
+            source_kind=r[9] or "student_upload", publisher=r[10],
+            vector_rank=i + 1, vector_score=float(r[11]),
         )
         for i, r in enumerate(rows)
     ]
@@ -137,6 +149,7 @@ def keyword_search(
         f"""
         SELECT c.id, c.document_id, d.title, c.content, c.page_start, c.page_end,
                c.section, c.chunk_index, c.notation_score,
+               d.source_kind, d.publisher,
                ts_rank_cd(c.content_tsv, websearch_to_tsquery('english', :q)) AS rank
         FROM document_chunks c
         JOIN documents d ON d.id = c.document_id
@@ -152,7 +165,8 @@ def keyword_search(
             chunk_id=r[0], document_id=r[1], document_title=r[2], content=r[3],
             page_start=r[4], page_end=r[5], section=r[6], chunk_index=r[7],
             notation_score=float(r[8] or 0.0),
-            keyword_rank=i + 1, keyword_score=float(r[9]),
+            source_kind=r[9] or "student_upload", publisher=r[10],
+            keyword_rank=i + 1, keyword_score=float(r[11]),
         )
         for i, r in enumerate(rows)
     ]

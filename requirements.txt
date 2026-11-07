@@ -12,6 +12,9 @@ pgvector>=0.2.5
 
 # --- Ingestion ---------------------------------------------------------
 pypdf>=4.2
+# Better reading-order reconstruction on textbook layouts.
+# Falls back to pypdf automatically if unavailable.
+pymupdf>=1.24
 
 # --- Embeddings --------------------------------------------------------
 # Local ONNX models: no API key, no torch. Drop this if you set

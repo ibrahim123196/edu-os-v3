@@ -1,0 +1,311 @@
+# Formula review — leph103.pdf
+#
+# Check each line against the PDF page named beside it.
+# For anything wrong, add an entry to content/corrections/leph103.json:
+#   {"page": 7, "find": "<paste the wrong text>", "replace": "<what it should say>", "note": "why"}
+#
+
+--- page 1 --------------------------------------------------
+  interval t, then, is q = q_+– q_–. This is proportional to t for steady current
+
+--- page 2 --------------------------------------------------
+  I=(3.1)
+  _∆→lim_t_0
+
+--- page 3 --------------------------------------------------
+  or, V = R I(3.3)
+  relation R = rl/A for
+
+--- page 4 --------------------------------------------------
+  of the combination R_C is [from Eq. (3.3)],
+  R_C==R(3.4)
+  since V/I = R, the resistance of either of the slabs. Thus,
+  of the half-slabs R_1 is
+  R_1===R(3.6)
+  R∝ (1)/(A) (3.7)
+  current density_2 and is denoted by j. The SI units of the current density
+
+--- page 5 --------------------------------------------------
+  E l = j rl
+  or, E = jr(3.11)
+  E = jr(3.12)
+  or, j = sE(3.13)
+  the velocity of the i^th electron (i = 1, 2, 3, ... N) at a given time is v_i, then
+  ∑^N
+  v_i=
+  N_i=_1
+  a= (–eE)/(m) (3.15)
+  Consider again the i^th electron at a given time t. This
+  before t, and let t_i be the time elapsed after its last
+  collision. If v_iwas its velocity immediately after the last
+  collision, then its velocity V_i at time t is
+  V_i=v_i+ (−eE)/(m) t_i(3.16)
+  time interval t_i. The average velocity of the electrons at
+  time t is the average of all the V_i’s. The average of v_i’s is
+
+--- page 6 --------------------------------------------------
+  time more than t and some less than t. In other words, the time t_i in
+  through the values of i = 1, 2 ..... N. The average value of t_i then is t
+  N-electrons at any given time t gives us for the average velocity v_d
+  _v_d≡(_V_i)average=(_v_i)average_−(_t_i)average
+  velocity v_d in Eq. (3.17) is called the drift velocity.
+  area and length v_d.
+  |v_d|Dt would have crossed the area. If n is the number
+  there are nDt |v_d|A such electrons. Since each
+  A to the right in time Dt is –ne A|v_d|Dt. E is directed towards the left and
+  I∆=t+n e Av_d∆t(3.18)
+  Substituting the value of |v_d| from Eq. (3.17)
+  e^2A
+  ne^2
+  ne^2
+
+--- page 7 --------------------------------------------------
+  ne^2
+  electrons in a copper wire of cross-sectional area 1.0 × 10^–7 m^2 carrying
+  one conduction electron. The density of copper is 9.0 × 10^3 kg/m^3,
+  of increasing potential. The drift speed v_dis given by Eq. (3.18)
+  v_d = (I/neA)
+  Now, e = 1.6 × 10^–19 C, A = 1.0 × 10^–7m^2, I = 1.5 A. The density of
+  reasonable from its valence electron count of one). A cubic metre_3
+  of copper has a mass of 9.0 × 10 kg. Since 6.0 × 10^23 copper
+  n= (6.0×10×)/(63.5) ^239.0×10^6
+  = 8.5 × 10^28 m^–3
+  v_d= (1.5)/(8.5×10^28×1.6×10^–19×1.0×10^–7)
+  = 1.1 × 10^–3 m s_–1 = 1.1 mm s
+  mass M is obtained from [<(1/2) Mv^2 > = (3/2) k_BT ] and is thus
+  typically of the order of kBT/M, where kBis the Boltzmann_2
+  an electromagnetic wave, namely equal to 3.0 × 10^8 m s^–1
+
+--- page 8 --------------------------------------------------
+  ~10^29 m^–3.
+  µ (=|v_d|)/(E)
+  The SI unit of mobility is m_2^2/Vs and is 10^4 of the mobility in practical
+  v_d =
+
+--- page 9 --------------------------------------------------
+  v_deτ
+
+--- page 10 --------------------------------------------------
+  r_T = r_0 [1 + a (T–T_0)](3.26)
+  where r_T is the resistivity at a temperature T and r_0 is the same at a
+  reference temperature T_0. a is called the temperature co-efficient of
+  The relation of Eq. (3.26) implies that a graph of r_T plotted against T
+  of T around any reference temperature T_0, where the graph can be
+  r_T of nichrome as a
+  Resistivity r_T of
+
+--- page 11 --------------------------------------------------
+  ρ== (m)/(ne^2τ) (3.27)
+  effects can be ignored and the temperature T_1 of the element is the
+  resistance R_2 at the steady temperature T_2 is
+  R_2 (=_230V)/(_2.68A) =_85.8Ω
+  R_2 = R_1 [1 + a (T_–4_2 – T_–1_1)]
+  with a = 1.70 × 10 °C, we get
+  T_2 – T_1=
+  that is, T_2 = (820 + 27.0) °C = 847 °C
+
+--- page 12 --------------------------------------------------
+  Solution R_0= 5 W, R_100= 5.23 W and R_t= 5.795 W
+  Now,t= (R_t−R_0×)/(R−R) _100_0R_t=R_0+αt
+  = (5.795−5×)/(5.23−5) 100
+  (0.795×)/(=0.23) 100 = 345.65 °C
+  and the potential difference across AB is V = V(A) – V(B) > 0.
+  In a time interval Dt, an amount of charge DQ = I Dt travels from A to
+  similarly at B, it is Q V(B). Thus, change in its potential energy DU_pot is
+  DU = Final potential energy – Initial potential energy
+  = ^potDQ[(V (B) – V (A)] = –DQV
+  DK = –DU_pot(3.29)
+  DK = I VDt > 0(3.30)
+  DW = I VDt(3.31)
+  P = DW/Dt and we have,
+  P = I V(3.32)
+
+--- page 13 --------------------------------------------------
+  Using Ohm’s law V = IR, we get
+  P = I ^2R = V ^2/R(3.33)
+  having a resistance R_c to be dissipated by it finally. If V is the voltage
+  P = V I(3.34)
+  resistance R_c. The power dissipated in the connecting wires, which is
+  wasted is P_c with
+  P_c = I^2R_c
+  = (PR_c)/(V^2) ^2(3.35)
+  connecting wires is inversely proportional to V ^2. The transmission cables
+  from power stations are hundreds of miles long and their resistance R_c is
+  considerable. To reduce P_c, these wires carry current at enormous values
+
+--- page 14 --------------------------------------------------
+  between P and N is V_+ – (–V_–) = V_+ + V_– . This difference is called the
+  e = V_++V_–> 0(3.36)
+  situation when R is infinite so that I = V/R = 0, where V is the
+  V = Potential difference between P and A
+  V = V_++ V_– – Ir
+  V = I R(3.39)
+
+--- page 15 --------------------------------------------------
+  I R = e – I r
+  Or, I=(3.40)
+  The maximum current that can be drawn from a cell is for R = 0
+  and it is I_max = e/r. However, in most cells the maximum allowed current
+  FIGUREFIGUREFIGURE 3.13FIGUREFIGURE 3.13 3.13 3.13 Two cells of emf’s 3.13e_1 and e_2 in the series. r_1, r_2 are their
+  can be considered as one cell of emf e_eq and an internal resistance r_eq.
+  e_1, e_2 are the emf’s of the two cells and r_1, r_2 their internal resistances,
+  V_AB≡V(A)–V(B)=ε_1–I r_1
+  V_BC≡V(B)–V(C)=ε_2–I r_2
+  V_AC≡V(A)–V(C)=V(A)–V(B)+V(B)–V(C)
+  =(_ε_1_+_ε_2)^– _I(_r_1_+_r_2)(3.43)
+  C of emf e_eq and internal resistance r_eq, we would have
+  V_AC = e_eq– I r_eq(3.44)
+  e_eq = e_1 + e_2(3.45)
+  and r_eq = r_1 + r_2(3.46)
+
+--- page 16 --------------------------------------------------
+  Eq. (3.42) would change to V_BC = –e_2–Ir_2 and we will get
+  e_eq = e_1 – e_2 (e_1 > e_2)(3.47)
+  for e_eq with a negative sign, as in Eq. (3.47).
+  I_1 and I_2 are the currents leaving the positive electrodes of the
+  cells. At the point B_1, I_1 and I_2 flow in whereas the current I flows
+  I = I_1 + I_2(3.48)
+  Let V (B_1) and V (B_2) be the potentials at B_1 and B_2, respectively.
+  terminals is V (B_1) – V (B_2). Hence, from Eq. (3.38)
+  V≡V(B_1)_–V(B_2)=_ε_1_–I_1_r1(3.49)
+  e_eq and internal resistances
+  r_eq whose values are given in
+  Points B_1 and B_2 are connected exactly similarly to the second
+  V≡V(B_1)_–V(B_2)=_ε_2_–I_2r2(3.50)
+  I=I_1+I_2
+  (=ε_1–V+)/(r) _1 (ε_2–V=)/(r) _2–
+  ε_1ε_2
+  r_1r_2r_1r_2
+  V= (ε_1r_2+ε_2r_1)/(r+r–) _1_2I (r r_1_2)/(r+r) _1_2(3.52)
+  If we want to replace the combination by a single cell, between B_1 and
+  B_2, of emf e_eq and internal resistance r_eq, we would have
+  V = e_eq– Ir_eq(3.53)
+  ε_eq= (ε_1r_2+ε_2r_1)/(r+r) _1_2(3.54)
+  r r_1_2
+  r_eq=(3.55)
+  r_1+r_2
+
+--- page 17 --------------------------------------------------
+  r_eqr_1r_2
+  ε_eqε_1ε_2
+  r_eqr_1r_2
+  currents I_1, I_2 flow out of positive terminals. If the negative
+  e _2® –e_2
+  If there are n cells of emf e_1, . . . e_nand of internal
+  resistances r_1,... r_n respectively, connected in parallel, the
+  combination is equivalent to a single cell of emf e_eq and
+  internal resistance r_eq, such that
+  r_eqr_1r_n
+  ε_eqε_n
+  = (ε_1)/(r) _1+...+
+  r_eqr_n
+  the cell. This will tell us the potential difference, V = V (P) – V (N) = e – Ir
+  V = e + Ir(3.60)
+
+--- page 18 --------------------------------------------------
+  leaving is I_1 + I_2 and current entering is I_3.
+  The junction rule says I_3 = I_1 + I_2. At point
+  h current entering is I_1. There is only one
+  that will also be I_1. For the loops ‘ahdcba’
+  and ‘ahdefga’, the loop rules give –30I_1 –
+  41 I_3 + 45 = 0 and –30I_1 + 21 I_2 – 80 = 0.
+
+--- page 19 --------------------------------------------------
+  –IR – (1/2)IR – IR + e= 0
+  The equivalent resistance R_eq of the network is
+  R_eq= (ε)/(3I) =R
+  For R = 1 W, R_eq = (5/6) W and for e = 10 V, the total current (= 3I) in
+  3I = 10 V/(5/6) W = 12 A, i.e., I = 4 A
+
+--- page 20 --------------------------------------------------
+  We then have three unknowns I_1, I_2 and I_3 which can be found by
+  10 – 4(I_1– I_2) + 2(I_2 + I_3 – I_1) – I_1 = 0[3.61(a)]
+  that is, 7I_1– 6I_2 – 2I_3 = 10
+  10 – 4I_2– 2 (I_2 + I_3) – I_1 = 0
+  that is, I_1 + 6I_2 + 2I_3 =10[3.61(b)]
+  5 – 2 (I_2 + I_3) – 2 (I_2 + I_3 – I_1) = 0
+  that is, 2I_1 – 4I_2 – 4I_3 = –5[3.61(c)]
+  I_1 = 2.5A, I_2 =
+  A, I_3 = A
+  four resistors R_1, R_2, R_3 and R_4. Across one pair of diagonally opposite
+  current I_g through G. Of special interest, is the case of a balanced bridge
+  where the resistors are such that I_g = 0. We can easily get the balance
+
+--- page 21 --------------------------------------------------
+  immediately gives us the relations I_1 = I_3 and I_2 = I_4. Next, we apply
+  –I_1R_1 + 0 + I_2R_2 = 0 (I_g = 0) (3.62)
+  and the second loop gives, upon using I_3 = I_1, I_4 = I_2
+  I_2R_4 + 0 – I_1R_3 = 0 (3.63)
+  I_1R_2
+  I_2R_1
+  I_1R_4
+  I_2R_3
+  (R_2)/(R) _1= (R_4)/(R) _3[3.64(a)]
+  have an unknown resistance, which we insert in the fourth arm; R_4 is
+  thus not known. Keeping known resistances R_1 and R_2 in the first and
+  second arm of the bridge, we go on varying R_3 till the galvanometer shows
+  condition the value of the unknown resistance R_4 is given by,
+  R_4=R_3 (R_2)/(R) _1[3.64(b)]
+  AB = 100W, BC = 10W, CD = 5W, and DA = 60W.
+
+--- page 22 --------------------------------------------------
+  100I_1 + 15I_g – 60I_2 = 0
+  or 20I_1 + 3I_g – 12I_2= 0[3.65(a)]
+  10 (I_1 – I_g) – 15I_g – 5 (I_2 + I_g) = 0
+  10I_1 – 30I_g –5I_2 = 0
+  2I_1 – 6I_g – I_2 = 0[3.65(b)]
+  60I_2 + 5 (I_2 + I_g) = 10
+  65I_2 + 5I_g = 10
+  13I_2 + I_g = 2[3.65(c)]
+  20I_1 – 60I_g – 10I_2 = 0[3.65(d)]
+  63I_g – 2I_2 = 0
+  I_2 = 31.5I_g[3.65(e)]
+  Substituting the value of I_2 into Eq. [3.65(c)], we get
+  13 (31.5I_g) + I_g = 2
+  410.5 I_g = 2
+  I_g = 4.87 mA.
+  proportional to the voltage V across its ends, i.e., VµI or V = RI,
+  is ohm: 1W = 1 V A^–1.
+
+--- page 23 --------------------------------------------------
+  have low resistivity, in the range of 10^–8_24W m to 10^–6W m. Insulators
+  Semiconductors like Si and Ge lie roughly in the middle range of^22
+  j = nq v_d
+  carriers each of charge q, and v_d is the drift velocity of the charge
+  the area is nev_d A.
+  8.Using E = V/l, I = nev_d A, and Ohm’s law, one obtains
+  eEne^2
+  =ρv_d
+  due to the external field E and the drift velocity v_d (not acceleration)
+  v_d = at = eEt/m
+  ne^2τ
+  voltage V_ext across R is given by
+  V_ext = IR = R
+
+--- page 24 --------------------------------------------------
+  13.The Wheatstone bridge is an arrangement of four resistances – R_1, R_2,
+  R_3, R_4 as shown in the text. The null-point condition is given by
+  (R_1)/(R) _2= (R_3)/(R) _4
+  ^2 T^–3 A
+  ^2 T^–3 A
+  ^2 T^–3 A
+  ^–2]WR = V/I
+  ^3 T^–3 A
+  ^–2]WmR =rl/A
+  ^3 A^2]Ss = 1/r
+  (Electric force)/(charge)
+  v_d (eEτ)/(m)
+  Drift speedv_d[L T
+  ^0 T^2 A]m
+  ^2 V^–1s^–1
+  v_d/E
+  I = j.DS
+
+--- page 25 --------------------------------------------------
+  V = IR is a statement of Ohm’s law is not true. This equation defines
+  v_d (Chapter 10, Textbook of Class XI). v_d , thus is only due to applied
+
+--- page 26 --------------------------------------------------
+  and uniform cross-section 6.0 × 10^–7 m^2, and its resistance is
+  estimated in Example 3.1 is 8.5 × 10^28 m^–3. How long does an electron
+  area of cross-section of the wire is 2.0 × 10^–6 m^2 and it is carrying a

@@ -1,0 +1,36 @@
+{
+  "document": "leph101",
+  "source": "leph101.pdf",
+  "corrections": [
+    {
+      "page": 6,
+      "find": "e = 1.6 × 10_13 C",
+      "replace": "e = 1.6 × 10^–19 C",
+      "note": "exponent -19 attached to the wrong number; 13 came from a marginal note"
+    },
+    {
+      "page": 6,
+      "find": "the charge given out in one second is 1.6 × 10^9 × 10^9 C_9 = 1.6 × 10^–10 C.",
+      "replace": "the charge given out in one second is 1.6 × 10^–19 × 10^9 C = 1.6 × 10^–10 C.",
+      "note": "first exponent should be -19, stray _9 from the sidebar"
+    },
+    {
+      "page": 6,
+      "find": "to be 1 C ÷ (1.6 × 10^–10 C/s)_9 = 6.25 × 10^9 s = 6.25 × 10÷ (365 × 24 ×_24",
+      "replace": "to be 1 C ÷ (1.6 × 10^–10 C/s) = 6.25 × 10^9 s = 6.25 × 10^9 ÷ (365 × 24 ×",
+      "note": "stray subscripts from the EXAMPLE sidebar"
+    },
+    {
+      "page": 6,
+      "find": "(250/18) × 6.02 × 10× 10 × 1.6 × 10^–19 C= 1.34 × 10^7 C.",
+      "replace": "(250/18) × 6.02 × 10^23 × 10 × 1.6 × 10^–19 C = 1.34 × 10^7 C.",
+      "note": "exponent 23 lost"
+    },
+    {
+      "page": 6,
+      "find": "1.5 COULOMB’S^23 LAW",
+      "replace": "1.5 COULOMB’S LAW",
+      "note": "page number 23 absorbed into the heading"
+    }
+  ]
+}

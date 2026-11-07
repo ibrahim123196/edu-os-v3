@@ -34,6 +34,12 @@ class Citation:
     page_label: str
     section: str | None
     snippet: str
+    # Whether this came from the student's own upload or the built-in
+    # chapters. Shown to the student, because an answer drawn from the
+    # textbook when their teacher's notes say something different is
+    # exactly the case they need to notice.
+    source_kind: str = "student_upload"
+    publisher: str | None = None
 
 
 @dataclass
@@ -121,6 +127,8 @@ def build_answer(raw: str, chunks: list[RetrievedChunk]) -> GroundedAnswer:
                 page_label=chunk.page_label,
                 section=chunk.section,
                 snippet=_snippet(chunk.content),
+                source_kind=chunk.source_kind,
+                publisher=chunk.publisher,
             )
         )
 

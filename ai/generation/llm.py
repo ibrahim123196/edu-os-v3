@@ -28,6 +28,11 @@ class LLMError(Exception):
 class LLMClient(ABC):
     model: str
 
+    # Whether this client can usefully rewrite a search query. The offline
+    # stand-in cannot: it has no idea what was asked, so its "rewrite" would
+    # become the text that gets searched for.
+    supports_query_rewriting: bool = True
+
     @abstractmethod
     def complete(
         self,
@@ -94,6 +99,7 @@ class EchoClient(LLMClient):
     """Offline stand-in. Produces a citation-shaped answer from the sources."""
 
     model = "echo"
+    supports_query_rewriting = False
 
     def complete(self, system, messages, max_tokens=None, temperature=None) -> str:
         content = messages[-1]["content"]

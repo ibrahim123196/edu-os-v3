@@ -58,12 +58,34 @@ class Document(Base):
     byte_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     checksum: Mapped[str | None] = mapped_column(String(64), index=True)
 
-    # Flat curriculum metadata -> becomes FKs to the curriculum graph later.
+    # Flat curriculum metadata, kept for student uploads that are not mapped
+    # into the graph. Platform documents use chapter_id instead.
     subject: Mapped[str | None] = mapped_column(String(120), index=True)
     grade: Mapped[str | None] = mapped_column(String(40), index=True)
 
+    # Curriculum link. Null for an unmapped student upload.
+    chapter_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chapters.id", ondelete="SET NULL"), index=True
+    )
+
+    # Provenance. "platform" documents are searchable by every student;
+    # "student_upload" documents only by their owner. Licence travels with
+    # the document so a citation can say what it is quoting and under what
+    # terms, which the README treats as both a legal and a technical need.
+    source_kind: Mapped[str] = mapped_column(
+        String(40), default="student_upload", nullable=False, index=True
+    )
+    license: Mapped[str] = mapped_column(String(40), default="unknown", nullable=False)
+    publisher: Mapped[str | None] = mapped_column(String(200))
+    edition: Mapped[str | None] = mapped_column(String(80))
+    source_url: Mapped[str | None] = mapped_column(String(1000))
+
     page_count: Mapped[int] = mapped_column(Integer, default=0)
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Which version of the ingestion pipeline produced this document's
+    # chunks. Lets a re-upload reprocess a file that was indexed by older code.
+    pipeline_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     status: Mapped[IngestStatus] = mapped_column(
         Enum(IngestStatus, name="ingest_status"),
