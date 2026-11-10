@@ -42,8 +42,13 @@ class _Block:
 
 
 # A heading: short, no terminal punctuation, often numbered.
+# The space after the section number is optional. Small-capitals headings
+# often arrive with none at all -- "3.8TEMPERATURE DEPENDENCE OF
+# RESISTIVITY" -- and requiring one silently cost six sections their
+# curriculum tags while coverage still read 100%, because their passages
+# were quietly attributed to the section above.
 _HEADING = re.compile(
-    r"^(?:\d+(?:\.\d+)*\.?\s+)?[A-Z][^.!?]{2,80}$"
+    r"^(?:\d+(?:\.\d+)*\.?\s*)?[A-Z][^.!?]{2,80}$"
 )
 
 # A real section heading carries the textbook's own number: "2.2
@@ -51,7 +56,7 @@ _HEADING = re.compile(
 # headings too, and on one page "COUNT ALESSANDRO VOLTA (1745-1827)"
 # displaced the section heading sitting right beside it -- which left four
 # pages of a chapter with nothing to tag them against.
-_NUMBERED_HEADING = re.compile(r"^\d+\.\d+(?:\.\d+)?\s+\S")
+_NUMBERED_HEADING = re.compile(r"^\d+\.\d+(?:\.\d+)?(?=\s|[A-Z])")
 
 
 def _is_numbered_heading(text: str) -> bool:
@@ -67,6 +72,29 @@ def _looks_like_heading(text: str) -> bool:
     return bool(_HEADING.match(text.strip()))
 
 
+# "3.11  3.11  CELLS IN SERIES" -- the number printed twice by an
+# overprinted bold effect that survived span de-duplication.
+_REPEATED_NUMBER = re.compile(r"^(\d+\.\d+(?:\.\d+)?)\s*\1\s*")
+
+
+def _split_leading_heading(para: str) -> list[str]:
+    """Separate a numbered heading from the paragraph that follows it.
+
+    A section heading often shares a paragraph with its opening sentence,
+    or wraps onto a second line ("4.4 MAGNETIC FIELD DUE TO A CURRENT /
+    ELEMENT, BIOT-SAVART LAW"). Heading detection rejects any block holding
+    a newline, so both cases went unrecognised -- and their passages were
+    quietly filed under the previous section, which left six topics in the
+    curriculum graph with no content while coverage still read 100%.
+    """
+    lines = para.split("\n")
+    first = _REPEATED_NUMBER.sub(r"\1 ", lines[0].strip())
+    if len(lines) > 1 and _NUMBERED_HEADING.match(first):
+        rest = "\n".join(lines[1:]).strip()
+        return [first, rest] if rest else [first]
+    return [_REPEATED_NUMBER.sub(r"\1 ", para)]
+
+
 def _blocks_from_pages(pages: list[Page]) -> list[_Block]:
     blocks: list[_Block] = []
     for page in pages:
@@ -74,7 +102,11 @@ def _blocks_from_pages(pages: list[Page]) -> list[_Block]:
             para = para.strip()
             if not para:
                 continue
-            blocks.append(_Block(text=para, page=page.number, words=len(para.split())))
+            for piece in _split_leading_heading(para):
+                if piece:
+                    blocks.append(
+                        _Block(text=piece, page=page.number, words=len(piece.split()))
+                    )
     return blocks
 
 
@@ -209,7 +241,19 @@ def chunk_pages(
             if has_new_content and current_words >= min_words:
                 flush()
                 current, current_words = [], 0
-            pending_heading = block.text
+
+            if pending_heading and _is_numbered_heading(pending_heading) and not (
+                _is_numbered_heading(block.text)
+            ):
+                # A heading that wraps onto a second line: "4.4 MAGNETIC
+                # FIELD DUE TO A CURRENT" / "ELEMENT, BIOT-SAVART LAW". The
+                # continuation looks like a heading in its own right, and
+                # replacing the numbered first line with it meant the
+                # section number was lost -- so those passages stayed filed
+                # under the previous section and the topic got no content.
+                pending_heading = f"{pending_heading} {block.text}"
+            else:
+                pending_heading = block.text
 
         if pending_heading and not _looks_like_heading(block.text):
             # A numbered heading always wins and holds until the next one.

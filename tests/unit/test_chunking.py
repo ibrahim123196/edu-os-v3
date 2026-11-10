@@ -89,3 +89,47 @@ def test_clean_text_rejoins_hyphenated_line_breaks():
 
 def test_clean_text_preserves_paragraph_breaks():
     assert clean_text("One.\n\n\n\nTwo.") == "One.\n\nTwo."
+
+
+# --- section headings ----------------------------------------------------
+
+def test_a_heading_with_no_space_after_the_number_is_recognised():
+    """Small-capitals headings often arrive with none: "3.8TEMPERATURE
+    DEPENDENCE OF RESISTIVITY". Requiring a space cost six sections their
+    curriculum tags while coverage still read 100%, because their passages
+    were quietly filed under the section above."""
+    from ai.ingestion.chunking import _is_numbered_heading, _looks_like_heading
+
+    assert _looks_like_heading("3.8TEMPERATURE DEPENDENCE OF RESISTIVITY")
+    assert _is_numbered_heading("3.8TEMPERATURE DEPENDENCE OF RESISTIVITY")
+
+
+def test_a_repeated_section_number_is_collapsed():
+    """An overprinted bold effect can survive span de-duplication and leave
+    "3.11  3.11  CELLS IN SERIES"."""
+    pages = [Page(1, "3.11  3.11  CELLS IN SERIES\n\n" + PROSE * 3)]
+    chunks = chunk_pages(pages, target_words=200, overlap_words=20)
+    assert chunks[0].section.startswith("3.11 CELLS")
+
+
+def test_a_heading_wrapping_onto_a_second_line_keeps_its_number():
+    """"4.4 MAGNETIC FIELD DUE TO A CURRENT" / "ELEMENT, BIOT-SAVART LAW".
+    The continuation looks like a heading itself, and replacing the numbered
+    first line with it lost the section number entirely."""
+    pages = [
+        Page(1, "4.4 MAGNETIC FIELD DUE TO A CURRENT\nELEMENT, BIOT-SAVART LAW\n\n"
+                + PROSE * 3)
+    ]
+    chunks = chunk_pages(pages, target_words=200, overlap_words=20)
+    assert chunks[0].section.startswith("4.4")
+
+
+def test_a_numbered_heading_is_not_displaced_by_a_margin_note():
+    """Biographies and figure captions look like headings and sit beside the
+    section they interrupt."""
+    pages = [
+        Page(1, "2.2 ELECTROSTATIC POTENTIAL\n\n" + PROSE * 2
+                + "\n\nCOUNT ALESSANDRO VOLTA\n\n" + PROSE * 2)
+    ]
+    chunks = chunk_pages(pages, target_words=400, overlap_words=20)
+    assert all(c.section.startswith("2.2") for c in chunks)

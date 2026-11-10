@@ -42,8 +42,15 @@ def compute_checksum(path: Path) -> str:
     return digest.hexdigest()
 
 
-def ingest_document(document_id) -> None:
-    """Extract, chunk, embed and store. Safe to re-run: chunks are replaced."""
+def ingest_document(document_id, rebuild_vocab: bool = True) -> None:
+    """Extract, chunk, embed and store. Safe to re-run: chunks are replaced.
+
+    `rebuild_vocab` exists for bulk loading. The spelling vocabulary is
+    rebuilt by scanning every chunk in the database, so doing it after each
+    document makes a bulk import quadratic: loading 150 chapters would
+    rescan the whole corpus 150 times. A batch importer passes False and
+    rebuilds once at the end.
+    """
     with session_scope() as db:
         doc = db.get(Document, document_id)
         if doc is None:
@@ -138,7 +145,8 @@ def ingest_document(document_id) -> None:
             db.flush()
 
             # New passages mean new words the student might misspell.
-            rebuild_vocabulary(db)
+            if rebuild_vocab:
+                rebuild_vocabulary(db)
 
             # Link passages to curriculum concepts. Only platform content
             # is mapped to a chapter; a student's own upload has no place

@@ -91,3 +91,22 @@ def test_corrections_load_from_json(tmp_path):
 def test_malformed_json_is_ignored_rather_than_crashing_ingestion(tmp_path):
     (tmp_path / "ch1.json").write_text("{ not json", encoding="utf-8")
     assert load_corrections("ch1", directory=tmp_path) == []
+
+
+# --- bulk loading --------------------------------------------------------
+
+def test_bulk_ingest_rebuilds_the_vocabulary_once():
+    """The spelling vocabulary is built by scanning every chunk in the
+    database. Rebuilding it after each document makes a bulk import
+    quadratic -- loading 150 chapters would rescan the whole corpus 150
+    times."""
+    import inspect
+
+    from apps.api.services.ingestion_service import ingest_document
+    from scripts import ingest_ncert
+
+    assert "rebuild_vocab" in inspect.signature(ingest_document).parameters
+
+    source = inspect.getsource(ingest_ncert.main)
+    assert "rebuild_vocab=False" in source
+    assert "rebuild_vocabulary" in source

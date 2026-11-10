@@ -57,8 +57,28 @@ class CorrectionResult:
         return ", ".join(parts)
 
 
+def candidate_keys(document_key: str) -> list[str]:
+    """Keys to try, stripping stacked extensions.
+
+    Windows hides known extensions by default, so renaming a download to
+    "leph101.pdf" in Explorer produces "leph101.pdf.pdf" on disk. The
+    document is then stored under the stem "leph101.pdf", which matches no
+    correction file -- and the corrections sit there doing nothing, with the
+    formulas they fix still wrong in the index.
+    """
+    keys = [document_key]
+    while "." in keys[-1]:
+        keys.append(keys[-1].rsplit(".", 1)[0])
+    return keys
+
+
 def corrections_path(document_key: str, directory: Path | None = None) -> Path:
-    return (directory or CORRECTIONS_DIR) / f"{document_key}.json"
+    base = directory or CORRECTIONS_DIR
+    for key in candidate_keys(document_key):
+        candidate = base / f"{key}.json"
+        if candidate.exists():
+            return candidate
+    return base / f"{document_key}.json"
 
 
 def load_corrections(document_key: str, directory: Path | None = None) -> list[Correction]:

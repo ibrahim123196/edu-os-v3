@@ -27,8 +27,11 @@ from dataclasses import dataclass
 
 log = logging.getLogger(__name__)
 
-# "1.5", "3.14", "2.11.1"
-SECTION_NUMBER = re.compile(r"^(\d+\.\d+(?:\.\d+)?)\b")
+# "1.5", "3.14", "2.11.1" -- and "4.4MAGNETIC FIELD", where the PDF leaves
+# no space between the number and the title. A word boundary does not help
+# there: "4" and "M" are both word characters, so there is no boundary
+# between them.
+SECTION_NUMBER = re.compile(r"^(\d+\.\d+(?:\.\d+)?)(?=\s|[A-Z]|$)")
 
 CONFIDENCE_OWN_HEADING = 1.0
 CONFIDENCE_INHERITED = 0.8
