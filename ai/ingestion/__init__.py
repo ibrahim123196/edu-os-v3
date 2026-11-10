@@ -10,4 +10,4 @@ the old record -- the file looked ingested, the UI said "ready", and the new
 fields stayed empty with no error anywhere.
 """
 
-PIPELINE_VERSION = 11
+PIPELINE_VERSION = 12

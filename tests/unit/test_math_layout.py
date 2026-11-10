@@ -191,3 +191,37 @@ def test_a_script_far_from_any_full_size_text_is_left_alone():
     page.insert_text((72, 100), "A sentence of ordinary prose here", fontsize=11)
     page.insert_text((460, 100), "xyz", fontsize=7)
     assert "^xyz" not in page_text_with_math(page)
+
+
+def test_overprinted_bold_text_is_not_duplicated():
+    """Textbooks fake bold by drawing the same text several times a fraction
+    of a point apart. Concatenating the copies turned "2.1 INTRODUCTION"
+    into a 90-character run that failed every heading check, which cost four
+    pages of a chapter their curriculum tags."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    for offset in (0.0, 0.2, 0.4, 0.6, 0.8):
+        page.insert_text((72 + offset, 100), "2.1  INTRODUCTION", fontsize=11)
+    text = page_text_with_math(page).strip()
+    assert text == "2.1  INTRODUCTION"
+
+
+def test_genuinely_repeated_text_further_apart_is_kept():
+    """Two identical values in a table are not an overprint."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_text((72, 100), "5.0", fontsize=11)
+    page.insert_text((200, 100), "5.0", fontsize=11)
+    assert page_text_with_math(page).count("5.0") == 2
+
+
+def test_paragraph_breaks_survive_extraction():
+    """The chunker splits on blank lines, and section headings are detected
+    from them. Joining every line with a single newline left a whole page as
+    one paragraph and section detection fell to zero."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_text((72, 100), "First paragraph line one.", fontsize=11)
+    page.insert_text((72, 114), "Still the first paragraph.", fontsize=11)
+    page.insert_text((72, 160), "A new paragraph after a gap.", fontsize=11)
+    assert "\n\n" in page_text_with_math(page)

@@ -79,6 +79,14 @@ MAX_SCRIPT_CHARS = 4
 # "B ^. _d ^l _= _µ _0 I".
 NEVER_SCRIPT = set("=.,;:\u00b7\u2219\u00d7\u00f7\u00b1\u2213\u2192\u2190\u2194\u222b\u222e\u2211\u220f\u221a\u2248\u2260\u2264\u2265\u2261\u221d/\\|()[]{}'\u2032\u2033")
 
+# How close two identical spans must be to count as the same text drawn
+# twice for a bold effect rather than a genuine repetition.
+OVERPRINT_TOLERANCE = 2.0
+
+# How much further apart two lines must sit than the page's usual leading
+# before the second starts a new paragraph.
+PARAGRAPH_GAP_RATIO = 1.35
+
 # How far a script may sit from the character it attaches to. Beyond this
 # the nearest full-size span is unrelated prose on the same line, and its
 # size says nothing about whether the small span is raised or dropped.
@@ -252,7 +260,24 @@ def join_spans(spans: list[Span]) -> str:
     recover it either, because the gap between those spans is genuinely zero.
     """
     ordered = sorted(spans, key=lambda s: s.x0)
-    return "".join(s.text for s in ordered).strip()
+
+    # Drop overprinted duplicates. Textbooks fake bold by drawing the same
+    # text several times a fraction of a point apart, and concatenating the
+    # copies turned "2.1 INTRODUCTION" into
+    # "2.1  I2.1  I2.1  I2.1  I2.1  INTRODUCTIONNTRODUCTION..." -- long
+    # enough to fail every heading check, which cost four pages of a chapter
+    # their curriculum tags.
+    kept: list[Span] = []
+    for span in ordered:
+        text = span.text.strip()
+        if text and any(
+            other.text.strip() == text and abs(other.x0 - span.x0) <= OVERPRINT_TOLERANCE
+            for other in kept
+        ):
+            continue
+        kept.append(span)
+
+    return "".join(s.text for s in kept).strip()
 
 
 def _join(spans: list[Span]) -> str:
@@ -475,12 +500,38 @@ def page_text_with_math(page) -> str:
     remaining = [s for s in spans if not s.consumed] + fractions
     lines = _group_into_lines(remaining)
 
+    ordered = sorted(lines, key=lambda l: (min(s.block for s in l.spans), l.cy))
+
+    # Restore paragraph breaks from vertical spacing.
+    #
+    # Joining every line with a single newline silently destroyed them, and
+    # the chunker splits on blank lines -- so a whole page arrived as one
+    # paragraph. Section headings stopped being detected entirely (zero out
+    # of 107 chunks in one chapter), which in turn left nothing to hang
+    # curriculum tagging on.
+    #
+    # A new paragraph or a heading sits further from the line above it than
+    # ordinary leading does, so the median gap on the page is the yardstick.
+    gaps = [
+        later.cy - earlier.cy
+        for earlier, later in zip(ordered, ordered[1:])
+        if later.spans[0].block == earlier.spans[0].block
+        and 0 < later.cy - earlier.cy < 100
+    ]
+    typical = sorted(gaps)[len(gaps) // 2] if gaps else 0.0
+
     out: list[str] = []
-    # Block order first: it follows the columns, so the left column is read
-    # all the way down before the right one begins.
-    for line in sorted(lines, key=lambda l: (min(s.block for s in l.spans), l.cy)):
+    previous: Line | None = None
+    for line in ordered:
         text = join_spans(line.spans)
-        if text:
-            out.append(text)
+        if not text:
+            continue
+        if previous is not None and typical > 0:
+            same_block = line.spans[0].block == previous.spans[0].block
+            gap = line.cy - previous.cy
+            if not same_block or gap > typical * PARAGRAPH_GAP_RATIO:
+                out.append("")
+        out.append(text)
+        previous = line
 
     return "\n".join(out)

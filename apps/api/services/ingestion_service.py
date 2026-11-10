@@ -25,6 +25,7 @@ from ai.ingestion.boilerplate import strip_boilerplate
 from ai.ingestion.corrections import apply_corrections, load_corrections
 from ai.ingestion.extract import EmptyDocument, UnsupportedFileType, extract
 from ai.ingestion.notation import notation_score
+from ai.ingestion.tagging import tag_chunks
 from ai.retrieval.spelling import rebuild_vocabulary
 from apps.api.config import settings
 from apps.api.db import session_scope
@@ -54,6 +55,7 @@ def ingest_document(document_id) -> None:
         path = Path(doc.storage_path)
         subject, grade = doc.subject, doc.grade
         doc_filename = doc.filename
+        chapter_id = doc.chapter_id
 
     try:
         pages = extract(path)
@@ -138,6 +140,13 @@ def ingest_document(document_id) -> None:
             # New passages mean new words the student might misspell.
             rebuild_vocabulary(db)
 
+            # Link passages to curriculum concepts. Only platform content
+            # is mapped to a chapter; a student's own upload has no place
+            # in the graph until someone says where it belongs.
+            if chapter_id is not None:
+                tagged = _link_concepts(db, document_id, chapter_id, chunks)
+                log.info("Tagged %d passage-concept links", tagged)
+
         log.info("Ingested %s: %d pages, %d chunks", document_id, len(pages), len(chunks))
 
     except (UnsupportedFileType, EmptyDocument) as exc:
@@ -153,3 +162,58 @@ def _fail(document_id, message: str) -> None:
         if doc is not None:
             doc.status = IngestStatus.failed
             doc.error = message[:2000]
+
+
+def _link_concepts(db, document_id, chapter_id, chunks) -> int:
+    """Attach each passage to the concepts its section covers."""
+    from sqlalchemy import delete as sql_delete
+    from sqlalchemy import select
+
+    from apps.api.curriculum import Topic, chunk_concepts
+
+    topics = db.scalars(select(Topic).where(Topic.chapter_id == chapter_id)).all()
+    if not topics:
+        log.warning("Chapter %s has no topics; nothing to tag against", chapter_id)
+        return 0
+
+    by_number = {topic.number: topic for topic in topics}
+    tags = tag_chunks([c.section for c in chunks], set(by_number))
+    if not tags:
+        return 0
+
+    stored = db.scalars(
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == document_id)
+        .order_by(DocumentChunk.chunk_index)
+    ).all()
+    by_index = {chunk.chunk_index: chunk for chunk in stored}
+
+    db.execute(
+        sql_delete(chunk_concepts).where(
+            chunk_concepts.c.chunk_id.in_([c.id for c in stored])
+        )
+    )
+
+    rows = []
+    seen: set[tuple] = set()
+    for tag in tags:
+        chunk = by_index.get(tag.chunk_index)
+        topic = by_number.get(tag.topic_number)
+        if chunk is None or topic is None:
+            continue
+        for concept in topic.concepts:
+            key = (chunk.id, concept.id)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    "chunk_id": chunk.id,
+                    "concept_id": concept.id,
+                    "confidence": tag.confidence,
+                }
+            )
+
+    if rows:
+        db.execute(chunk_concepts.insert(), rows)
+    return len(rows)

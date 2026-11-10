@@ -46,6 +46,17 @@ _HEADING = re.compile(
     r"^(?:\d+(?:\.\d+)*\.?\s+)?[A-Z][^.!?]{2,80}$"
 )
 
+# A real section heading carries the textbook's own number: "2.2
+# ELECTROSTATIC POTENTIAL". Margin biographies and figure captions look like
+# headings too, and on one page "COUNT ALESSANDRO VOLTA (1745-1827)"
+# displaced the section heading sitting right beside it -- which left four
+# pages of a chapter with nothing to tag them against.
+_NUMBERED_HEADING = re.compile(r"^\d+\.\d+(?:\.\d+)?\s+\S")
+
+
+def _is_numbered_heading(text: str) -> bool:
+    return bool(_NUMBERED_HEADING.match(text.strip()))
+
 
 def _looks_like_heading(text: str) -> bool:
     if len(text) > 90 or "\n" in text:
@@ -201,7 +212,14 @@ def chunk_pages(
             pending_heading = block.text
 
         if pending_heading and not _looks_like_heading(block.text):
-            current_heading = pending_heading
+            # A numbered heading always wins and holds until the next one.
+            # An unnumbered candidate only applies while no numbered heading
+            # has been seen, so a margin note cannot displace the section it
+            # happens to sit next to.
+            if _is_numbered_heading(pending_heading) or not (
+                current_heading and _is_numbered_heading(current_heading)
+            ):
+                current_heading = pending_heading
             pending_heading = None
 
         # Close the current chunk first if this block would overshoot it.

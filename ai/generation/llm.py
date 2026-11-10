@@ -110,10 +110,16 @@ class EchoClient(LLMClient):
 
         question = content.split("Student's question:")[-1].split("\n")[0].strip()
         first = content.split("[S1]", 1)[1].split("\n", 1)[-1]
-        excerpt = " ".join(first.split()[:60])
+        # The whole top passage, cut only where the next source begins.
+        # A short excerpt made it look as though answers were being
+        # truncated by the system, when nothing here writes an answer at
+        # all -- this provider exists to prove retrieval works without an
+        # API key, and seeing the full retrieved passage is the point.
+        excerpt = first.split("[S2]")[0].strip()
         return (
-            f"(echo provider — no LLM configured) Based on your material, "
-            f"regarding {question!r}: {excerpt} [S1]"
+            f"(echo provider — no model configured, so this is the top "
+            f"retrieved passage verbatim rather than an answer)\n\n"
+            f"Question: {question}\n\n{excerpt} [S1]"
         )
 
 
