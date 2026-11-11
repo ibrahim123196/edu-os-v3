@@ -73,14 +73,24 @@ def _hit(chunk, case: Case) -> bool:
 
 
 def evaluate(dataset: Path, k: int = 5) -> dict:
+    """Score retrieval against a dataset of questions with known answers.
+
+    Abstention is measured by similarity, not by whether anything came back.
+    Vector search always returns its top k, however poor the matches, so
+    "did it return nothing" is never true and would score 0% forever. What
+    actually decides abstention upstream is how well the best passage
+    matches, which is absolute and comparable across questions -- so that is
+    what is reported here, for both kinds of case, and the gap between the
+    two distributions is where the threshold belongs.
+    """
     cases = load_dataset(dataset)
     provider = get_embedding_provider()
     reranker = get_reranker()
 
     recalls: list[float] = []
     reciprocal_ranks: list[float] = []
-    abstain_correct = 0
-    abstain_total = 0
+    answerable_best: list[float] = []
+    abstain_best: list[float] = []
     rows = []
 
     with session_scope() as db:
@@ -92,35 +102,49 @@ def evaluate(dataset: Path, k: int = 5) -> dict:
                 query_embedding=embedding,
                 filters=RetrievalFilters(),
             )
+            best = max((c.vector_score or 0.0 for c in candidates), default=0.0)
             top = reranker.rerank(case.question, candidates, k)
 
             if case.expect_abstain:
-                abstain_total += 1
-                # Correct behaviour is retrieving nothing convincing.
-                got_nothing = not top
-                abstain_correct += int(got_nothing)
-                rows.append((case.question, "abstain", "ok" if got_nothing else "leaked"))
+                abstain_best.append(best)
+                rows.append((case.question, "abstain", f"best {best:.3f}"))
                 continue
 
+            answerable_best.append(best)
             hits = [i for i, c in enumerate(top, start=1) if _hit(c, case)]
             recalls.append(1.0 if hits else 0.0)
             reciprocal_ranks.append(1.0 / hits[0] if hits else 0.0)
             rows.append(
                 (
                     case.question,
-                    f"rank {hits[0]}" if hits else "miss",
-                    top[0].page_label if top else "-",
+                    f"rank {hits[0]}" if hits else "MISS",
+                    f"{top[0].page_label if top else '-'}  best {best:.3f}",
                 )
             )
+
+    threshold = settings.own_material_threshold
+    correct_abstentions = sum(1 for b in abstain_best if b < threshold)
+    false_abstentions = sum(1 for b in answerable_best if b < threshold)
+
+    def mean(values: list[float]) -> float | None:
+        return round(statistics.fmean(values), 3) if values else None
 
     return {
         "cases": len(cases),
         "k": k,
-        f"recall@{k}": round(statistics.fmean(recalls), 3) if recalls else None,
-        "mrr": round(statistics.fmean(reciprocal_ranks), 3) if reciprocal_ranks else None,
-        "abstention_accuracy": (
-            round(abstain_correct / abstain_total, 3) if abstain_total else None
-        ),
+        f"recall@{k}": mean(recalls),
+        "mrr": mean(reciprocal_ranks),
+        "similarity": {
+            "answerable_mean": mean(answerable_best),
+            "answerable_min": round(min(answerable_best), 3) if answerable_best else None,
+            "unanswerable_mean": mean(abstain_best),
+            "unanswerable_max": round(max(abstain_best), 3) if abstain_best else None,
+        },
+        "at_threshold": {
+            "threshold": threshold,
+            "correctly_abstained": f"{correct_abstentions}/{len(abstain_best)}",
+            "wrongly_abstained": f"{false_abstentions}/{len(answerable_best)}",
+        },
         "config": {
             "embedding_model": settings.embedding_model,
             "reranker": type(reranker).__name__,
@@ -147,7 +171,12 @@ def main() -> int:
     print(json.dumps(report, indent=2))
     print("\nPer case:")
     for question, outcome, detail in rows:
-        print(f"  {outcome:<10} {detail:<14} {question[:60]}")
+        print(f"  {outcome:<10} {detail:<22} {question[:56]}")
+    print(
+        "\nA good threshold sits between unanswerable_max and "
+        "answerable_min. If they overlap, similarity alone cannot separate "
+        "them and the abstention decision needs another signal."
+    )
     return 0
 
 

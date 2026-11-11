@@ -1,0 +1,82 @@
+# Retrieval evaluation — NCERT Physics Class 12, Part I, chapters 1–4.
+#
+# Each line is one case. `expect_pages` lists the pages where the answer
+# actually lives; a hit means retrieval surfaced a passage from one of them.
+# `expect_abstain` marks questions the corpus genuinely cannot answer.
+#
+# CHECK THESE BEFORE TRUSTING THE SCORE. The page numbers were derived from
+# where each section begins, which is right for "what is X" questions and can
+# be a page out for anything buried mid-section. Open the PDF, fix what is
+# wrong, and add your own.
+#
+# Roughly a quarter are abstention cases on purpose. A retriever that never
+# abstains scores beautifully on recall and is useless in a classroom.
+#
+#   python -m ai.evaluation.retrieval_eval ai/evaluation/datasets/ncert_physics_12.jsonl
+
+# --- Chapter 1: Electric Charges and Fields ------------------------------
+{"question": "what is the formula for coulomb force", "expect_document": "Chapter 1", "expect_pages": [6, 7, 8]}
+{"question": "define electric charge", "expect_document": "Chapter 1", "expect_pages": [1, 2]}
+{"question": "what is quantisation of charge", "expect_document": "Chapter 1", "expect_pages": [4, 5]}
+{"question": "difference between conductors and insulators", "expect_document": "Chapter 1", "expect_pages": [3, 4]}
+{"question": "state the superposition principle for forces between charges", "expect_document": "Chapter 1", "expect_pages": [11, 12]}
+{"question": "what is an electric field", "expect_document": "Chapter 1", "expect_pages": [14, 15]}
+{"question": "what are electric field lines", "expect_document": "Chapter 1", "expect_pages": [19, 20]}
+{"question": "define electric flux", "expect_document": "Chapter 1", "expect_pages": [21, 22]}
+{"question": "what is an electric dipole and dipole moment", "expect_document": "Chapter 1", "expect_pages": [23, 24]}
+{"question": "torque on a dipole in a uniform electric field", "expect_document": "Chapter 1", "expect_pages": [27, 28]}
+{"question": "state gauss law", "expect_document": "Chapter 1", "expect_pages": [29, 30]}
+{"question": "electric field due to an infinitely long charged wire", "expect_document": "Chapter 1", "expect_pages": [32, 33, 34]}
+
+# --- Chapter 2: Electrostatic Potential and Capacitance ------------------
+{"question": "define electrostatic potential", "expect_document": "Chapter 2", "expect_pages": [3, 4]}
+{"question": "potential due to a point charge formula", "expect_document": "Chapter 2", "expect_pages": [4, 5]}
+{"question": "what is an equipotential surface", "expect_document": "Chapter 2", "expect_pages": [9, 10]}
+{"question": "potential energy of a system of two charges", "expect_document": "Chapter 2", "expect_pages": [11, 12]}
+{"question": "why is the electric field zero inside a conductor", "expect_document": "Chapter 2", "expect_pages": [17, 18]}
+{"question": "what is dielectric polarisation", "expect_document": "Chapter 2", "expect_pages": [21, 22]}
+{"question": "define capacitance", "expect_document": "Chapter 2", "expect_pages": [23, 24]}
+{"question": "capacitance of a parallel plate capacitor", "expect_document": "Chapter 2", "expect_pages": [24, 25]}
+{"question": "capacitors in series and parallel", "expect_document": "Chapter 2", "expect_pages": [27, 28]}
+{"question": "energy stored in a capacitor formula", "expect_document": "Chapter 2", "expect_pages": [29, 30]}
+
+# --- Chapter 3: Current Electricity --------------------------------------
+{"question": "define electric current", "expect_document": "Chapter 3", "expect_pages": [1, 2]}
+{"question": "state ohms law", "expect_document": "Chapter 3", "expect_pages": [3, 4]}
+{"question": "what is drift velocity", "expect_document": "Chapter 3", "expect_pages": [5, 6]}
+{"question": "what is mobility of a charge carrier", "expect_document": "Chapter 3", "expect_pages": [8, 9]}
+{"question": "limitations of ohms law", "expect_document": "Chapter 3", "expect_pages": [9, 10]}
+{"question": "how does resistivity vary with temperature", "expect_document": "Chapter 3", "expect_pages": [10, 11]}
+{"question": "formula for electrical power dissipated in a resistor", "expect_document": "Chapter 3", "expect_pages": [12, 13]}
+{"question": "what is internal resistance of a cell", "expect_document": "Chapter 3", "expect_pages": [13, 14]}
+{"question": "cells connected in series and parallel", "expect_document": "Chapter 3", "expect_pages": [15, 16]}
+{"question": "state kirchhoffs junction and loop rules", "expect_document": "Chapter 3", "expect_pages": [17, 18]}
+{"question": "balance condition of a wheatstone bridge", "expect_document": "Chapter 3", "expect_pages": [20, 21]}
+
+# --- Chapter 4: Moving Charges and Magnetism -----------------------------
+{"question": "what is the lorentz force", "expect_document": "Chapter 4", "expect_pages": [2, 3]}
+{"question": "motion of a charged particle in a magnetic field", "expect_document": "Chapter 4", "expect_pages": [5, 6]}
+{"question": "state the biot savart law", "expect_document": "Chapter 4", "expect_pages": [7, 8]}
+{"question": "magnetic field on the axis of a circular current loop", "expect_document": "Chapter 4", "expect_pages": [9, 10]}
+{"question": "state amperes circuital law", "expect_document": "Chapter 4", "expect_pages": [11, 12]}
+{"question": "magnetic field inside a solenoid", "expect_document": "Chapter 4", "expect_pages": [15, 16]}
+{"question": "force between two parallel current carrying wires", "expect_document": "Chapter 4", "expect_pages": [16, 17]}
+{"question": "torque on a current carrying loop in a magnetic field", "expect_document": "Chapter 4", "expect_pages": [18, 19]}
+{"question": "how does a moving coil galvanometer work", "expect_document": "Chapter 4", "expect_pages": [23, 24]}
+
+# --- Must abstain: not in the corpus -------------------------------------
+# Other subjects
+{"question": "what is the structure of benzene", "expect_abstain": true}
+{"question": "explain the process of photosynthesis", "expect_abstain": true}
+{"question": "what are the laws of mendelian inheritance", "expect_abstain": true}
+# Physics, but other chapters or classes
+{"question": "state faradays law of electromagnetic induction", "expect_abstain": true}
+{"question": "what is the photoelectric effect", "expect_abstain": true}
+{"question": "explain youngs double slit experiment", "expect_abstain": true}
+{"question": "what is the de broglie wavelength", "expect_abstain": true}
+{"question": "how does a pn junction diode work", "expect_abstain": true}
+{"question": "what is nuclear binding energy", "expect_abstain": true}
+# Not curriculum at all
+{"question": "who won the 2011 cricket world cup", "expect_abstain": true}
+{"question": "what is the capital of australia", "expect_abstain": true}
+{"question": "how do i apply for a passport", "expect_abstain": true}
