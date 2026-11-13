@@ -197,7 +197,25 @@
     font-size: 16.5px;
     line-height: 1.72;
     max-width: 68ch;
-    white-space: pre-wrap;
+  }
+  .answer-body p { margin: 0 0 0.9em; }
+  .answer-body h3 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    margin: 1.3em 0 0.5em;
+  }
+  .answer-body ul { margin: 0 0 0.9em; padding-left: 1.3em; }
+  .answer-body li { margin-bottom: 0.3em; }
+  .answer-body strong { font-weight: 600; }
+  /* Formulas sit on their own line, set in a face where the symbols are
+     distinguishable from prose. */
+  .answer-body .formula {
+    display: block;
+    font-family: "Cambria Math", Cambria, Georgia, serif;
+    font-size: 17px;
+    margin: 0.7em 0;
+    padding-left: 0.3em;
   }
 
   /* The one loud element on the page. A citation is the product's whole
@@ -577,12 +595,7 @@ function renderAnswer(data) {
     corrected.hidden = true;
   }
 
-  // Turn [S1] markers into buttons that reveal the passage they point at.
-  const html = escapeHtml(data.answer).replace(
-    /\[S(\d+)\]/g,
-    (_, n) => `<button class="cite" data-cite="S${n}" title="Show source ${n}">${n}</button>`
-  );
-  $('answerBody').innerHTML = html;
+  $('answerBody').innerHTML = renderAnswer_(data.answer);
 
   const wrap = $('sourcesWrap');
   const list = $('sourceList');
@@ -627,6 +640,53 @@ function renderAnswer(data) {
   } else {
     traceWrap.hidden = true;
   }
+}
+
+/* A deliberately small Markdown renderer.
+   The model writes headings, bold and lists, and shown as raw text they are
+   noise -- "**Where:**" and "# Coulomb's Law" in the middle of an answer.
+   Pulling in a Markdown library for four constructs would be heavier than
+   the whole page, and this one escapes first so nothing in the model's
+   output can inject markup. */
+function renderAnswer_(text) {
+  const lines = escapeHtml(text).split('\n');
+  const out = [];
+  let inList = false;
+
+  const closeList = () => { if (inList) { out.push('</ul>'); inList = false; } };
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) { closeList(); continue; }
+
+    // A line that is only a formula gets its own block.
+    const isFormula = /^[A-Za-z\u03b1-\u03c9][\s\S]{0,60}=/.test(line)
+      && line.length < 70 && !/[.!?]$/.test(line);
+
+    if (/^#{1,6}\s/.test(line)) {
+      closeList();
+      out.push('<h3>' + inline_(line.replace(/^#{1,6}\s*/, '')) + '</h3>');
+    } else if (/^[-*]\s/.test(line)) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push('<li>' + inline_(line.replace(/^[-*]\s*/, '')) + '</li>');
+    } else if (isFormula) {
+      closeList();
+      out.push('<span class="formula">' + inline_(line) + '</span>');
+    } else {
+      closeList();
+      out.push('<p>' + inline_(line) + '</p>');
+    }
+  }
+  closeList();
+  return out.join('');
+}
+
+function inline_(text) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[S(\d+)\]/g,
+      (_, n) => `<button class="cite" data-cite="S${n}" title="Show source ${n}">${n}</button>`);
 }
 
 async function ask() {

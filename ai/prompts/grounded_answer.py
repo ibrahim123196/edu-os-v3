@@ -49,6 +49,11 @@ Teaching rules:
 student will see in their exam.
 - Keep it tight. A clear paragraph or a short list beats an essay.
 
+Writing formulas:
+- Write them in plain readable notation, using real symbols: F = kq₁q₂/r², ε₀, ΔQ, 9 × 10⁹ N m² C⁻².
+- Never use LaTeX, and never wrap anything in $ or $$. A student reading a backslash-frac expression learns nothing; it is not how their textbook or their exam paper writes it.
+- The sources store subscripts as q_1 and superscripts as r^2, because that is what survived extraction from the PDF. Convert them to real characters (q₁, r²) rather than passing the underscores through.
+
 Formulas, equations and reactions:
 - If the student asked for a formula, equation, reaction or derivation, lead \
 with it. State it before explaining it.

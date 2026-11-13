@@ -4,6 +4,11 @@
 # actually lives; a hit means retrieval surfaced a passage from one of them.
 # `expect_abstain` marks questions the corpus genuinely cannot answer.
 #
+# Two page ranges were widened after the first run: "define electric charge"
+# is answered both in the introduction and in the summary on p37-38, and the
+# definition of electric field spans p15-16 rather than stopping at p15.
+# Neither was a retrieval failure. Expect more of these as you add cases.
+#
 # CHECK THESE BEFORE TRUSTING THE SCORE. The page numbers were derived from
 # where each section begins, which is right for "what is X" questions and can
 # be a page out for anything buried mid-section. Open the PDF, fix what is
@@ -16,11 +21,11 @@
 
 # --- Chapter 1: Electric Charges and Fields ------------------------------
 {"question": "what is the formula for coulomb force", "expect_document": "Chapter 1", "expect_pages": [6, 7, 8]}
-{"question": "define electric charge", "expect_document": "Chapter 1", "expect_pages": [1, 2]}
+{"question": "define electric charge", "expect_document": "Chapter 1", "expect_pages": [1, 2, 37, 38]}
 {"question": "what is quantisation of charge", "expect_document": "Chapter 1", "expect_pages": [4, 5]}
 {"question": "difference between conductors and insulators", "expect_document": "Chapter 1", "expect_pages": [3, 4]}
 {"question": "state the superposition principle for forces between charges", "expect_document": "Chapter 1", "expect_pages": [11, 12]}
-{"question": "what is an electric field", "expect_document": "Chapter 1", "expect_pages": [14, 15]}
+{"question": "what is an electric field", "expect_document": "Chapter 1", "expect_pages": [14, 15, 16]}
 {"question": "what are electric field lines", "expect_document": "Chapter 1", "expect_pages": [19, 20]}
 {"question": "define electric flux", "expect_document": "Chapter 1", "expect_pages": [21, 22]}
 {"question": "what is an electric dipole and dipole moment", "expect_document": "Chapter 1", "expect_pages": [23, 24]}

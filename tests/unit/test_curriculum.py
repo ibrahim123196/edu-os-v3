@@ -110,3 +110,26 @@ def test_the_four_chapters_are_present(number):
     assert number in CHAPTERS
     name, topics = CHAPTERS[number]
     assert name and len(topics) >= 10
+
+
+def test_every_concept_is_attached_to_at_least_one_topic():
+    """A concept no topic references can never acquire passages, so mastery
+    for it can never move. "Cyclotron" sat like that unnoticed."""
+    used = {
+        slug
+        for _, topics in CHAPTERS.values()
+        for _, _, slugs in topics
+        for slug in slugs
+    }
+    assert sorted(SLUGS - used) == []
+
+
+def test_the_seed_removes_topics_it_no_longer_defines():
+    """Correcting the chapter 3 numbering left "3.14 Wheatstone Bridge"
+    behind as an orphan that no passage could match."""
+    import inspect
+
+    from scripts import seed_curriculum
+
+    source = inspect.getsource(seed_curriculum.seed)
+    assert "db.delete(existing)" in source

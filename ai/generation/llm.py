@@ -12,6 +12,7 @@ network call.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from functools import lru_cache
@@ -53,18 +54,41 @@ class AnthropicClient(LLMClient):
         self._client = anthropic.Anthropic(api_key=api_key)
 
     def complete(self, system, messages, max_tokens=None, temperature=None) -> str:
-        try:
-            resp = self._client.messages.create(
-                model=self.model,
-                system=system,
-                messages=messages,
-                max_tokens=max_tokens or settings.llm_max_tokens,
-                temperature=(
-                    temperature if temperature is not None else settings.llm_temperature
-                ),
-            )
-        except Exception as exc:
-            raise LLMError(f"Anthropic request failed: {exc}") from exc
+        kwargs = {
+            "model": self.model,
+            "system": system,
+            "messages": messages,
+            "max_tokens": max_tokens or settings.llm_max_tokens,
+        }
+
+        # Where temperature belongs has moved between SDK and API versions:
+        # a top-level argument once, absent in others, and rejected inside
+        # output_config by the current one. Guessing produced two different
+        # errors in a row, so it is attempted and dropped if refused.
+        #
+        # Losing it is survivable. Grounding here comes from the prompt and
+        # from citation validation, not from a low sampling temperature.
+        value = temperature if temperature is not None else settings.llm_temperature
+        attempts: list[dict] = []
+        if value is not None and "temperature" in inspect.signature(
+            self._client.messages.create
+        ).parameters:
+            attempts.append({**kwargs, "temperature": value})
+        attempts.append(kwargs)
+
+        last_error: Exception | None = None
+        for attempt in attempts:
+            try:
+                resp = self._client.messages.create(**attempt)
+                break
+            except Exception as exc:
+                last_error = exc
+                if "temperature" in str(exc).lower() and attempt is not attempts[-1]:
+                    log.debug("This provider rejects temperature; retrying without it")
+                    continue
+                raise LLMError(f"Anthropic request failed: {exc}") from exc
+        else:
+            raise LLMError(f"Anthropic request failed: {last_error}") from last_error
 
         return "".join(
             block.text for block in resp.content if getattr(block, "type", "") == "text"

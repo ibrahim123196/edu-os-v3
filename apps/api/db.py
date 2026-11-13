@@ -56,7 +56,7 @@ def init_db() -> None:
     under real data, replace this with Alembic migrations in
     infrastructure/migrations/.
     """
-    from apps.api import curriculum, models  # noqa: F401  (register mappers)
+    from apps.api import curriculum, models, quiz  # noqa: F401  (register mappers)
 
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))

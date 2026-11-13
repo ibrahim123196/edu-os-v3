@@ -110,3 +110,36 @@ def test_bulk_ingest_rebuilds_the_vocabulary_once():
     source = inspect.getsource(ingest_ncert.main)
     assert "rebuild_vocab=False" in source
     assert "rebuild_vocabulary" in source
+
+
+def test_the_bulk_importer_can_actually_call_what_it_imports():
+    """The batching change added a final vocabulary rebuild but not its
+    import, so a bulk load ingested every chapter and then died on the last
+    line -- leaving the vocabulary empty and typo correction silently dead."""
+    from scripts import ingest_ncert
+
+    assert hasattr(ingest_ncert, "rebuild_vocabulary")
+
+
+def test_correction_lookup_survives_a_doubled_extension():
+    """Windows hides known extensions, so renaming a download to
+    "leph101.pdf" in Explorer produces "leph101.pdf.pdf" on disk. The
+    document is stored under the stem "leph101.pdf", which matched no
+    correction file -- and the corrections sat there doing nothing while the
+    formulas they fix stayed wrong in the index."""
+    import json
+
+    from ai.ingestion.corrections import candidate_keys
+
+    assert candidate_keys("leph101.pdf") == ["leph101.pdf", "leph101"]
+    assert candidate_keys("leph101") == ["leph101"]
+
+
+def test_corrections_load_through_a_doubled_extension(tmp_path):
+    import json
+
+    (tmp_path / "ch1.json").write_text(
+        json.dumps({"corrections": [{"find": "a", "replace": "b"}]}),
+        encoding="utf-8",
+    )
+    assert len(load_corrections("ch1.pdf", directory=tmp_path)) == 1

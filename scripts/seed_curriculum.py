@@ -1,33 +1,33 @@
 """Seed the curriculum graph with NCERT Physics Class 12, chapters 1-4.
- 
+
 Concepts are shared: "Coulomb's law" is one node that CBSE, JEE and NEET all
 link to, so a student revising for boards is building mastery the system can
 read when they sit JEE.
- 
+
 Topic numbers and names follow the NCERT contents pages. Prerequisites are
 the ones the textbook's own ordering implies -- you cannot read Gauss's law
 without electric field, and you cannot read electric field without Coulomb's
 law. They are deliberately sparse: a wrong prerequisite edge sends Milestone 4
 chasing the wrong weakness, which is worse than a missing one.
- 
+
 Idempotent -- re-running updates rather than duplicating.
- 
+
     python -m scripts.seed_curriculum
 """
- 
+
 from __future__ import annotations
- 
+
 from sqlalchemy import select
- 
+
 from apps.api.curriculum import Chapter, Concept, Exam, Subject, Topic
 from apps.api.db import init_db, session_scope
- 
+
 EXAMS = [
     ("cbse-12", "CBSE Class 12", "12"),
     ("jee-main", "JEE Main", "11-12"),
     ("neet", "NEET", "11-12"),
 ]
- 
+
 # (slug, display name, prerequisite slugs)
 CONCEPTS = [
     # Chapter 1 — Electric Charges and Fields
@@ -78,7 +78,7 @@ CONCEPTS = [
     ("torque-current-loop", "Torque on a current loop", ["force-between-currents"]),
     ("moving-coil-galvanometer", "Moving coil galvanometer", ["torque-current-loop"]),
 ]
- 
+
 # chapter number -> (name, [(topic number, topic name, [concept slugs])])
 CHAPTERS = {
     1: ("Electric Charges and Fields", [
@@ -148,11 +148,11 @@ CHAPTERS = {
         ("4.10", "The Moving Coil Galvanometer", ["moving-coil-galvanometer"]),
     ]),
 }
- 
- 
+
+
 def seed() -> None:
     init_db()
- 
+
     with session_scope() as db:
         # Exams
         exams: dict[str, Exam] = {}
@@ -162,7 +162,7 @@ def seed() -> None:
                 exam = Exam(code=code, name=name, grade=grade)
                 db.add(exam)
             exams[code] = exam
- 
+
         # Subject
         subject = db.scalar(select(Subject).where(Subject.code == "physics"))
         if subject is None:
@@ -170,7 +170,7 @@ def seed() -> None:
             db.add(subject)
         db.flush()
         subject.exams = list(exams.values())
- 
+
         # Concepts, then prerequisite edges once every node exists
         concepts: dict[str, Concept] = {}
         for slug, name, _ in CONCEPTS:
@@ -180,13 +180,13 @@ def seed() -> None:
                 db.add(concept)
             concepts[slug] = concept
         db.flush()
- 
+
         for slug, _, prerequisite_slugs in CONCEPTS:
             concept = concepts[slug]
             concept.prerequisites = [concepts[p] for p in prerequisite_slugs]
             # Shared: every exam that covers Class 12 physics assesses these.
             concept.exams = list(exams.values())
- 
+
         # Chapters and topics
         for number, (chapter_name, topics) in CHAPTERS.items():
             chapter = db.scalar(
@@ -204,7 +204,7 @@ def seed() -> None:
             else:
                 chapter.name = chapter_name
             db.flush()
- 
+
             # Drop topics this seed no longer defines. Without this, editing
             # the numbering leaves orphans behind that no passage can match
             # and that quietly inflate the topic count.
@@ -214,7 +214,7 @@ def seed() -> None:
                     print(f"  removing stale topic {existing.number} {existing.name}")
                     db.delete(existing)
             db.flush()
- 
+
             for topic_number, topic_name, concept_slugs in topics:
                 topic = db.scalar(
                     select(Topic).where(
@@ -230,14 +230,14 @@ def seed() -> None:
                     topic.name = topic_name
                 db.flush()
                 topic.concepts = [concepts[s] for s in concept_slugs]
- 
+
     with session_scope() as db:
         print(f"exams:     {db.query(Exam).count()}")
         print(f"subjects:  {db.query(Subject).count()}")
         print(f"chapters:  {db.query(Chapter).count()}")
         print(f"topics:    {db.query(Topic).count()}")
         print(f"concepts:  {db.query(Concept).count()}")
- 
- 
+
+
 if __name__ == "__main__":
     seed()
