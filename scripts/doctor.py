@@ -285,6 +285,50 @@ def check_questions(db) -> None:
         )
 
 
+def check_mastery(db) -> None:
+    print("\nStudent model")
+    from apps.api.quiz import Attempt
+    from apps.api.student import ConceptMastery, Student
+
+    students = db.scalar(select(func.count()).select_from(Student)) or 0
+    if students == 0:
+        report(FAIL, "No student row", fix="start the server once to seed it")
+        return
+
+    attempts = db.scalar(select(func.count()).select_from(Attempt)) or 0
+    if attempts == 0:
+        report(WARN, "No questions answered yet", "mastery has nothing to work from")
+        return
+
+    tracked = db.scalar(select(func.count()).select_from(ConceptMastery)) or 0
+    report(PASS, f"{attempts} attempt(s) across {tracked} concept(s)")
+
+    # Mastery is cached but derived; a count that disagrees with the
+    # attempts means a recompute was missed and the estimate has drifted
+    # from what the student actually did.
+    counted = db.scalar(select(func.sum(ConceptMastery.attempts))) or 0
+    if counted != attempts:
+        report(
+            FAIL,
+            f"mastery counts {counted} attempts but {attempts} are stored",
+            "deleting questions takes their attempts with them, but nothing "
+            "recomputes the estimates that counted them",
+            "python -m scripts.rebuild_mastery",
+        )
+
+    reliable = db.scalar(
+        select(func.count())
+        .select_from(ConceptMastery)
+        .where(ConceptMastery.confidence >= 0.5)
+    ) or 0
+    if tracked and not reliable:
+        report(
+            WARN,
+            "no concept has enough attempts to act on",
+            "about five answered questions per concept are needed",
+        )
+
+
 def check_vocabulary(db) -> None:
     print("\nSpelling vocabulary")
     terms = db.execute(text("SELECT COUNT(*) FROM corpus_terms")).scalar() or 0
@@ -365,6 +409,7 @@ def main() -> int:
             check_curriculum(db)
             check_tagging(db)
             check_questions(db)
+            check_mastery(db)
             check_vocabulary(db)
             check_corrections(db)
     except Exception as exc:

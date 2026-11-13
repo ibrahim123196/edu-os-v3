@@ -13,6 +13,7 @@ from apps.api.curriculum import Concept
 from apps.api.db import get_db
 from apps.api.quiz import Question
 from apps.api.services.quiz_service import grade, select_questions, shuffled
+from apps.api.student import LOCAL_STUDENT_ID
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
@@ -52,6 +53,7 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
         count=payload.count,
         difficulty=payload.difficulty,
         exclude=payload.exclude or None,
+        student_id=LOCAL_STUDENT_ID,
     )
 
     return {
@@ -78,7 +80,13 @@ def answer(payload: AnswerRequest, db: Session = Depends(get_db)):
     if question is None:
         raise HTTPException(status_code=404, detail="No such question.")
 
-    result = grade(db, question, payload.selected_option_id, payload.seconds_taken)
+    result = grade(
+        db,
+        question,
+        payload.selected_option_id,
+        payload.seconds_taken,
+        student_id=LOCAL_STUDENT_ID,
+    )
     db.commit()
     return result
 

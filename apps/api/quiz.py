@@ -81,8 +81,15 @@ class Question(Base):
         UUID(as_uuid=True), ForeignKey("concepts.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # The passage this came from. Null only for questions typed in by hand.
+    #
+    # Deleting the passage deletes the question. Setting it null instead
+    # left 45 questions in the bank with no provenance after a duplicate
+    # document was removed: still answerable, but their explanations could
+    # no longer be checked against anything, which is the claim the bank
+    # rests on. A question without its source is not a cheaper question,
+    # it is an unverifiable one.
     source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("document_chunks.id", ondelete="SET NULL")
+        UUID(as_uuid=True), ForeignKey("document_chunks.id", ondelete="CASCADE")
     )
 
     kind: Mapped[QuestionKind] = mapped_column(
@@ -145,17 +152,17 @@ class QuestionOption(Base):
 
 
 class Attempt(Base):
-    """One answer to one question.
-
-    No student column yet -- there is no authentication, so there is nobody
-    to attribute it to. The column arrives with accounts; until then this
-    records that a question was answered and whether it was right, which is
-    enough to calibrate difficulty.
-    """
+    """One answer to one question, by one student."""
 
     __tablename__ = "attempts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     question_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True
     )

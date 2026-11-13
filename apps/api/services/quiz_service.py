@@ -25,6 +25,7 @@ from ai.generation.llm import LLMError, get_llm
 from ai.quiz.generation import GenerationRefused, generate_question
 from apps.api.curriculum import Concept, chunk_concepts
 from apps.api.models import Document, DocumentChunk
+from apps.api.student import LOCAL_STUDENT_ID
 from apps.api.quiz import (
     Attempt,
     Difficulty,
@@ -187,13 +188,20 @@ def select_questions(
     count: int = 5,
     difficulty: int | None = None,
     exclude: list[uuid.UUID] | None = None,
+    student_id: uuid.UUID | None = None,
 ) -> list[Question]:
     """Pick approved questions to put in front of a student.
 
-    Only approved questions, and never the ones just answered. Ordering is
-    random within the filter: a fixed order means a student who repeats a
-    quiz sees the same questions in the same sequence and learns the
-    pattern rather than the physics.
+    With a student, weak and untouched concepts are favoured. The weighting
+    is probabilistic rather than a strict weakest-first ordering: sorting by
+    mastery hands the student the same quiz every time and stops them ever
+    revisiting something they have learnt, which is how knowledge decays
+    unnoticed.
+
+    Weakness and ignorance both earn practice. A concept with no attempts
+    ranks just below the weakest known one -- finding out is nearly as
+    valuable as remediating, and a topic never seen can never be shown to
+    be weak.
     """
     query = select(Question).where(Question.status == QuestionStatus.approved)
 
@@ -204,7 +212,37 @@ def select_questions(
     if exclude:
         query = query.where(Question.id.notin_(exclude))
 
-    return list(db.scalars(query.order_by(func.random()).limit(count)).all())
+    if student_id is None:
+        return list(db.scalars(query.order_by(func.random()).limit(count)).all())
+
+    # Oversample, then weight in Python. Expressing the weighting in SQL
+    # would need the mastery table joined and multiplied against random(),
+    # which is harder to read and harder to change than this.
+    pool = list(db.scalars(query.order_by(func.random()).limit(count * 6)).all())
+    if len(pool) <= count:
+        return pool
+
+    from apps.api.services.mastery_service import selection_weights
+
+    weights = selection_weights(
+        db, student_id, list({q.concept_id for q in pool})
+    )
+
+    chosen: list[Question] = []
+    remaining = list(pool)
+    while remaining and len(chosen) < count:
+        scores = [weights.get(q.concept_id, 1.0) for q in remaining]
+        total = sum(scores) or 1.0
+        pick = random.random() * total
+        running = 0.0
+        for index, score in enumerate(scores):
+            running += score
+            if running >= pick:
+                chosen.append(remaining.pop(index))
+                break
+        else:
+            chosen.append(remaining.pop())
+    return chosen
 
 
 def grade(
@@ -212,6 +250,7 @@ def grade(
     question: Question,
     selected_option_id: uuid.UUID | None,
     seconds_taken: float | None = None,
+    student_id: uuid.UUID | None = None,
 ) -> dict:
     """Record an answer and explain it.
 
@@ -228,14 +267,22 @@ def grade(
         (o for o in question.options if o.id == selected_option_id), None
     )
 
+    student_id = student_id or LOCAL_STUDENT_ID
     db.add(
         Attempt(
+            student_id=student_id,
             question_id=question.id,
             selected_option_id=selected_option_id,
             is_correct=is_correct,
             seconds_taken=seconds_taken,
         )
     )
+
+    # Mastery is recomputed from the attempts rather than nudged, so the
+    # stored estimate can never drift away from what the student did.
+    from apps.api.services.mastery_service import record_attempt
+
+    record_attempt(db, student_id, question)
 
     return {
         "correct": is_correct,

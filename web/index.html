@@ -301,6 +301,94 @@
 
   .scope { margin-bottom: 12px; font-size: 13px; color: var(--muted); }
 
+  /* --- mode tabs ------------------------------------------------- */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs button {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 14px;
+  }
+  .tabs button:hover:not(.on) { background: none; color: var(--ink); }
+  .tabs button.on {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+    background: none;
+  }
+
+  /* --- quiz ------------------------------------------------------- */
+  .progress { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .question-stem {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  /* Options are buttons, not radios: a student picks once and sees the
+     result, rather than selecting and then hunting for Submit. */
+  button.choice {
+    text-align: left;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 11px 14px;
+    font-size: 15px;
+    line-height: 1.45;
+    white-space: normal;
+  }
+  button.choice:hover:not(:disabled) { background: var(--paper); }
+  /* Chosen but not yet submitted. A single click used to commit the answer,
+     which is unforgiving when the options are long or the screen is small. */
+  button.choice.picked {
+    border-color: var(--focus);
+    box-shadow: inset 0 0 0 1px var(--focus);
+  }
+  button.choice:disabled { opacity: 1; cursor: default; }
+  button.choice.right {
+    border-color: var(--verified);
+    background: var(--verified-wash);
+  }
+  button.choice.wrong {
+    border-color: var(--warn);
+    background: var(--warn-wash);
+  }
+  .mark { font-weight: 600; margin-right: 6px; }
+  .feedback { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .feedback h3 {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  .feedback p {
+    font-family: var(--serif);
+    font-size: 15.5px;
+    line-height: 1.6;
+    margin: 0 0 12px;
+  }
+  /* What a wrong answer suggests the student was thinking. This is the
+     reason distractors are written deliberately rather than filled with
+     plausible noise. */
+  .diagnosis {
+    background: var(--warn-wash);
+    border-left: 3px solid var(--warn);
+    padding: 10px 13px;
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+  .score { font-family: var(--serif); font-size: 20px; margin-bottom: 6px; }
+
   /* Course material loaded for every student. Stated, not listed: it is
      background knowledge the assistant draws on, not files to manage. */
   .builtin {
@@ -364,6 +452,12 @@
 
   <!-- ------------------------------------------------ main column -->
   <div>
+    <div class="tabs">
+      <button id="tabAsk" class="on">Ask</button>
+      <button id="tabQuiz">Practise</button>
+    </div>
+
+    <div id="askMode">
     <section class="panel">
       <h2>Ask a question</h2>
       <p class="hint">Answers come only from your uploaded material, not from general knowledge.</p>
@@ -407,6 +501,50 @@
         </details>
       </div>
     </section>
+    </div>
+
+    <div id="quizMode" hidden>
+      <section class="panel">
+        <h2>Practise</h2>
+        <p class="hint">Questions written from the course material, each one
+          citing the page it came from.</p>
+
+        <div class="scope">
+          Topic
+          <select id="quizConcept">
+            <option value="">anything</option>
+          </select>
+        </div>
+        <div class="row" style="align-items:center;">
+          <label class="field" style="flex:0 0 120px; margin:0;">
+            <span>Questions</span>
+            <input type="text" id="quizCount" value="5">
+          </label>
+          <div style="flex:1;"></div>
+        </div>
+        <button id="startQuiz" style="margin-top:10px;">Start</button>
+        <div id="quizNotice" style="margin-top:12px;"></div>
+      </section>
+
+      <section class="panel" id="questionPanel" hidden style="margin-top:16px;">
+        <div class="progress" id="progress"></div>
+        <div class="question-stem" id="stem"></div>
+        <div class="choices" id="choices"></div>
+        <button id="submitAnswer" style="margin-top:14px;" disabled>Submit answer</button>
+        <div class="feedback" id="feedback" hidden>
+          <h3>Why</h3>
+          <p id="explanation"></p>
+          <div class="diagnosis" id="diagnosis" hidden></div>
+          <button id="nextQuestion">Next question</button>
+        </div>
+      </section>
+
+      <section class="panel" id="resultPanel" hidden style="margin-top:16px;">
+        <div class="score" id="score"></div>
+        <p class="hint" id="scoreNote"></p>
+        <button id="againQuiz">Practise again</button>
+      </section>
+    </div>
   </div>
 </div>
 
@@ -728,6 +866,181 @@ async function ask() {
 $('askBtn').addEventListener('click', ask);
 $('questionInput').addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask();
+});
+
+/* ------------------------------------------------------------- quiz */
+let quiz = { questions: [], index: 0, correct: 0, answered: [] };
+
+$('tabAsk').addEventListener('click', () => switchMode('ask'));
+$('tabQuiz').addEventListener('click', () => switchMode('quiz'));
+
+function switchMode(mode) {
+  const quizzing = mode === 'quiz';
+  $('askMode').hidden = quizzing;
+  $('quizMode').hidden = !quizzing;
+  $('tabAsk').classList.toggle('on', !quizzing);
+  $('tabQuiz').classList.toggle('on', quizzing);
+  if (quizzing && $('quizConcept').options.length <= 1) loadQuizConcepts();
+}
+
+async function loadQuizConcepts() {
+  try {
+    const concepts = await api('/quiz/concepts');
+    const select = $('quizConcept');
+    // Only concepts that actually have questions. Offering a topic with
+    // none produces an empty quiz and looks broken.
+    for (const c of concepts) {
+      const opt = document.createElement('option');
+      opt.value = c.slug;
+      opt.textContent = `${c.name} (${c.questions})`;
+      select.appendChild(opt);
+    }
+    if (!concepts.length) {
+      $('quizNotice').innerHTML =
+        '<div class="notice bad">No questions yet. Generate some with ' +
+        '<code>python -m scripts.generate_questions</code>.</div>';
+    }
+  } catch (err) {
+    $('quizNotice').innerHTML =
+      `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+$('startQuiz').addEventListener('click', startQuiz);
+$('againQuiz').addEventListener('click', () => {
+  $('resultPanel').hidden = true;
+  startQuiz();
+});
+
+async function startQuiz() {
+  const slug = $('quizConcept').value;
+  const count = Math.max(1, Math.min(20, parseInt($('quizCount').value, 10) || 5));
+  const btn = $('startQuiz');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  $('quizNotice').innerHTML = '';
+
+  try {
+    const data = await api('/quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        concept_slugs: slug ? [slug] : [],
+        count,
+        // Never repeat a question inside one sitting.
+        exclude: quiz.answered,
+      }),
+    });
+
+    if (!data.count) {
+      $('quizNotice').innerHTML =
+        '<div class="notice bad">No questions left for that topic.</div>';
+      return;
+    }
+    quiz = { questions: data.questions, index: 0, correct: 0, answered: quiz.answered };
+    $('resultPanel').hidden = true;
+    showQuestion();
+  } catch (err) {
+    $('quizNotice').innerHTML =
+      `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Start';
+  }
+}
+
+function showQuestion() {
+  const q = quiz.questions[quiz.index];
+  $('questionPanel').hidden = false;
+  $('feedback').hidden = true;
+  $('diagnosis').hidden = true;
+  $('submitAnswer').hidden = false;
+  $('submitAnswer').disabled = true;
+  $('submitAnswer').textContent = 'Submit answer';
+  quiz.picked = null;
+  $('progress').textContent =
+    `Question ${quiz.index + 1} of ${quiz.questions.length}`;
+  $('stem').textContent = q.stem;
+
+  const choices = $('choices');
+  choices.innerHTML = '';
+  q.options.forEach((option, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.innerHTML =
+      `<span class="mark">${String.fromCharCode(65 + i)}</span>` +
+      escapeHtml(option.text);
+    // Selecting is separate from submitting, so an answer can be changed.
+    btn.addEventListener('click', () => {
+      choices.querySelectorAll('button').forEach((b) => b.classList.remove('picked'));
+      btn.classList.add('picked');
+      quiz.picked = option.id;
+      $('submitAnswer').disabled = false;
+    });
+    choices.appendChild(btn);
+  });
+}
+
+$('submitAnswer').addEventListener('click', () => {
+  if (quiz.picked) answerQuestion(quiz.picked);
+});
+
+async function answerQuestion(optionId) {
+  const q = quiz.questions[quiz.index];
+  const buttons = [...$('choices').querySelectorAll('button')];
+  buttons.forEach((b) => {
+    b.disabled = true;
+    b.classList.remove('picked');
+  });
+  $('submitAnswer').hidden = true;
+
+  try {
+    const result = await api('/quiz/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_id: q.id, selected_option_id: optionId }),
+    });
+
+    // Always mark the correct answer, not just the one chosen: a student
+    // who got it wrong needs to see which was right.
+    q.options.forEach((option, i) => {
+      if (option.id === result.correct_option_id) buttons[i].classList.add('right');
+      else if (option.id === optionId) buttons[i].classList.add('wrong');
+    });
+
+    if (result.correct) quiz.correct += 1;
+    quiz.answered.push(q.id);
+
+    $('explanation').textContent = result.explanation;
+    if (!result.correct && result.misconception) {
+      $('diagnosis').hidden = false;
+      $('diagnosis').textContent = result.misconception;
+    }
+    $('nextQuestion').textContent =
+      quiz.index + 1 < quiz.questions.length ? 'Next question' : 'See score';
+    $('feedback').hidden = false;
+  } catch (err) {
+    buttons.forEach((b) => (b.disabled = false));
+    $('submitAnswer').hidden = false;
+    $('quizNotice').innerHTML =
+      `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+$('nextQuestion').addEventListener('click', () => {
+  quiz.index += 1;
+  if (quiz.index < quiz.questions.length) {
+    showQuestion();
+  } else {
+    $('questionPanel').hidden = true;
+    $('resultPanel').hidden = false;
+    const total = quiz.questions.length;
+    $('score').textContent = `${quiz.correct} out of ${total}`;
+    $('scoreNote').textContent =
+      quiz.correct === total
+        ? 'All correct.'
+        : 'Read the explanations for the ones you missed — they cite the page.';
+  }
 });
 
 loadHealth();
