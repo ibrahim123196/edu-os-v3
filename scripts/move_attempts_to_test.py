@@ -19,7 +19,7 @@ import sys
 
 from sqlalchemy import delete, func, select, update
 
-from apps.api.db import session_scope
+from apps.api.db import ensure_students, session_scope
 from apps.api.quiz import Attempt, Question
 from apps.api.services.mastery_service import recompute
 from apps.api.student import LOCAL_STUDENT_ID, TEST_STUDENT_ID, ConceptMastery
@@ -58,6 +58,11 @@ def main(apply: bool) -> None:
             print(f"\nWould move them, touching {len(concept_ids)} concept(s).")
             print("Nothing changed. Re-run with --apply to do it.")
             return
+
+        # The server creates the test student when it starts; this script
+        # may run before the server ever has. Same transaction, so a failure
+        # below undoes this too.
+        ensure_students(db)
 
         db.execute(
             update(Attempt)

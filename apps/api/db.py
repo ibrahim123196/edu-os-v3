@@ -49,6 +49,27 @@ def session_scope() -> Iterator[Session]:
         db.close()
 
 
+def ensure_students(db) -> None:
+    """Create the stand-in students if they are missing. Safe to repeat.
+
+    One for real study, one for testing, until there is a login. Separate
+    from init_db because init_db only runs when the server starts: a script
+    run before that once found the test student missing and failed on it.
+    Takes a Connection or a Session, so a script can do this inside its own
+    transaction.
+    """
+    from apps.api.student import STUDENTS
+
+    for student_id, name in STUDENTS.values():
+        db.execute(
+            text(
+                "INSERT INTO students (id, display_name) "
+                "VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"
+            ),
+            {"id": str(student_id), "name": name},
+        )
+
+
 def init_db() -> None:
     """Create the pgvector extension, tables, and the search indexes.
 
@@ -69,20 +90,8 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
 
-    # The stand-in students that own everything until there is a login:
-    # one for real study, one for testing. Both always exist so switching
-    # the setting never points answers at a student row that is missing.
-    from apps.api.student import STUDENTS
-
     with engine.begin() as conn:
-        for student_id, name in STUDENTS.values():
-            conn.execute(
-                text(
-                    "INSERT INTO students (id, display_name) "
-                    "VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"
-                ),
-                {"id": str(student_id), "name": name},
-            )
+        ensure_students(conn)
 
     dim = settings.embedding_dim
     with engine.begin() as conn:

@@ -302,6 +302,19 @@ def check_mastery(db) -> None:
 
     active = get_settings().active_student
     report(PASS, f"answers are being recorded against: {active}")
+
+    # The setting can name a student whose row was never created; the first
+    # answer then fails on the database. This once read OK while the test
+    # student did not exist.
+    present = set(db.scalars(select(Student.id)).all())
+    missing = [name for name, (sid, _) in STUDENTS.items() if sid not in present]
+    if missing:
+        report(
+            FAIL,
+            f"student row(s) missing: {', '.join(missing)}",
+            fix="start the server once to create them",
+        )
+
     for name, (student_id, _) in STUDENTS.items():
         n = db.scalar(
             select(func.count()).select_from(Attempt).where(Attempt.student_id == student_id)
