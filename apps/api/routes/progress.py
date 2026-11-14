@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.db import get_db
 from apps.api.services.mastery_service import progress_report
-from apps.api.student import LOCAL_STUDENT_ID
+from apps.api.student import active_student_id
 
 router = APIRouter(prefix="/progress", tags=["progress"])
 
@@ -19,4 +19,4 @@ def progress(db: Session = Depends(get_db)):
     Until there is a login this reports the placeholder student, which is
     everything answered on this device.
     """
-    return progress_report(db, LOCAL_STUDENT_ID)
+    return progress_report(db, active_student_id())

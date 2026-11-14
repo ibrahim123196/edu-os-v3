@@ -76,6 +76,15 @@ class Settings(BaseSettings):
     enable_spelling_correction: bool = True
     spelling_min_similarity: float = 0.4
 
+    # --- Student ----------------------------------------------------------
+    # Which placeholder student answers are recorded against until there is
+    # a login. "test" while building, "local" when actually studying.
+    # Defaults to "test": during development nearly every quiz taken is a
+    # click-through, and a forgotten setting should cost a real study
+    # session's data, not quietly pollute the real student with guesses.
+    # Read once at startup -- restart the server after changing it.
+    active_student: Literal["local", "test"] = "test"
+
 
 @lru_cache
 def get_settings() -> Settings:

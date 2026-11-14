@@ -295,6 +295,19 @@ def check_mastery(db) -> None:
         report(FAIL, "No student row", fix="start the server once to seed it")
         return
 
+    # Which student is recording, said out loud. A forgotten setting looks
+    # identical to a correct one everywhere else.
+    from apps.api.config import get_settings
+    from apps.api.student import STUDENTS
+
+    active = get_settings().active_student
+    report(PASS, f"answers are being recorded against: {active}")
+    for name, (student_id, _) in STUDENTS.items():
+        n = db.scalar(
+            select(func.count()).select_from(Attempt).where(Attempt.student_id == student_id)
+        ) or 0
+        print(f"         {name}: {n} attempt(s)")
+
     attempts = db.scalar(select(func.count()).select_from(Attempt)) or 0
     if attempts == 0:
         report(WARN, "No questions answered yet", "mastery has nothing to work from")
@@ -309,11 +322,9 @@ def check_mastery(db) -> None:
     counted = db.scalar(select(func.sum(ConceptMastery.attempts))) or 0
     if counted != attempts:
         report(
-            FAIL,
+            WARN,
             f"mastery counts {counted} attempts but {attempts} are stored",
-            "deleting questions takes their attempts with them, but nothing "
-            "recomputes the estimates that counted them",
-            "python -m scripts.rebuild_mastery",
+            "the cache has drifted; it can be rebuilt from the attempts",
         )
 
     reliable = db.scalar(

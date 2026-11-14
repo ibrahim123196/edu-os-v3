@@ -13,7 +13,7 @@ from apps.api.curriculum import Concept
 from apps.api.db import get_db
 from apps.api.quiz import Question
 from apps.api.services.quiz_service import grade, select_questions, shuffled
-from apps.api.student import LOCAL_STUDENT_ID
+from apps.api.student import active_student_id
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
@@ -53,7 +53,7 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
         count=payload.count,
         difficulty=payload.difficulty,
         exclude=payload.exclude or None,
-        student_id=LOCAL_STUDENT_ID,
+        student_id=active_student_id(),
     )
 
     return {
@@ -85,7 +85,7 @@ def answer(payload: AnswerRequest, db: Session = Depends(get_db)):
         question,
         payload.selected_option_id,
         payload.seconds_taken,
-        student_id=LOCAL_STUDENT_ID,
+        student_id=active_student_id(),
     )
     db.commit()
     return result

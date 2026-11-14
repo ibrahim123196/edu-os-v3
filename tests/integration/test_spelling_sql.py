@@ -17,7 +17,7 @@ from sqlalchemy import delete, text
 
 from ai.retrieval.spelling import correct_query, rebuild_vocabulary
 from apps.api.db import init_db, session_scope
-from apps.api.models import CorpusTerm, Document, DocumentChunk, IngestStatus
+from apps.api.models import Document, DocumentChunk, IngestStatus
 
 pytestmark = pytest.mark.integration
 
@@ -72,7 +72,11 @@ def vocabulary():
     with session_scope() as db:
         db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document_id))
         db.execute(delete(Document).where(Document.id == document_id))
-        db.execute(delete(CorpusTerm))
+        db.flush()
+        # Rebuilt from whatever passages remain, not emptied. Deleting every
+        # term here once meant a test run left the vocabulary empty -- and an
+        # empty vocabulary turns spelling correction off without an error.
+        rebuild_vocabulary(db)
 
 
 def test_vocabulary_contains_terms_from_the_passages(vocabulary):

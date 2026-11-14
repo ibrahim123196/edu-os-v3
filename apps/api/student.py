@@ -35,6 +35,28 @@ from apps.api.db import Base
 # restarts and so every attempt lands on the same student.
 LOCAL_STUDENT_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
+# Where clicking through a quiz to test a feature goes. Twenty-one guesses
+# once landed on the real student and the mastery model believed them: to
+# the code a guess is indistinguishable from an answer, so the only defence
+# is to keep testing on a different student entirely.
+TEST_STUDENT_ID = uuid.UUID("00000000-0000-0000-0000-000000000002")
+
+STUDENTS: dict[str, tuple[uuid.UUID, str]] = {
+    "local": (LOCAL_STUDENT_ID, "This device"),
+    "test": (TEST_STUDENT_ID, "Testing (not a real student)"),
+}
+
+
+def active_student_id() -> uuid.UUID:
+    """The student this running server records answers against.
+
+    The one place routes ask. When login arrives this becomes "the student
+    in the session", and nothing that calls it has to change.
+    """
+    from apps.api.config import get_settings
+
+    return STUDENTS[get_settings().active_student][0]
+
 
 class Student(Base):
     __tablename__ = "students"

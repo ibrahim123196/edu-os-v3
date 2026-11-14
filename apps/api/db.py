@@ -62,7 +62,6 @@ def init_db() -> None:
         quiz,
         student,
     )
-    from apps.api.student import LOCAL_STUDENT_ID
 
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
@@ -70,17 +69,20 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
 
-    # The stand-in student that owns everything until there is a login.
-    # Seeded before any column referencing it is added, so a NOT NULL
-    # default has something valid to point at.
+    # The stand-in students that own everything until there is a login:
+    # one for real study, one for testing. Both always exist so switching
+    # the setting never points answers at a student row that is missing.
+    from apps.api.student import STUDENTS
+
     with engine.begin() as conn:
-        conn.execute(
-            text(
-                "INSERT INTO students (id, display_name) "
-                "VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"
-            ),
-            {"id": str(LOCAL_STUDENT_ID), "name": "This device"},
-        )
+        for student_id, name in STUDENTS.values():
+            conn.execute(
+                text(
+                    "INSERT INTO students (id, display_name) "
+                    "VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"
+                ),
+                {"id": str(student_id), "name": name},
+            )
 
     dim = settings.embedding_dim
     with engine.begin() as conn:
@@ -98,34 +100,6 @@ def init_db() -> None:
                 "pipeline_version integer NOT NULL DEFAULT 0"
             )
         )
-        # Questions follow the passage they came from. The original rule
-        # set the reference to null, leaving questions that could not be
-        # checked against anything.
-        conn.execute(
-            text(
-                "ALTER TABLE questions DROP CONSTRAINT IF EXISTS "
-                "questions_source_chunk_id_fkey"
-            )
-        )
-        conn.execute(
-            text(
-                "ALTER TABLE questions ADD CONSTRAINT "
-                "questions_source_chunk_id_fkey FOREIGN KEY (source_chunk_id) "
-                "REFERENCES document_chunks(id) ON DELETE CASCADE"
-            )
-        )
-
-        # create_all never alters an existing table, so every column added
-        # after a table first shipped needs naming here. attempts.student_id
-        # was missed, and answering a question failed on a table that had
-        # existed since the previous version.
-        conn.execute(
-            text(
-                "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS student_id uuid "
-                f"NOT NULL DEFAULT '{LOCAL_STUDENT_ID}'"
-            )
-        )
-
         for column, spec in (
             ("chapter_id", "uuid"),
             ("source_kind", "varchar(40) NOT NULL DEFAULT 'student_upload'"),

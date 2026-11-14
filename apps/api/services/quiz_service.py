@@ -25,7 +25,6 @@ from ai.generation.llm import LLMError, get_llm
 from ai.quiz.generation import GenerationRefused, generate_question
 from apps.api.curriculum import Concept, chunk_concepts
 from apps.api.models import Document, DocumentChunk
-from apps.api.student import LOCAL_STUDENT_ID
 from apps.api.quiz import (
     Attempt,
     Difficulty,
@@ -250,7 +249,8 @@ def grade(
     question: Question,
     selected_option_id: uuid.UUID | None,
     seconds_taken: float | None = None,
-    student_id: uuid.UUID | None = None,
+    *,
+    student_id: uuid.UUID,
 ) -> dict:
     """Record an answer and explain it.
 
@@ -267,7 +267,9 @@ def grade(
         (o for o in question.options if o.id == selected_option_id), None
     )
 
-    student_id = student_id or LOCAL_STUDENT_ID
+    # No default student. A fallback here is how test clicks once landed on
+    # the real student: a caller that forgets to say whose answer this is
+    # should fail loudly, not guess.
     db.add(
         Attempt(
             student_id=student_id,
