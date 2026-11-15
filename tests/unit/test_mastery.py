@@ -150,6 +150,24 @@ def test_the_weakest_prerequisite_is_chosen():
     assert finding.blamed_prerequisite == "Electric field"
 
 
+def test_an_untried_concept_is_not_diagnosed():
+    """It sits at the prior, so any weak prerequisite looked like the cause
+    of a weakness nobody had seen."""
+    finding = diagnose("Lorentz force", estimate([]), {"Electric field": estimate([False] * 10)})
+    assert finding.blamed_prerequisite is None
+
+
+def test_a_concept_with_too_few_answers_is_not_diagnosed():
+    finding = diagnose("Gauss's law", estimate([False]), {"Electric field": estimate([False] * 10)})
+    assert finding.blamed_prerequisite is None
+
+
+def test_a_strong_concept_is_not_diagnosed():
+    """Nothing to explain: a weak prerequisite does not make it a problem."""
+    finding = diagnose("Gauss's law", strong(), {"Electric field": estimate([False] * 10)})
+    assert finding.blamed_prerequisite is None
+
+
 def test_a_prerequisite_barely_weaker_is_not_blamed():
     """Lower by noise is not a cause."""
     concept = estimate([False] * 5 + [True] * 3)

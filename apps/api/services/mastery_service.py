@@ -15,10 +15,10 @@ import logging
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ai.mastery.estimate import MasteryEstimate, diagnose, estimate, practice_weight
-from apps.api.curriculum import Concept
+from apps.api.curriculum import Concept, Topic
 from apps.api.quiz import Attempt, Question
 from apps.api.student import ConceptMastery
 
@@ -95,7 +95,15 @@ def estimates_for(
 
 def progress_report(db: Session, student_id: uuid.UUID) -> dict:
     """Everything known about this student, with causes where they exist."""
-    concepts = db.scalars(select(Concept)).all()
+    # Loaded together. Fetched one concept at a time, the prerequisites and
+    # chapters cost two round trips per concept -- dozens of trips to a
+    # database across the internet for a single page.
+    concepts = db.scalars(
+        select(Concept).options(
+            selectinload(Concept.prerequisites),
+            selectinload(Concept.topics).selectinload(Topic.chapter),
+        )
+    ).all()
     by_id = {c.id: c for c in concepts}
     stored = estimates_for(db, student_id)
 
@@ -109,11 +117,14 @@ def progress_report(db: Session, student_id: uuid.UUID) -> dict:
             if p.id in by_id
         }
         finding = diagnose(concept.name, est, prerequisites)
+        home = _home_chapter(concept)
 
         rows.append(
             {
                 "concept": concept.name,
                 "slug": concept.slug,
+                "chapter_number": home.number if home else None,
+                "chapter": home.name if home else None,
                 "mastery": est.mastery,
                 "confidence": est.confidence,
                 "attempts": est.attempts,
@@ -143,6 +154,17 @@ def progress_report(db: Session, student_id: uuid.UUID) -> dict:
         "untouched": [r["concept"] for r in rows if not r["attempts"]][:10],
         "concepts": rows,
     }
+
+
+def _home_chapter(concept: Concept):
+    """The chapter that first teaches a concept.
+
+    A concept can appear in several chapters -- electric field returns in
+    chapter 2 -- but a progress page lists it once, under the chapter that
+    introduces it.
+    """
+    chapters = [t.chapter for t in concept.topics]
+    return min(chapters, key=lambda c: (c.part or "", c.number), default=None)
 
 
 def selection_weights(

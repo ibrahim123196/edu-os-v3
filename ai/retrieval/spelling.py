@@ -120,6 +120,12 @@ def _best_matches(
     if not tokens:
         return {}
 
+    # Written out rather than as pg_trgm's `term % token` operator, which
+    # means exactly this. A literal % in SQL depends on each database
+    # driver's escaping: psycopg needed it doubled, and pg8000 -- used where
+    # Windows blocks psycopg -- rejected it outright, which silently switched
+    # spelling correction off. The cost is the trigram index, irrelevant
+    # for a vocabulary of a few thousand words.
     rows = db.execute(
         text(
             """
@@ -128,7 +134,8 @@ def _best_matches(
             CROSS JOIN LATERAL (
                 SELECT term, frequency
                 FROM corpus_terms
-                WHERE term % t.token
+                WHERE similarity(term, t.token)
+                      > current_setting('pg_trgm.similarity_threshold')::real
                 ORDER BY similarity(term, t.token) DESC, frequency DESC
                 LIMIT :candidates
             ) AS m

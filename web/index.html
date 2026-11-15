@@ -400,6 +400,32 @@
   .history .result { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .history .unfinished { color: var(--muted); }
 
+  /* --- progress ---------------------------------------------------- */
+  .summary-line { font-size: 14px; margin: 0 0 4px; }
+  .chapter + .chapter { margin-top: 16px; }
+  .chapter h3 {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 14px; font-weight: 600; margin: 0 0 4px;
+  }
+  .chapter h3 .count { font-weight: 400; font-size: 12.5px; color: var(--muted); }
+  .concept-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px auto;
+    gap: 14px; align-items: center;
+    padding: 9px 0; border-top: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .concept-row .cause { grid-column: 1 / -1; font-size: 13px; color: var(--warn); margin-top: -4px; }
+  .standing { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* A bar only once the estimate is trustworthy. Drawn earlier, a guess
+     from two answers looks exactly as solid as a measurement. */
+  .bar { display: flex; align-items: center; gap: 8px; }
+  .bar .track { flex: 1; height: 8px; background: var(--paper); border-radius: 4px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--verified); }
+  .bar.weak .fill { background: var(--warn); }
+  .bar .pct { width: 38px; text-align: right; color: var(--ink); }
+  .needs-work .concept-row:first-of-type { border-top: 0; }
+
   /* Course material loaded for every student. Stated, not listed: it is
      background knowledge the assistant draws on, not files to manage. */
   .builtin {
@@ -466,6 +492,7 @@
     <div class="tabs">
       <button id="tabAsk" class="on">Ask</button>
       <button id="tabQuiz">Practise</button>
+      <button id="tabProgress">Progress</button>
     </div>
 
     <div id="askMode">
@@ -560,6 +587,21 @@
         <h3>Recent quizzes</h3>
         <ol id="historyList"></ol>
       </section>
+    </div>
+
+    <div id="progressMode" hidden>
+      <section class="panel">
+        <h2>Progress</h2>
+        <div id="progressWho"></div>
+        <p class="summary-line" id="progressSummary"></p>
+        <p class="hint" id="progressHint"></p>
+      </section>
+      <section class="panel needs-work" id="needsWork" hidden>
+        <h2>Needs work</h2>
+        <p class="hint">Weak, and answered often enough to be sure of it.</p>
+        <div id="needsWorkList"></div>
+      </section>
+      <section class="panel" id="progressChapters"></section>
     </div>
   </div>
 </div>
@@ -891,15 +933,20 @@ let quiz = { sessionId: null, questions: [], index: 0, score: null, answered: []
 
 $('tabAsk').addEventListener('click', () => switchMode('ask'));
 $('tabQuiz').addEventListener('click', () => switchMode('quiz'));
+$('tabProgress').addEventListener('click', () => switchMode('progress'));
 
-function switchMode(mode) {
-  const quizzing = mode === 'quiz';
-  $('askMode').hidden = quizzing;
-  $('quizMode').hidden = !quizzing;
-  $('tabAsk').classList.toggle('on', !quizzing);
-  $('tabQuiz').classList.toggle('on', quizzing);
-  if (quizzing && $('quizConcept').options.length <= 1) loadQuizConcepts();
-  if (quizzing) loadQuizHistory();
+async function switchMode(mode) {
+  for (const m of ['ask', 'quiz', 'progress']) {
+    $(`${m}Mode`).hidden = m !== mode;
+  }
+  $('tabAsk').classList.toggle('on', mode === 'ask');
+  $('tabQuiz').classList.toggle('on', mode === 'quiz');
+  $('tabProgress').classList.toggle('on', mode === 'progress');
+  if (mode === 'quiz') {
+    if ($('quizConcept').options.length <= 1) await loadQuizConcepts();
+    loadQuizHistory();
+  }
+  if (mode === 'progress') loadProgress();
 }
 
 async function loadQuizConcepts() {
@@ -1110,6 +1157,98 @@ async function loadQuizHistory() {
 
 loadHealth();
 loadDocuments();
+
+/* --------------------------------------------------------- progress */
+async function loadProgress() {
+  $('progressSummary').textContent = 'Loading…';
+  try {
+    const p = await api('/progress');
+
+    // Whose answers these are, said first: a page of test clicks looks
+    // exactly like a real one.
+    $('progressWho').innerHTML = p.student.key === 'test'
+      ? '<div class="notice bad">Showing <strong>testing</strong> answers, not real ' +
+        'study. Add <code>ACTIVE_STUDENT=local</code> to .env when you study for real.</div>'
+      : '';
+
+    $('progressSummary').textContent =
+      `${p.questions_answered} question${p.questions_answered === 1 ? '' : 's'} answered · ` +
+      `${p.concepts_attempted} of ${p.concepts_total} concepts tried`;
+
+    const reliable = p.concepts.filter((c) => c.reliable).length;
+    $('progressHint').textContent = reliable
+      ? `${reliable} concept${reliable === 1 ? ' has' : 's have'} enough answers to judge.`
+      : 'Too early to judge anything yet: about five answers per concept are needed.';
+
+    // Needs work: only what is both weak and backed by enough answers.
+    $('needsWork').hidden = !p.weakest.length;
+    $('needsWorkList').innerHTML = p.weakest.map(conceptRow).join('');
+
+    // Every concept, under the chapter that introduces it.
+    const chapters = new Map();
+    for (const c of p.concepts) {
+      const key = c.chapter_number ?? 999;
+      if (!chapters.has(key)) chapters.set(key, { name: c.chapter, concepts: [] });
+      chapters.get(key).concepts.push(c);
+    }
+    $('progressChapters').innerHTML = [...chapters.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([num, ch]) => {
+        const tried = ch.concepts.filter((c) => c.attempts).length;
+        const title = num === 999 ? 'Other' : `Chapter ${num} · ${escapeHtml(ch.name)}`;
+        return `<div class="chapter"><h3><span>${title}</span>` +
+          `<span class="count">${tried} of ${ch.concepts.length} tried</span></h3>` +
+          ch.concepts.map(conceptRow).join('') + '</div>';
+      })
+      .join('');
+  } catch (err) {
+    $('progressSummary').innerHTML =
+      `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function conceptRow(c) {
+  let standing;
+  if (!c.attempts) {
+    standing = '<span class="standing">not tried yet</span>';
+  } else if (!c.reliable) {
+    // The raw count, not the estimate: "1 of 2 right" is a fact, while a
+    // percentage from two answers is a guess that looks like a measurement.
+    standing = `<span class="standing">${c.correct} of ${c.attempts} right · too few to judge</span>`;
+  } else {
+    const pct = Math.round(c.mastery * 100);
+    standing = `<div class="bar${c.weak ? ' weak' : ''}" title="over ${c.attempts} questions">` +
+      `<div class="track"><div class="fill" style="width:${pct}%"></div></div>` +
+      `<span class="pct standing">${pct}%</span>` +
+      // The raw count beside the estimate: 5 right of 6 reads as 67%,
+      // because the estimate is cautious and favours recent answers, and
+      // without the count that looks like a wrong sum.
+      `<span class="standing">${c.correct}/${c.attempts}</span></div>`;
+  }
+  const cause = c.likely_cause
+    ? `<div class="cause">Likely cause: ${escapeHtml(c.likely_cause)} — practise that first.</div>`
+    : '';
+  return `<div class="concept-row"><span>${escapeHtml(c.concept)}</span>${standing}` +
+    `<button class="quiet" data-practise="${escapeHtml(c.slug)}">Practise</button>${cause}</div>`;
+}
+
+// One handler for every Practise button, wherever it is on the page.
+$('progressMode').addEventListener('click', async (e) => {
+  const slug = e.target.closest('[data-practise]')?.dataset.practise;
+  if (!slug) return;
+  await switchMode('quiz');
+  const select = $('quizConcept');
+  if ([...select.options].some((o) => o.value === slug)) {
+    select.value = slug;
+    $('quizNotice').innerHTML = '';
+  } else {
+    // Concepts without questions are not in the list; say so rather than
+    // quietly starting a quiz on something else.
+    select.value = '';
+    $('quizNotice').innerHTML =
+      '<div class="notice bad">There are no questions for that concept yet.</div>';
+  }
+});
 </script>
 </body>
 </html>

@@ -502,6 +502,11 @@ def check_schema(db) -> bool:
 
 def main() -> int:
     print(f"EduOS doctor — pipeline v{PIPELINE_VERSION}")
+    # Said out loud: the driver can switch by itself when Windows blocks
+    # psycopg, and a silent switch is the kind that gets forgotten.
+    from apps.api.db import engine
+
+    print(f"database driver: {engine.dialect.driver}")
     try:
         with session_scope() as db:
             if not check_schema(db):

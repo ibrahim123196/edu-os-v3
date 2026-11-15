@@ -263,32 +263,24 @@ def test_rollback_failure_is_also_survivable():
 
 # --- SQL rendering -------------------------------------------------------
 
-def test_trigram_operator_survives_parameter_escaping():
-    """SQLAlchemy doubles percent signs for psycopg's pyformat parameters.
-
-    Writing %% in the source therefore sent Postgres "%%", which is not an
-    operator -- the query failed, aborted the transaction, and took the
-    retrieval query down with it. The bug was invisible until it reached a
-    real database, so this checks the rendered SQL directly.
+def test_spelling_sql_has_no_percent_sign():
+    """A literal % in SQL depends on the driver's escaping, and it has
+    broken twice: psycopg needed %% and sent Postgres "%%", which is not an
+    operator; pg8000 refused the query outright. Each time the failure
+    switched spelling correction off without an error a user would see.
+    The trigram operator is written out as similarity(...) instead, so
+    there is nothing left to escape.
     """
     import inspect
-
-    from sqlalchemy import text
-    from sqlalchemy.dialects import postgresql
 
     import ai.retrieval.spelling as spelling
 
     source = inspect.getsource(spelling._best_matches)
-    start = source.index("SELECT t.token")
+    start = source.index('"""\n            SELECT')
     end = source.index(") AS m")
-    sql = source[start:end] + ") AS m"
+    sql = source[start:end]
 
-    compiled = str(text(sql).compile(dialect=postgresql.dialect(paramstyle="pyformat")))
-    # psycopg turns each %% back into a single % before the server sees it.
-    at_server = compiled.replace("%%", "\x00").replace("%(", "\x01(").replace("\x00", "%")
-
-    assert "term % " in at_server, "trigram operator mangled by escaping"
-    assert "term %% " not in at_server, "operator double-escaped again"
+    assert "%" not in sql
 
 
 def test_failure_rolls_back_so_later_queries_still_work():

@@ -8,6 +8,8 @@ pydantic-settings>=2.3
 # --- Database ----------------------------------------------------------
 SQLAlchemy>=2.0
 psycopg[binary]>=3.1
+# Plain-Python fallback, used when Windows Smart App Control blocks psycopg.
+pg8000>=1.31
 pgvector>=0.2.5
 
 # --- Ingestion ---------------------------------------------------------

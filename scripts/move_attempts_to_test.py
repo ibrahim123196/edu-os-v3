@@ -20,7 +20,7 @@ import sys
 from sqlalchemy import delete, func, select, update
 
 from apps.api.db import ensure_students, session_scope
-from apps.api.quiz import Attempt, Question
+from apps.api.quiz import Attempt, Question, QuizSession
 from apps.api.services.mastery_service import recompute
 from apps.api.student import LOCAL_STUDENT_ID, TEST_STUDENT_ID, ConceptMastery
 
@@ -34,7 +34,10 @@ def _summary(db, student_id) -> str:
         .select_from(ConceptMastery)
         .where(ConceptMastery.student_id == student_id)
     )
-    return f"{attempts} attempt(s), {rows} mastery row(s)"
+    quizzes = db.scalar(
+        select(func.count()).select_from(QuizSession).where(QuizSession.student_id == student_id)
+    )
+    return f"{attempts} attempt(s), {rows} mastery row(s), {quizzes} quiz(zes)"
 
 
 def main(apply: bool) -> None:
@@ -67,6 +70,14 @@ def main(apply: bool) -> None:
         db.execute(
             update(Attempt)
             .where(Attempt.student_id == LOCAL_STUDENT_ID)
+            .values(student_id=TEST_STUDENT_ID)
+        )
+        # The quizzes go with their answers. Left behind, a quiz would
+        # belong to one student while holding another's answers, and show
+        # up in the wrong student's history.
+        db.execute(
+            update(QuizSession)
+            .where(QuizSession.student_id == LOCAL_STUDENT_ID)
             .values(student_id=TEST_STUDENT_ID)
         )
 

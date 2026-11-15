@@ -3,18 +3,59 @@
 from __future__ import annotations
 
 import logging
+import ssl
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import URL, create_engine, make_url, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from apps.api.config import settings
 
 log = logging.getLogger(__name__)
 
+def _psycopg_loads() -> bool:
+    try:
+        import psycopg  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def engine_url_and_args(database_url: str) -> tuple[URL, dict]:
+    """The URL and connection options to actually use.
+
+    psycopg ships a compiled library, and Windows Smart App Control blocks
+    unrecognised libraries -- one day it loaded, the next it did not, and
+    nothing in the project had changed. pg8000 is plain Python, so there is
+    nothing for Windows to block; it is used whenever psycopg cannot load.
+
+    pg8000 does not understand libpq's sslmode=... in the URL, and passing
+    it through fails the connection, so it is turned into a TLS context.
+    The certificate is verified: Neon's is valid, and an unverified
+    connection to a database across the internet is not worth having.
+    """
+    url = make_url(database_url)
+    if url.drivername == "postgresql+psycopg" and not _psycopg_loads():
+        log.warning("psycopg cannot load on this computer; using pg8000 instead")
+        url = url.set(drivername="postgresql+pg8000")
+
+    connect_args: dict = {}
+    if url.drivername == "postgresql+pg8000":
+        query = dict(url.query)
+        sslmode = query.pop("sslmode", None)
+        # libpq-only, like sslmode. pg8000 negotiates authentication itself.
+        query.pop("channel_binding", None)
+        url = url.set(query=query)
+        if sslmode not in (None, "disable"):
+            connect_args["ssl_context"] = ssl.create_default_context()
+    return url, connect_args
+
+
+_url, _connect_args = engine_url_and_args(settings.database_url)
 engine = create_engine(
-    settings.database_url,
+    _url,
+    connect_args=_connect_args,
     pool_pre_ping=True,
     future=True,
 )

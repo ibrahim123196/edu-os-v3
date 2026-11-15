@@ -161,6 +161,13 @@ def diagnose(
     weakest: str | None = None
     weakest_mastery: float | None = None
 
+    # Only a concept known to be weak has a cause to find. An untried one
+    # sits at the prior, so any weaker prerequisite used to "explain" a
+    # weakness nobody had observed -- the progress page told students why
+    # they were struggling with topics they had never been asked about.
+    if not (concept_estimate.is_reliable and concept_estimate.is_weak):
+        return Diagnosis(concept=concept, mastery=concept_estimate.mastery)
+
     for name, prerequisite in prerequisites.items():
         if not prerequisite.is_reliable:
             continue
