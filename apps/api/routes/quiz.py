@@ -1,4 +1,4 @@
-"""Quiz endpoints: take a quiz, answer a question."""
+"""Quiz endpoints: take a quiz, answer inside it, look back at past ones."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from apps.api.curriculum import Concept
 from apps.api.db import get_db
 from apps.api.quiz import Question
-from apps.api.services.quiz_service import grade, select_questions, shuffled
+from apps.api.services import session_service
+from apps.api.services.quiz_service import select_questions, shuffled
 from apps.api.student import active_student_id
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
@@ -26,6 +27,9 @@ class QuizRequest(BaseModel):
 
 
 class AnswerRequest(BaseModel):
+    # Required. An answer outside a quiz has no score to count towards and
+    # nothing to stop it being sent twice.
+    session_id: uuid.UUID
     question_id: uuid.UUID
     selected_option_id: uuid.UUID | None = None
     seconds_taken: float | None = None
@@ -47,16 +51,22 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
             )
         concept_ids = [c.id for c in concepts]
 
+    student_id = active_student_id()
     questions = select_questions(
         db,
         concept_ids=concept_ids or None,
         count=payload.count,
         difficulty=payload.difficulty,
         exclude=payload.exclude or None,
-        student_id=active_student_id(),
+        student_id=student_id,
     )
+    session = session_service.start_session(db, student_id, questions)
+    # get_db does not commit. Without this the session id goes to the
+    # browser and the row it names is thrown away when the request ends.
+    db.commit()
 
     return {
+        "session_id": str(session.id) if session else None,
         "count": len(questions),
         "questions": [
             {
@@ -76,19 +86,26 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
 
 @router.post("/answer")
 def answer(payload: AnswerRequest, db: Session = Depends(get_db)):
-    question = db.get(Question, payload.question_id)
-    if question is None:
-        raise HTTPException(status_code=404, detail="No such question.")
-
-    result = grade(
-        db,
-        question,
-        payload.selected_option_id,
-        payload.seconds_taken,
-        student_id=active_student_id(),
-    )
+    try:
+        result = session_service.answer(
+            db,
+            student_id=active_student_id(),
+            session_id=payload.session_id,
+            question_id=payload.question_id,
+            selected_option_id=payload.selected_option_id,
+            seconds_taken=payload.seconds_taken,
+        )
+    except session_service.SessionError as err:
+        raise HTTPException(status_code=err.status_code, detail=err.message) from err
     db.commit()
     return result
+
+
+@router.get("/sessions")
+def past_sessions(db: Session = Depends(get_db)):
+    """Recent quizzes for the student this server is recording, newest
+    first."""
+    return session_service.history(db, active_student_id())
 
 
 @router.get("/concepts")

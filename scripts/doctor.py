@@ -424,10 +424,93 @@ def check_corrections(db) -> None:
         report(PASS, f"{applied} correction(s) present in the indexed text")
 
 
+def check_schema(db) -> bool:
+    """Does the database have what the code expects?
+
+    create_all never alters an existing table, so a column added to a model
+    reaches a database only through an explicit ALTER in init_db -- and a
+    forgotten one is invisible until a query touches it. Returns False when
+    columns are missing, because every check after this would then crash
+    with an error that points somewhere else entirely.
+    """
+    print("\nSchema")
+    from sqlalchemy import inspect
+
+    from apps.api import curriculum, models, quiz, student  # noqa: F401
+    from apps.api.db import Base
+
+    insp = inspect(db.get_bind())
+    existing = set(insp.get_table_names())
+
+    missing_tables, missing_columns, missing_links, missing_unique = [], [], [], []
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing:
+            missing_tables.append(table.name)
+            continue
+
+        columns = {c["name"] for c in insp.get_columns(table.name)}
+        missing_columns += [
+            f"{table.name}.{c.name}" for c in table.columns if c.name not in columns
+        ]
+
+        # Links between tables ("every attempt belongs to a real student").
+        # Without one, the database accepts rows pointing at nothing.
+        links = {
+            (tuple(fk["constrained_columns"]), fk["referred_table"])
+            for fk in insp.get_foreign_keys(table.name)
+        }
+        for fk in table.foreign_key_constraints:
+            key = (tuple(fk.column_keys), fk.referred_table.name)
+            if key not in links:
+                missing_links.append(
+                    f"{table.name}.{', '.join(fk.column_keys)} -> {fk.referred_table.name}"
+                )
+
+        # Unique rules carry meaning ("one answer per question per quiz");
+        # plain indexes only affect speed and are not checked.
+        indexes = {ix["name"] for ix in insp.get_indexes(table.name)}
+        missing_unique += [
+            f"{table.name}: {ix.name}"
+            for ix in table.indexes
+            if ix.unique and ix.name not in indexes
+        ]
+
+    if missing_tables or missing_columns:
+        report(
+            FAIL,
+            "the database is missing what the code expects",
+            "; ".join(missing_tables + missing_columns),
+            fix="start the server once; if this stays, init_db lacks an ALTER",
+        )
+        return False
+    report(PASS, "every table and column the code expects is present")
+
+    if missing_links:
+        report(
+            WARN,
+            f"{len(missing_links)} link(s) between tables are not enforced",
+            "; ".join(missing_links),
+        )
+    if missing_unique:
+        report(
+            WARN,
+            f"{len(missing_unique)} uniqueness rule(s) missing",
+            "; ".join(missing_unique),
+        )
+    return True
+
+
 def main() -> int:
     print(f"EduOS doctor — pipeline v{PIPELINE_VERSION}")
     try:
         with session_scope() as db:
+            if not check_schema(db):
+                print("\n  Stopped here: the checks below would fail for this reason.")
+                print(
+                    f"\n{_counts[PASS]} ok, {_counts[WARN]} warning(s), "
+                    f"{_counts[FAIL]} failure(s)"
+                )
+                return 1
             check_documents(db)
             check_chunks(db)
             check_curriculum(db)
@@ -437,9 +520,11 @@ def main() -> int:
             check_vocabulary(db)
             check_corrections(db)
     except Exception as exc:
-        print(f"\n  [{FAIL}] Could not reach the database")
+        # Not always a connection problem: a check that hits a missing column
+        # also lands here, and blaming DATABASE_URL sent people the wrong way.
+        print(f"\n  [{FAIL}] The doctor stopped with an error")
         print(f"         {exc}")
-        print("         fix: check DATABASE_URL in .env")
+        print("         fix: if this is a connection error, check DATABASE_URL in .env")
         return 1
 
     print(

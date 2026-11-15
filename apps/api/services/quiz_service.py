@@ -251,6 +251,7 @@ def grade(
     seconds_taken: float | None = None,
     *,
     student_id: uuid.UUID,
+    session_id: uuid.UUID | None = None,
 ) -> dict:
     """Record an answer and explain it.
 
@@ -277,6 +278,7 @@ def grade(
             selected_option_id=selected_option_id,
             is_correct=is_correct,
             seconds_taken=seconds_taken,
+            session_id=session_id,
         )
     )
 

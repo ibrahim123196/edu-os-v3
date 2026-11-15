@@ -81,15 +81,8 @@ class Question(Base):
         UUID(as_uuid=True), ForeignKey("concepts.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # The passage this came from. Null only for questions typed in by hand.
-    #
-    # Deleting the passage deletes the question. Setting it null instead
-    # left 45 questions in the bank with no provenance after a duplicate
-    # document was removed: still answerable, but their explanations could
-    # no longer be checked against anything, which is the claim the bank
-    # rests on. A question without its source is not a cheaper question,
-    # it is an unverifiable one.
     source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("document_chunks.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("document_chunks.id", ondelete="SET NULL")
     )
 
     kind: Mapped[QuestionKind] = mapped_column(
@@ -178,4 +171,81 @@ class Attempt(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
+    # The quiz this answer was given in. Nullable because attempts recorded
+    # before sessions existed belong to none, and they are still real
+    # evidence for mastery. Added after the table shipped, so init_db adds
+    # it to existing databases -- create_all never would.
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("quiz_sessions.id", ondelete="SET NULL"),
+        index=True,
+    )
+
     question: Mapped[Question] = relationship(back_populates="attempts")
+
+    __table_args__ = (
+        # One answer per question per quiz, enforced by the database. A
+        # double click sends two requests; without this both are stored and
+        # the question counts twice in the score and in mastery. Postgres
+        # treats NULLs as distinct, so attempts without a session are free.
+        Index("uq_attempt_session_question", "session_id", "question_id", unique=True),
+    )
+
+
+class QuizSession(Base):
+    """One sitting: the questions handed out together, and how it went.
+
+    Without this the server forgot which questions belonged together the
+    moment it sent them, so "7 out of 10 on Tuesday" existed only in the
+    browser until the tab closed.
+
+    The score is not stored. It is counted from the attempts whenever it is
+    asked for, so it can never disagree with them -- the same reason mastery
+    is recomputed rather than nudged.
+    """
+
+    __tablename__ = "quiz_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # Set when the last question is answered. A quiz left halfway stays
+    # unfinished rather than being scored as if the rest were wrong.
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    questions: Mapped[list["QuizSessionQuestion"]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="QuizSessionQuestion.position",
+    )
+
+
+class QuizSessionQuestion(Base):
+    """Which questions a session handed out, in order.
+
+    Needed for the total ("out of 10" includes the ones never answered) and
+    so an answer can be refused when its question was never part of the quiz.
+    """
+
+    __tablename__ = "quiz_session_questions"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("quiz_sessions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("questions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    session: Mapped[QuizSession] = relationship(back_populates="questions")

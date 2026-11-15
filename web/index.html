@@ -334,8 +334,9 @@
     margin-bottom: 18px;
   }
   .choices { display: flex; flex-direction: column; gap: 8px; }
-  /* Options are buttons, not radios: a student picks once and sees the
-     result, rather than selecting and then hunting for Submit. */
+  /* Pick, then Submit. Answering on the first click once made a slip of
+     the mouse final -- and each quiz accepts only one answer per question,
+     so a mis-click could not be taken back. */
   button.choice {
     text-align: left;
     background: var(--surface);
@@ -347,13 +348,11 @@
     white-space: normal;
   }
   button.choice:hover:not(:disabled) { background: var(--paper); }
-  /* Chosen but not yet submitted. A single click used to commit the answer,
-     which is unforgiving when the options are long or the screen is small. */
-  button.choice.picked {
+  button.choice:disabled { opacity: 1; cursor: default; }
+  button.choice.selected {
     border-color: var(--focus);
     box-shadow: inset 0 0 0 1px var(--focus);
   }
-  button.choice:disabled { opacity: 1; cursor: default; }
   button.choice.right {
     border-color: var(--verified);
     background: var(--verified-wash);
@@ -388,6 +387,18 @@
     margin-bottom: 12px;
   }
   .score { font-family: var(--serif); font-size: 20px; margin-bottom: 6px; }
+
+  /* Past quizzes. Kept by the server, so they survive closing the tab. */
+  .history h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+  .history ol { list-style: none; margin: 0; padding: 0; }
+  .history li {
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px;
+  }
+  .history .when { color: var(--muted); white-space: nowrap; }
+  .history .what { flex: 1; }
+  .history .result { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .history .unfinished { color: var(--muted); }
 
   /* Course material loaded for every student. Stated, not listed: it is
      background knowledge the assistant draws on, not files to manage. */
@@ -530,7 +541,7 @@
         <div class="progress" id="progress"></div>
         <div class="question-stem" id="stem"></div>
         <div class="choices" id="choices"></div>
-        <button id="submitAnswer" style="margin-top:14px;" disabled>Submit answer</button>
+        <button id="submitAnswer" style="margin-top:14px;" disabled>Submit</button>
         <div class="feedback" id="feedback" hidden>
           <h3>Why</h3>
           <p id="explanation"></p>
@@ -543,6 +554,11 @@
         <div class="score" id="score"></div>
         <p class="hint" id="scoreNote"></p>
         <button id="againQuiz">Practise again</button>
+      </section>
+
+      <section class="panel history" id="historyPanel" hidden style="margin-top:16px;">
+        <h3>Recent quizzes</h3>
+        <ol id="historyList"></ol>
       </section>
     </div>
   </div>
@@ -869,7 +885,9 @@ $('questionInput').addEventListener('keydown', (e) => {
 });
 
 /* ------------------------------------------------------------- quiz */
-let quiz = { questions: [], index: 0, correct: 0, answered: [] };
+// sessionId ties every answer to the quiz it was given in; the server
+// refuses answers without it. score is the server's count, not ours.
+let quiz = { sessionId: null, questions: [], index: 0, score: null, answered: [] };
 
 $('tabAsk').addEventListener('click', () => switchMode('ask'));
 $('tabQuiz').addEventListener('click', () => switchMode('quiz'));
@@ -881,6 +899,7 @@ function switchMode(mode) {
   $('tabAsk').classList.toggle('on', !quizzing);
   $('tabQuiz').classList.toggle('on', quizzing);
   if (quizzing && $('quizConcept').options.length <= 1) loadQuizConcepts();
+  if (quizzing) loadQuizHistory();
 }
 
 async function loadQuizConcepts() {
@@ -937,7 +956,13 @@ async function startQuiz() {
         '<div class="notice bad">No questions left for that topic.</div>';
       return;
     }
-    quiz = { questions: data.questions, index: 0, correct: 0, answered: quiz.answered };
+    quiz = {
+      sessionId: data.session_id,
+      questions: data.questions,
+      index: 0,
+      score: null,
+      answered: quiz.answered,
+    };
     $('resultPanel').hidden = true;
     showQuestion();
   } catch (err) {
@@ -954,13 +979,12 @@ function showQuestion() {
   $('questionPanel').hidden = false;
   $('feedback').hidden = true;
   $('diagnosis').hidden = true;
-  $('submitAnswer').hidden = false;
-  $('submitAnswer').disabled = true;
-  $('submitAnswer').textContent = 'Submit answer';
-  quiz.picked = null;
   $('progress').textContent =
     `Question ${quiz.index + 1} of ${quiz.questions.length}`;
   $('stem').textContent = q.stem;
+  quiz.selected = null;
+  $('submitAnswer').hidden = false;
+  $('submitAnswer').disabled = true;
 
   const choices = $('choices');
   choices.innerHTML = '';
@@ -970,11 +994,16 @@ function showQuestion() {
     btn.innerHTML =
       `<span class="mark">${String.fromCharCode(65 + i)}</span>` +
       escapeHtml(option.text);
-    // Selecting is separate from submitting, so an answer can be changed.
+    btn.setAttribute('aria-pressed', 'false');
+    // Choosing only selects; nothing is sent until Submit.
     btn.addEventListener('click', () => {
-      choices.querySelectorAll('button').forEach((b) => b.classList.remove('picked'));
-      btn.classList.add('picked');
-      quiz.picked = option.id;
+      choices.querySelectorAll('button').forEach((b) => {
+        b.classList.remove('selected');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.classList.add('selected');
+      btn.setAttribute('aria-pressed', 'true');
+      quiz.selected = option.id;
       $('submitAnswer').disabled = false;
     });
     choices.appendChild(btn);
@@ -982,25 +1011,30 @@ function showQuestion() {
 }
 
 $('submitAnswer').addEventListener('click', () => {
-  if (quiz.picked) answerQuestion(quiz.picked);
+  if (quiz.selected) answerQuestion(quiz.selected);
 });
 
 async function answerQuestion(optionId) {
   const q = quiz.questions[quiz.index];
   const buttons = [...$('choices').querySelectorAll('button')];
-  buttons.forEach((b) => {
-    b.disabled = true;
-    b.classList.remove('picked');
-  });
-  $('submitAnswer').hidden = true;
+  buttons.forEach((b) => (b.disabled = true));
+  // Disabled straight away: a double click on Submit would otherwise send
+  // the answer twice and the second would come back refused.
+  $('submitAnswer').disabled = true;
 
   try {
     const result = await api('/quiz/answer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question_id: q.id, selected_option_id: optionId }),
+      body: JSON.stringify({
+        session_id: quiz.sessionId,
+        question_id: q.id,
+        selected_option_id: optionId,
+      }),
     });
 
+    // The selection outline would sit on top of the right/wrong colours.
+    buttons.forEach((b) => b.classList.remove('selected'));
     // Always mark the correct answer, not just the one chosen: a student
     // who got it wrong needs to see which was right.
     q.options.forEach((option, i) => {
@@ -1008,7 +1042,7 @@ async function answerQuestion(optionId) {
       else if (option.id === optionId) buttons[i].classList.add('wrong');
     });
 
-    if (result.correct) quiz.correct += 1;
+    quiz.score = result.session;
     quiz.answered.push(q.id);
 
     $('explanation').textContent = result.explanation;
@@ -1018,10 +1052,11 @@ async function answerQuestion(optionId) {
     }
     $('nextQuestion').textContent =
       quiz.index + 1 < quiz.questions.length ? 'Next question' : 'See score';
+    $('submitAnswer').hidden = true;
     $('feedback').hidden = false;
   } catch (err) {
     buttons.forEach((b) => (b.disabled = false));
-    $('submitAnswer').hidden = false;
+    $('submitAnswer').disabled = false;
     $('quizNotice').innerHTML =
       `<div class="notice bad">${escapeHtml(err.message)}</div>`;
   }
@@ -1034,14 +1069,44 @@ $('nextQuestion').addEventListener('click', () => {
   } else {
     $('questionPanel').hidden = true;
     $('resultPanel').hidden = false;
-    const total = quiz.questions.length;
-    $('score').textContent = `${quiz.correct} out of ${total}`;
+    // The server's count of what it recorded, so the score shown here is
+    // the one the history will show later.
+    const { correct, total } = quiz.score;
+    $('score').textContent = `${correct} out of ${total}`;
     $('scoreNote').textContent =
-      quiz.correct === total
+      correct === total
         ? 'All correct.'
         : 'Read the explanations for the ones you missed — they cite the page.';
+    loadQuizHistory();
   }
 });
+
+async function loadQuizHistory() {
+  try {
+    const sessions = await api('/quiz/sessions');
+    $('historyPanel').hidden = !sessions.length;
+    $('historyList').innerHTML = sessions.map((s) => {
+      const when = new Date(s.started_at).toLocaleString(undefined, {
+        weekday: 'short', day: 'numeric', month: 'short',
+        hour: '2-digit', minute: '2-digit',
+      });
+      const topics = s.concepts.length > 2
+        ? `${s.concepts.slice(0, 2).join(', ')} +${s.concepts.length - 2} more`
+        : s.concepts.join(', ');
+      // A quiz left halfway is shown as such, not scored as if the
+      // unanswered questions were wrong.
+      const result = s.finished
+        ? `${s.correct} / ${s.total}`
+        : `<span class="unfinished">${s.answered} of ${s.total} answered</span>`;
+      return `<li><span class="when">${escapeHtml(when)}</span>` +
+        `<span class="what">${escapeHtml(topics)}</span>` +
+        `<span class="result">${result}</span></li>`;
+    }).join('');
+  } catch (err) {
+    // History is a convenience; failing to load it must not block a quiz.
+    $('historyPanel').hidden = true;
+  }
+}
 
 loadHealth();
 loadDocuments();

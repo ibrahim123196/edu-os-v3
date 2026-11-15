@@ -120,6 +120,27 @@ def init_db() -> None:
             conn.execute(
                 text(f"ALTER TABLE documents ADD COLUMN IF NOT EXISTS {column} {spec}")
             )
+        # Quiz sessions. quiz_sessions is a new table, so create_all above
+        # has already made it; the column on attempts is not, so it is added
+        # here along with the indexes create_all would have given a new table.
+        conn.execute(
+            text(
+                "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS session_id uuid "
+                "REFERENCES quiz_sessions(id) ON DELETE SET NULL"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_attempts_session_id "
+                "ON attempts (session_id)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_attempt_session_question "
+                "ON attempts (session_id, question_id)"
+            )
+        )
         # HNSW gives good recall/latency for cosine distance without tuning
         # lists the way IVFFlat requires.
         conn.execute(
