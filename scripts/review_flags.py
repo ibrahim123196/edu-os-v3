@@ -28,7 +28,10 @@ def describe(db: Session, n: int, first: QuestionFlag) -> list[str]:
     q = db.get(Question, first.question_id)
     concept = db.get(Concept, q.concept_id)
     flags = [f for f in q_flags(db, q) if f.resolved_at is None]
-    lines = [f"{n}. {concept.name}  (flagged {first.created_at:%d %b %H:%M})", f"   Q: {q.stem}"]
+    # In this computer's time zone: the database keeps UTC, and "14:30" for
+    # a flag sent at 20:00 in India read as somebody else's.
+    when = first.created_at.astimezone()
+    lines = [f"{n}. {concept.name}  (flagged {when:%d %b %H:%M})", f"   Q: {q.stem}"]
     for o in sorted(q.options, key=lambda o: o.position):
         lines.append(f"   {'KEY ' if o.is_correct else '    '} {o.text}")
     for f in flags:

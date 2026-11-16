@@ -291,6 +291,23 @@ def check_questions(db) -> None:
     elif approved:
         report(PASS, f"all {approved} approved questions independently checked")
 
+    # A flagged question is out of every quiz until someone reviews it, and
+    # nothing reviews it automatically: without this line a forgotten flag
+    # looks exactly like a question that was never there.
+    from apps.api.quiz import QuestionFlag
+
+    waiting = db.scalar(
+        select(func.count(func.distinct(QuestionFlag.question_id))).where(
+            QuestionFlag.resolved_at.is_(None)
+        )
+    ) or 0
+    if waiting:
+        report(
+            WARN,
+            f"{waiting} flagged question(s) waiting for review, out of every quiz until then",
+            fix="python -m scripts.review_flags",
+        )
+
     orphan = db.scalar(
         select(func.count())
         .select_from(Question)

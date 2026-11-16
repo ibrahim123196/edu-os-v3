@@ -136,3 +136,33 @@ Not deployable to students as-is. Needed first: authentication and per-student
 data isolation, consent and privacy handling for minors, rate limiting, upload
 scanning, content licensing review for uploaded material, and a human
 oversight path for reporting wrong answers.
+
+### Reviewing flagged questions: teachers, not a terminal
+
+What exists: after answering, a student can mark a question "looks wrong".
+It leaves every quiz at once and waits for `python -m scripts.review_flags`;
+retiring it marks it faulty, and answers given to it stop counting toward
+mastery. The doctor warns while flags are waiting. Nothing reviews them
+automatically. That suits one user and does not survive a pilot.
+
+The plan is for the NGO's teachers to review. That needs:
+
+- **Roles.** Teacher and student logins -- part of the authentication above.
+- **A review page.** Flagged questions with their key, options and the
+  students' notes, and Retire / Restore buttons. Teachers should not need a
+  terminal.
+- **A flag hides the question only for the student who raised it** until a
+  teacher confirms. Withdrawing for everyone on one flag lets a single
+  student who disagrees with a correct answer remove it from every class.
+- **Assignment.** Physics flags go to a physics teacher. Unassigned flags pile
+  up unseen -- the forgotten-flag problem, at scale.
+- **A record of decisions.** Who retired what and why, so a wrong call can be
+  found and undone.
+- **A queue.** Sorted by how many students flagged each question.
+
+A stronger version of the same idea: teachers approve new questions before
+any student sees them. The automated checker (`ai/quiz/checking.py`) then
+filters out the plainly broken ones first, so a teacher's time goes on the
+judgement calls. A model checking a model still misses things; a person
+reading each question once does not, the same reasoning as the hand
+corrections for platform content.
