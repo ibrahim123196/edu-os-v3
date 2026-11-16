@@ -159,4 +159,11 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if "--apply" in args:
         sys.exit(apply_results(_keep(args)))
-    run_checks(_limit(args))
+    from ai.generation import usage
+
+    # Printed even when a run stops part-way: what it spent was still spent.
+    try:
+        run_checks(_limit(args))
+    finally:
+        if usage.summary():
+            print("\n" + usage.summary())

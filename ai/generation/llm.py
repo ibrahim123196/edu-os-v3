@@ -22,6 +22,9 @@ from apps.api.config import settings
 log = logging.getLogger(__name__)
 
 
+from ai.generation.usage import record as _record
+
+
 class LLMError(Exception):
     pass
 
@@ -90,6 +93,8 @@ class AnthropicClient(LLMClient):
         else:
             raise LLMError(f"Anthropic request failed: {last_error}") from last_error
 
+        usage = getattr(resp, "usage", None)
+        _record(self.model, getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None))
         return "".join(
             block.text for block in resp.content if getattr(block, "type", "") == "text"
         ).strip()
@@ -116,6 +121,8 @@ class OpenAIClient(LLMClient):
             )
         except Exception as exc:
             raise LLMError(f"OpenAI request failed: {exc}") from exc
+        usage = getattr(resp, "usage", None)
+        _record(self.model, getattr(usage, "prompt_tokens", None), getattr(usage, "completion_tokens", None))
         return (resp.choices[0].message.content or "").strip()
 
 

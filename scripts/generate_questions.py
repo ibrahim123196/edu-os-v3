@@ -104,5 +104,17 @@ def main() -> int:
     return 0 if approved else 1
 
 
+def _run() -> int:
+    from ai.generation import usage
+
+    # Printed even when a run stops part-way: what a failed run spent was
+    # still spent.
+    try:
+        return main()
+    finally:
+        if usage.summary():
+            print("\n" + usage.summary())
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_run())
