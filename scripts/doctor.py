@@ -39,7 +39,9 @@ def report(level: str, title: str, detail: str = "", fix: str = "") -> None:
     print(f"  [{level}] {title}")
     if detail:
         print(f"         {detail}")
-    if level == FAIL and fix:
+    # Any level: warnings carry fixes too, and printing them only for
+    # failures hid the very next step a warning was pointing at.
+    if fix:
         print(f"         fix: {fix}")
 
 
@@ -285,6 +287,64 @@ def check_questions(db) -> None:
         )
 
 
+def check_misconceptions(db) -> None:
+    print("\nNamed mistakes")
+    from apps.api.curriculum import Concept
+    from apps.api.quiz import Misconception, Question, QuestionOption, QuestionStatus
+
+    total = db.scalar(select(func.count()).select_from(Misconception)) or 0
+    if total == 0:
+        report(
+            WARN,
+            "no named mistakes loaded",
+            "wrong answers cannot be grouped into repeated mistakes",
+            fix="python -m scripts.seed_misconceptions",
+        )
+        return
+
+    covered = db.scalar(select(func.count(func.distinct(Misconception.concept_id)))) or 0
+    concepts = db.scalar(select(func.count()).select_from(Concept)) or 0
+    report(PASS, f"{total} named mistakes across {covered} of {concepts} concepts")
+    if covered < concepts:
+        report(
+            WARN,
+            f"{concepts - covered} concept(s) have no named mistakes",
+            "new questions for them cannot name what a wrong answer means",
+        )
+
+    # Only approved questions are ever handed out, so only their options
+    # decide whether a wrong answer can be traced to a mistake.
+    wrong = db.scalar(
+        select(func.count())
+        .select_from(QuestionOption)
+        .join(Question, Question.id == QuestionOption.question_id)
+        .where(~QuestionOption.is_correct, Question.status == QuestionStatus.approved)
+    ) or 0
+    linked = db.scalar(
+        select(func.count())
+        .select_from(QuestionOption)
+        .join(Question, Question.id == QuestionOption.question_id)
+        .where(
+            ~QuestionOption.is_correct,
+            Question.status == QuestionStatus.approved,
+            QuestionOption.misconception_id.is_not(None),
+        )
+    ) or 0
+    if wrong == 0:
+        return
+    share = linked / wrong
+    # Below half, most wrong answers cannot be traced to a mistake and the
+    # repeated-mistakes list stays empty however much is answered.
+    report(
+        PASS if share >= 0.5 else WARN,
+        f"{linked} of {wrong} wrong options in approved questions name a mistake ({share:.0%})",
+        # After matching, most older options still name nothing: they were
+        # never built on a real mistake. Only new questions change this.
+        "" if share >= 0.5 else "most older wrong options are not built on a common mistake",
+        fix="" if share >= 0.5 else "new questions name a mistake as they are generated",
+    )
+
+
 def check_mastery(db) -> None:
     print("\nStudent model")
     from apps.api.quiz import Attempt
@@ -521,6 +581,7 @@ def main() -> int:
             check_curriculum(db)
             check_tagging(db)
             check_questions(db)
+            check_misconceptions(db)
             check_mastery(db)
             check_vocabulary(db)
             check_corrections(db)

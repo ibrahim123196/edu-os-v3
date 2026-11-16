@@ -122,6 +122,26 @@ class Question(Base):
     __table_args__ = (Index("ix_question_concept_status", "concept_id", "status"),)
 
 
+class Misconception(Base):
+    """A named mistake students make with one concept.
+
+    Loaded from content/misconceptions.json. The point is a shared name:
+    when every question described its wrong answers in its own words, the
+    same mistake made on two questions never counted as a repeat.
+    """
+
+    __tablename__ = "misconceptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    # The id from the JSON file, e.g. "coulombs-law/inverse-r". Stable, so a
+    # reworded label never breaks the questions already pointing here.
+    slug: Mapped[str] = mapped_column(String(160), unique=True, nullable=False)
+    concept_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("concepts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    label: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class QuestionOption(Base):
     __tablename__ = "question_options"
 
@@ -136,6 +156,18 @@ class QuestionOption(Base):
     # Why this wrong answer is tempting. A distractor that corresponds to a
     # specific mistake is what turns a wrong answer into a diagnosis.
     misconception: Mapped[str | None] = mapped_column(Text)
+
+    # Which named mistake this wrong option stands for. The free text above
+    # says why it is tempting in this particular question; this says which
+    # mistake it is, in words shared with every other question. Null where
+    # none of the concept's named mistakes fits. Added after the table
+    # shipped, so init_db adds it to existing databases.
+    misconception_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("misconceptions.id", ondelete="SET NULL"),
+        index=True,
+    )
+    named_misconception: Mapped[Misconception | None] = relationship()
 
     question: Mapped[Question] = relationship(back_populates="options")
 

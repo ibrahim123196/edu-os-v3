@@ -1,0 +1,671 @@
+{
+  "_about": "Common mistakes per concept. Each wrong option of a question names one of these, so the same mistake made on different questions is recognised as a repeat. Safe to edit labels; changing an id breaks the link to questions already using it.",
+  "concepts": {
+    "electric-charge": [
+      {
+        "id": "electric-charge/rubbing-creates-charge",
+        "label": "Thinks rubbing creates charge, rather than moving electrons from one body to the other"
+      },
+      {
+        "id": "electric-charge/protons-move",
+        "label": "Thinks positive charges (protons) move when a body is charged"
+      },
+      {
+        "id": "electric-charge/induction-needs-contact",
+        "label": "Thinks charging by induction needs contact, or that the inducing body loses charge"
+      },
+      {
+        "id": "electric-charge/insulator-spreads-charge",
+        "label": "Thinks charge spreads over an insulator the way it does over a conductor"
+      }
+    ],
+    "charge-quantisation": [
+      {
+        "id": "charge-quantisation/any-amount",
+        "label": "Thinks a body can carry any amount of charge, including a fraction of e"
+      },
+      {
+        "id": "charge-quantisation/visible-at-large-scale",
+        "label": "Expects quantisation to be noticeable in everyday, large-scale charges"
+      },
+      {
+        "id": "charge-quantisation/sign-of-electron-transfer",
+        "label": "Gets the sign wrong: losing electrons leaves a body positive"
+      }
+    ],
+    "charge-conservation": [
+      {
+        "id": "charge-conservation/charge-destroyed",
+        "label": "Thinks charge is destroyed when opposite charges neutralise or a body is earthed"
+      },
+      {
+        "id": "charge-conservation/each-body-neutral",
+        "label": "Confuses conservation of total charge with each body staying neutral"
+      },
+      {
+        "id": "charge-conservation/particles-never-created",
+        "label": "Thinks conservation means charged particles can never be created or destroyed"
+      }
+    ],
+    "coulombs-law": [
+      {
+        "id": "coulombs-law/inverse-r",
+        "label": "Uses 1/r instead of 1/r²"
+      },
+      {
+        "id": "coulombs-law/bigger-charge-bigger-force",
+        "label": "Thinks the larger charge pulls harder on the smaller one (forgets Newton's third law)"
+      },
+      {
+        "id": "coulombs-law/ignores-medium",
+        "label": "Forgets that a medium weakens the force by the factor K"
+      },
+      {
+        "id": "coulombs-law/vector-form-direction",
+        "label": "Confuses the direction in the vector form: signs of the charges vs the unit vector"
+      }
+    ],
+    "superposition-principle": [
+      {
+        "id": "superposition-principle/adds-magnitudes",
+        "label": "Adds the sizes of forces instead of adding them as vectors"
+      },
+      {
+        "id": "superposition-principle/third-charge-changes-pair",
+        "label": "Thinks a third charge changes the force between the other two"
+      },
+      {
+        "id": "superposition-principle/false-symmetry",
+        "label": "Assumes forces cancel by symmetry when the arrangement is not actually symmetric"
+      }
+    ],
+    "electric-field": [
+      {
+        "id": "electric-field/depends-on-test-charge",
+        "label": "Thinks the field at a point depends on the test charge placed there"
+      },
+      {
+        "id": "electric-field/negative-charge-along-field",
+        "label": "Thinks a negative charge is pushed along the field direction"
+      },
+      {
+        "id": "electric-field/no-field-without-charge",
+        "label": "Thinks there is no field at a point unless a charge is placed there"
+      },
+      {
+        "id": "electric-field/inverse-r",
+        "label": "Uses 1/r instead of 1/r² for the field of a point charge"
+      }
+    ],
+    "field-lines": [
+      {
+        "id": "field-lines/lines-are-paths",
+        "label": "Treats field lines as the paths charges actually follow"
+      },
+      {
+        "id": "field-lines/lines-cross",
+        "label": "Thinks field lines can cross"
+      },
+      {
+        "id": "field-lines/spacing-misread",
+        "label": "Misreads how closely spaced the lines are (closer means a stronger field)"
+      },
+      {
+        "id": "field-lines/closed-loops",
+        "label": "Thinks electrostatic field lines form closed loops"
+      }
+    ],
+    "electric-dipole": [
+      {
+        "id": "electric-dipole/moment-direction",
+        "label": "Takes the dipole moment as pointing from + to − (it points from − to +)"
+      },
+      {
+        "id": "electric-dipole/inverse-r-squared",
+        "label": "Uses 1/r² instead of 1/r³ for the field far from a dipole"
+      },
+      {
+        "id": "electric-dipole/axial-equatorial-mixup",
+        "label": "Mixes up the axial and equatorial fields (the factor of 2, or the direction)"
+      }
+    ],
+    "dipole-in-field": [
+      {
+        "id": "dipole-in-field/net-force",
+        "label": "Thinks a dipole in a uniform field feels a net force"
+      },
+      {
+        "id": "dipole-in-field/cos-for-torque",
+        "label": "Uses cos θ instead of sin θ for the torque"
+      },
+      {
+        "id": "dipole-in-field/equilibrium-mixup",
+        "label": "Mixes up stable equilibrium (p along E) and unstable (p opposite E)"
+      }
+    ],
+    "electric-flux": [
+      {
+        "id": "electric-flux/area-only",
+        "label": "Thinks flux depends only on area, ignoring the angle"
+      },
+      {
+        "id": "electric-flux/angle-from-surface",
+        "label": "Measures the angle from the surface instead of from its normal"
+      },
+      {
+        "id": "electric-flux/ignores-sign",
+        "label": "Ignores sign: treats inward and outward flux as both positive"
+      }
+    ],
+    "gauss-law": [
+      {
+        "id": "gauss-law/outside-charges-change-flux",
+        "label": "Thinks charges outside the surface change the net flux"
+      },
+      {
+        "id": "gauss-law/field-only-from-inside",
+        "label": "Thinks the E in Gauss's law comes only from the charges inside"
+      },
+      {
+        "id": "gauss-law/depends-on-shape",
+        "label": "Thinks the net flux depends on the size or shape of the surface"
+      },
+      {
+        "id": "gauss-law/zero-flux-zero-field",
+        "label": "Thinks zero net flux means zero field everywhere on the surface"
+      }
+    ],
+    "gauss-applications": [
+      {
+        "id": "gauss-applications/shell-inside-nonzero",
+        "label": "Thinks the field inside a charged spherical shell is not zero"
+      },
+      {
+        "id": "gauss-applications/line-charge-inverse-r-squared",
+        "label": "Uses 1/r² instead of 1/r for a long straight line of charge"
+      },
+      {
+        "id": "gauss-applications/sheet-weakens",
+        "label": "Thinks the field of an infinite flat sheet weakens with distance"
+      },
+      {
+        "id": "gauss-applications/surface-without-symmetry",
+        "label": "Picks a Gaussian surface without the symmetry needed to take E out of the integral"
+      }
+    ],
+    "electrostatic-potential": [
+      {
+        "id": "electrostatic-potential/potential-is-vector",
+        "label": "Thinks potential has a direction, like a vector"
+      },
+      {
+        "id": "electrostatic-potential/zero-potential-zero-field",
+        "label": "Thinks zero potential at a point means zero field there, or the reverse"
+      },
+      {
+        "id": "electrostatic-potential/potential-vs-energy",
+        "label": "Mixes up potential (energy per unit charge) with potential energy"
+      },
+      {
+        "id": "electrostatic-potential/work-sign",
+        "label": "Gets the sign of the work wrong when a charge moves to a higher potential"
+      }
+    ],
+    "potential-point-charge": [
+      {
+        "id": "potential-point-charge/inverse-r-squared",
+        "label": "Uses 1/r² instead of 1/r"
+      },
+      {
+        "id": "potential-point-charge/ignores-charge-sign",
+        "label": "Ignores the sign of the charge when adding potentials"
+      },
+      {
+        "id": "potential-point-charge/adds-as-vectors",
+        "label": "Adds potentials as vectors instead of as plain numbers"
+      }
+    ],
+    "equipotential-surfaces": [
+      {
+        "id": "equipotential-surfaces/work-along-surface",
+        "label": "Thinks work is needed to move a charge along an equipotential surface"
+      },
+      {
+        "id": "equipotential-surfaces/field-along-surface",
+        "label": "Thinks the field can point along an equipotential surface (it is always perpendicular)"
+      },
+      {
+        "id": "equipotential-surfaces/evenly-spaced",
+        "label": "Thinks equipotentials around a point charge are evenly spaced for equal steps of V"
+      }
+    ],
+    "potential-energy-charges": [
+      {
+        "id": "potential-energy-charges/pair-counting",
+        "label": "Counts pairs twice, or misses pairs, when adding up a system of charges"
+      },
+      {
+        "id": "potential-energy-charges/like-charges-negative",
+        "label": "Thinks two like charges have negative potential energy"
+      },
+      {
+        "id": "potential-energy-charges/belongs-to-one-charge",
+        "label": "Thinks the energy belongs to one charge rather than to the whole arrangement"
+      },
+      {
+        "id": "potential-energy-charges/depends-on-order",
+        "label": "Thinks the energy depends on the order the charges were brought in"
+      }
+    ],
+    "conductors-electrostatics": [
+      {
+        "id": "conductors-electrostatics/field-inside-nonzero",
+        "label": "Thinks the field inside a charged conductor is not zero"
+      },
+      {
+        "id": "conductors-electrostatics/charge-in-volume",
+        "label": "Thinks extra charge spreads through a conductor's volume instead of sitting on its surface"
+      },
+      {
+        "id": "conductors-electrostatics/field-at-angle",
+        "label": "Thinks the field just outside a conductor can be at an angle to the surface"
+      },
+      {
+        "id": "conductors-electrostatics/even-charge-density",
+        "label": "Thinks charge spreads evenly over an irregular conductor (it gathers at sharp points)"
+      }
+    ],
+    "dielectrics-polarisation": [
+      {
+        "id": "dielectrics-polarisation/free-charges",
+        "label": "Thinks a dielectric has free charges that move as in a conductor"
+      },
+      {
+        "id": "dielectrics-polarisation/cancels-completely",
+        "label": "Thinks a dielectric cancels the field inside completely, like a conductor"
+      },
+      {
+        "id": "dielectrics-polarisation/k-backwards",
+        "label": "Gets the effect of K backwards: thinks a dielectric strengthens the field inside"
+      }
+    ],
+    "capacitance": [
+      {
+        "id": "capacitance/depends-on-q-or-v",
+        "label": "Thinks capacitance depends on the charge stored or the voltage applied"
+      },
+      {
+        "id": "capacitance/net-charge-q",
+        "label": "Thinks a charged capacitor's net charge is Q (it is +Q and −Q, so zero)"
+      },
+      {
+        "id": "capacitance/more-charge-more-c",
+        "label": "Reads C = Q/V as more charge gives more capacitance"
+      }
+    ],
+    "parallel-plate-capacitor": [
+      {
+        "id": "parallel-plate-capacitor/grows-with-separation",
+        "label": "Thinks capacitance increases with plate separation"
+      },
+      {
+        "id": "parallel-plate-capacitor/k-misplaced",
+        "label": "Forgets the factor K, or puts it in the wrong place, when a dielectric fills the gap"
+      },
+      {
+        "id": "parallel-plate-capacitor/slab-no-effect",
+        "label": "Thinks a slab partly filling the gap leaves C unchanged"
+      }
+    ],
+    "capacitor-combinations": [
+      {
+        "id": "capacitor-combinations/rules-swapped",
+        "label": "Swaps the rules: adds capacitances in series, like resistors"
+      },
+      {
+        "id": "capacitor-combinations/series-same-voltage",
+        "label": "Thinks capacitors in series share the same voltage (they carry the same charge)"
+      },
+      {
+        "id": "capacitor-combinations/parallel-same-charge",
+        "label": "Thinks capacitors in parallel carry the same charge (they share the same voltage)"
+      }
+    ],
+    "energy-in-capacitor": [
+      {
+        "id": "energy-in-capacitor/qv-not-half",
+        "label": "Uses QV instead of ½QV"
+      },
+      {
+        "id": "energy-in-capacitor/stored-in-plates",
+        "label": "Thinks the energy is stored in the plates rather than in the field between them"
+      },
+      {
+        "id": "energy-in-capacitor/what-stays-fixed",
+        "label": "Mixes up what stays fixed when a dielectric goes in: battery connected (V fixed) or disconnected (Q fixed)"
+      }
+    ],
+    "electric-current": [
+      {
+        "id": "electric-current/electron-direction",
+        "label": "Takes the current direction as the direction electrons move"
+      },
+      {
+        "id": "electric-current/current-used-up",
+        "label": "Thinks current gets used up as it passes through a bulb or resistor"
+      },
+      {
+        "id": "electric-current/current-is-vector",
+        "label": "Thinks current is a vector"
+      }
+    ],
+    "drift-velocity": [
+      {
+        "id": "drift-velocity/near-light-speed",
+        "label": "Thinks electrons drift at nearly the speed of light (confusing it with how fast the signal travels)"
+      },
+      {
+        "id": "drift-velocity/confused-with-thermal",
+        "label": "Confuses drift velocity with the electrons' fast random thermal motion"
+      },
+      {
+        "id": "drift-velocity/along-field",
+        "label": "Thinks electrons drift along the field (they drift against it)"
+      },
+      {
+        "id": "drift-velocity/thickness-effect",
+        "label": "Gets how drift speed changes with wire thickness, for the same current, wrong"
+      }
+    ],
+    "ohms-law": [
+      {
+        "id": "ohms-law/holds-for-everything",
+        "label": "Thinks Ohm's law holds for every material and device"
+      },
+      {
+        "id": "ohms-law/r-depends-on-v-or-i",
+        "label": "Reads R = V/I as resistance depends on V or I"
+      }
+    ],
+    "resistivity": [
+      {
+        "id": "resistivity/resistance-vs-resistivity",
+        "label": "Confuses resistance (depends on shape) with resistivity (a property of the material)"
+      },
+      {
+        "id": "resistivity/stretching-changes-resistivity",
+        "label": "Thinks stretching a wire changes its resistivity"
+      },
+      {
+        "id": "resistivity/stretched-wire-scaling",
+        "label": "Gets the change in resistance wrong when a wire is stretched (n times longer gives n² times the resistance)"
+      },
+      {
+        "id": "resistivity/resistivity-is-a-force",
+        "label": "Thinks resistivity is a force pushing against the field, rather than a measure of how freely charges move"
+      }
+    ],
+    "temperature-resistivity": [
+      {
+        "id": "temperature-resistivity/always-rises",
+        "label": "Thinks every material's resistivity rises with temperature (a semiconductor's falls)"
+      },
+      {
+        "id": "temperature-resistivity/alloys-change-strongly",
+        "label": "Thinks alloys like manganin change strongly with temperature (they barely change)"
+      },
+      {
+        "id": "temperature-resistivity/expansion-not-collisions",
+        "label": "Thinks resistance rises because the wire expands, not because of more collisions"
+      }
+    ],
+    "electrical-energy-power": [
+      {
+        "id": "electrical-energy-power/wrong-power-formula",
+        "label": "Uses V²/R or I²R without checking which quantity is shared (series or parallel)"
+      },
+      {
+        "id": "electrical-energy-power/high-watt-high-resistance",
+        "label": "Thinks a higher-wattage bulb has a higher resistance"
+      },
+      {
+        "id": "electrical-energy-power/heat-without-collisions",
+        "label": "Thinks energy turns into heat even where charges move without colliding"
+      }
+    ],
+    "resistor-combinations": [
+      {
+        "id": "resistor-combinations/rules-swapped",
+        "label": "Swaps the series and parallel rules"
+      },
+      {
+        "id": "resistor-combinations/parallel-same-current",
+        "label": "Thinks resistors in parallel carry the same current"
+      },
+      {
+        "id": "resistor-combinations/parallel-larger",
+        "label": "Thinks a parallel combination can be larger than its smallest resistor"
+      },
+      {
+        "id": "resistor-combinations/not-series-or-parallel",
+        "label": "Treats resistors as series or parallel when they are neither (that needs Kirchhoff's rules)"
+      }
+    ],
+    "emf-internal-resistance": [
+      {
+        "id": "emf-internal-resistance/emf-is-force",
+        "label": "Thinks emf is a force"
+      },
+      {
+        "id": "emf-internal-resistance/terminal-equals-emf",
+        "label": "Thinks terminal voltage always equals the emf"
+      },
+      {
+        "id": "emf-internal-resistance/charging-sign",
+        "label": "Gets the sign wrong while charging: V = ε + Ir versus ε − Ir"
+      },
+      {
+        "id": "emf-internal-resistance/max-current-large-r",
+        "label": "Thinks the most current flows when the external resistance is largest"
+      }
+    ],
+    "kirchhoffs-rules": [
+      {
+        "id": "kirchhoffs-rules/inconsistent-signs",
+        "label": "Uses inconsistent signs going around a loop"
+      },
+      {
+        "id": "kirchhoffs-rules/loop-rule-misread",
+        "label": "Treats the loop rule as comparing emfs with resistances instead of adding up voltage drops"
+      },
+      {
+        "id": "kirchhoffs-rules/junction-not-conservation",
+        "label": "Does not see that the junction rule is conservation of charge"
+      },
+      {
+        "id": "kirchhoffs-rules/negative-current-is-error",
+        "label": "Thinks a negative current in the answer means a mistake (it means the guessed direction was backwards)"
+      }
+    ],
+    "wheatstone-bridge": [
+      {
+        "id": "wheatstone-bridge/balance-pairing",
+        "label": "Pairs the resistors wrongly in the balance condition (P/Q = R/S)"
+      },
+      {
+        "id": "wheatstone-bridge/current-at-balance",
+        "label": "Thinks current flows through the galvanometer at balance"
+      },
+      {
+        "id": "wheatstone-bridge/balance-depends-on-source",
+        "label": "Thinks balance depends on the battery's emf or the galvanometer's resistance"
+      }
+    ],
+    "magnetic-force": [
+      {
+        "id": "magnetic-force/acts-at-rest",
+        "label": "Thinks a magnetic field pushes on a charge at rest"
+      },
+      {
+        "id": "magnetic-force/along-field-or-velocity",
+        "label": "Thinks the magnetic force points along the field or along the velocity"
+      },
+      {
+        "id": "magnetic-force/does-work",
+        "label": "Thinks the magnetic force does work and changes the speed"
+      },
+      {
+        "id": "magnetic-force/negative-charge-direction",
+        "label": "Forgets to reverse the direction for a negative charge"
+      }
+    ],
+    "lorentz-force": [
+      {
+        "id": "lorentz-force/adds-magnitudes",
+        "label": "Adds the electric and magnetic forces as sizes instead of as vectors"
+      },
+      {
+        "id": "lorentz-force/acts-when-parallel",
+        "label": "Thinks the magnetic part still acts when v is parallel to B"
+      },
+      {
+        "id": "lorentz-force/velocity-selector",
+        "label": "Gets the velocity-selector condition wrong (it is v = E/B)"
+      }
+    ],
+    "motion-in-magnetic-field": [
+      {
+        "id": "motion-in-magnetic-field/mass-misplaced",
+        "label": "Puts the mass in the wrong place in r = mv/qB"
+      },
+      {
+        "id": "motion-in-magnetic-field/period-depends-on-speed",
+        "label": "Thinks the time for one circle depends on the speed (it does not)"
+      },
+      {
+        "id": "motion-in-magnetic-field/circle-not-helix",
+        "label": "Thinks a charge moving at an angle to B goes in a circle (it is a helix)"
+      },
+      {
+        "id": "motion-in-magnetic-field/speeds-up",
+        "label": "Thinks the charge speeds up as it circles"
+      }
+    ],
+    "cyclotron": [
+      {
+        "id": "cyclotron/magnetic-field-accelerates",
+        "label": "Thinks the magnetic field speeds the particle up (the electric field between the dees does)"
+      },
+      {
+        "id": "cyclotron/frequency-changes",
+        "label": "Thinks the oscillator's frequency must change as the particle speeds up (it stays constant)"
+      },
+      {
+        "id": "cyclotron/energy-from-voltage",
+        "label": "Thinks the final energy depends on the voltage between the dees, rather than on the radius and B"
+      }
+    ],
+    "biot-savart-law": [
+      {
+        "id": "biot-savart-law/inverse-r",
+        "label": "Uses 1/r instead of 1/r²"
+      },
+      {
+        "id": "biot-savart-law/db-direction",
+        "label": "Gets the direction of dB wrong (it is perpendicular to both dl and r)"
+      },
+      {
+        "id": "biot-savart-law/field-along-line",
+        "label": "Thinks a point straight along the line of the current element feels a field (it is zero there)"
+      }
+    ],
+    "field-circular-loop": [
+      {
+        "id": "field-circular-loop/centre-vs-axis",
+        "label": "Mixes up the field at the centre (μ₀I/2R) with the formula for points on the axis"
+      },
+      {
+        "id": "field-circular-loop/axis-direction",
+        "label": "Gets the direction of the field on the axis wrong"
+      },
+      {
+        "id": "field-circular-loop/wrong-components-cancel",
+        "label": "Thinks the components along the axis cancel (it is the sideways ones that cancel)"
+      }
+    ],
+    "amperes-circuital-law": [
+      {
+        "id": "amperes-circuital-law/outside-currents-count",
+        "label": "Thinks currents outside the loop change the line integral"
+      },
+      {
+        "id": "amperes-circuital-law/b-only-from-inside",
+        "label": "Thinks B on the loop comes only from the currents inside it"
+      },
+      {
+        "id": "amperes-circuital-law/used-without-symmetry",
+        "label": "Applies it without the symmetry needed to take B out of the integral"
+      }
+    ],
+    "solenoid-toroid": [
+      {
+        "id": "solenoid-toroid/total-turns",
+        "label": "Uses the total number of turns N instead of turns per unit length n"
+      },
+      {
+        "id": "solenoid-toroid/depends-on-radius",
+        "label": "Thinks the field inside a long solenoid depends on its radius or position"
+      },
+      {
+        "id": "solenoid-toroid/field-outside-toroid",
+        "label": "Thinks there is a field outside an ideal toroid, or in its open middle"
+      }
+    ],
+    "force-between-currents": [
+      {
+        "id": "force-between-currents/attraction-backwards",
+        "label": "Gets it backwards: thinks parallel currents repel and opposite currents attract"
+      },
+      {
+        "id": "force-between-currents/bigger-current-bigger-force",
+        "label": "Thinks the wire with more current feels the bigger force"
+      },
+      {
+        "id": "force-between-currents/inverse-r-squared",
+        "label": "Uses 1/r² instead of 1/r for the force per unit length"
+      }
+    ],
+    "torque-current-loop": [
+      {
+        "id": "torque-current-loop/net-force",
+        "label": "Thinks a current loop in a uniform field feels a net force"
+      },
+      {
+        "id": "torque-current-loop/angle-from-plane",
+        "label": "Measures the angle from the coil's plane instead of from its normal"
+      },
+      {
+        "id": "torque-current-loop/max-when-perpendicular",
+        "label": "Thinks the torque is largest when the coil's plane is perpendicular to B"
+      }
+    ],
+    "moving-coil-galvanometer": [
+      {
+        "id": "moving-coil-galvanometer/radial-field-purpose",
+        "label": "Thinks the radial field is there to make the field stronger (it keeps the torque the same at every angle, so the scale is even)"
+      },
+      {
+        "id": "moving-coil-galvanometer/conversions-swapped",
+        "label": "Swaps the conversions: an ammeter needs a small resistor in parallel (shunt), a voltmeter a large one in series"
+      },
+      {
+        "id": "moving-coil-galvanometer/sensitivities-linked",
+        "label": "Thinks raising current sensitivity always raises voltage sensitivity too"
+      },
+      {
+        "id": "moving-coil-galvanometer/plane-vs-wires",
+        "label": "Confuses field perpendicular to the coil's plane with field perpendicular to the wires"
+      }
+    ]
+  }
+}

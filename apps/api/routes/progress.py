@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.db import get_db
 from apps.api.services.mastery_service import progress_report
+from apps.api.services.misconception_service import mistake_summary
 from apps.api.config import get_settings
 from apps.api.student import STUDENTS, active_student_id
 
@@ -20,7 +21,9 @@ def progress(db: Session = Depends(get_db)):
     Until there is a login this reports the placeholder student, which is
     everything answered on this device.
     """
-    report = progress_report(db, active_student_id())
+    student_id = active_student_id()
+    report = progress_report(db, student_id)
+    report["mistakes"] = mistake_summary(db, student_id)
     # Said on the page, not just in settings: a progress page full of test
     # clicks looks exactly like a real one.
     key = get_settings().active_student

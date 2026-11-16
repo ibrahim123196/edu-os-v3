@@ -63,8 +63,8 @@ where it was written down.
 
 Reply with JSON only, no prose and no code fence:
 
-{"stem": "...", "options": [{"text": "...", "misconception": null},
-{"text": "...", "misconception": "why a student might pick this"}],
+{"stem": "...", "options": [{"text": "...", "misconception": null, "mistake": null},
+{"text": "...", "misconception": "why a student might pick this", "mistake": "an id from the list, or other"}],
 "correct_index": 0, "explanation": "..."}
 
 Set "stem" to null if the passage cannot support a fair question."""
@@ -85,7 +85,15 @@ USER_TEMPLATE = """Passage (from {title}{location}):
 
 Write one multiple-choice question with four options.
 Difficulty {difficulty}: {difficulty_guide}.
-The question must be about: {concept}{already_asked}"""
+The question must be about: {concept}{mistakes}{already_asked}"""
+
+MISTAKES = """
+
+Common mistakes students make with {concept}. Build each wrong option on \
+one of these where you can, and give its id as "mistake". Use "other" only \
+when none fits -- a wrong id is worse than "other", because it records a \
+mistake the student did not make:
+{items}"""
 
 ALREADY_ASKED = """
 
@@ -101,6 +109,10 @@ class GeneratedQuestion:
     correct_index: int
     explanation: str
     misconceptions: list[str | None]
+    # The named mistake behind each option, as an id from the list given to
+    # the model; None for the correct option, for "other", and for any id
+    # the model made up.
+    mistake_ids: list[str | None]
     validation: ValidationResult
 
 
@@ -126,6 +138,31 @@ def _extract_json(raw: str) -> dict:
     raise ValueError("no JSON object in the reply")
 
 
+def _mistake_ids(
+    raw_options: list[dict], correct_index: int, mistakes: list[tuple[str, str]]
+) -> list[str | None]:
+    """Keep only ids that were actually offered.
+
+    A model asked to pick from a list will sometimes invent a plausible id
+    instead. Kept, that would point at nothing; worse, a near-miss could be
+    mistaken for a real one. Anything not on the list becomes "no named
+    mistake", which the doctor counts.
+    """
+    allowed = {slug for slug, _ in mistakes}
+    ids: list[str | None] = []
+    for position, option in enumerate(raw_options):
+        given = option.get("mistake")
+        if position == correct_index or not isinstance(given, str):
+            ids.append(None)
+        elif given in allowed:
+            ids.append(given)
+        else:
+            if given != "other":
+                log.info("Generator named a mistake not on the list: %r", given)
+            ids.append(None)
+    return ids
+
+
 def generate_question(
     llm: LLMClient,
     content: str,
@@ -134,6 +171,7 @@ def generate_question(
     location: str = "",
     difficulty: int = 2,
     existing_stems: list[str] | None = None,
+    mistakes: list[tuple[str, str]] | None = None,
 ) -> GeneratedQuestion:
     """Ask for one question about `concept`, grounded in `content`.
 
@@ -148,6 +186,13 @@ def generate_question(
             stems="\n".join(f"- {stem}" for stem in existing_stems[:8])
         )
 
+    listed = ""
+    if mistakes:
+        listed = MISTAKES.format(
+            concept=concept,
+            items="\n".join(f"- {slug}: {label}" for slug, label in mistakes),
+        )
+
     prompt = USER_TEMPLATE.format(
         title=title,
         location=f", {location}" if location else "",
@@ -155,6 +200,7 @@ def generate_question(
         difficulty=difficulty,
         difficulty_guide=DIFFICULTY_GUIDE.get(difficulty, DIFFICULTY_GUIDE[2]),
         concept=concept,
+        mistakes=listed,
         already_asked=already_asked,
     )
 
@@ -183,6 +229,7 @@ def generate_question(
     misconceptions = [o.get("misconception") for o in raw_options]
     correct_index = int(data.get("correct_index", -1))
     explanation = (data.get("explanation") or "").strip()
+    mistake_ids = _mistake_ids(raw_options, correct_index, mistakes or [])
 
     return GeneratedQuestion(
         stem=stem,
@@ -190,5 +237,6 @@ def generate_question(
         correct_index=correct_index,
         explanation=explanation,
         misconceptions=misconceptions,
+        mistake_ids=mistake_ids,
         validation=validate_multiple_choice(stem, options, correct_index, explanation),
     )

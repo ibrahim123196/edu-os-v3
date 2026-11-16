@@ -10,3 +10,6 @@ storage/
 .DS_Store
 node_modules/
 .fastembed_cache/
+# Working file for matching old options to named mistakes; regenerate it
+# with scripts.export_options_for_matching rather than keeping it.
+options_to_match.json

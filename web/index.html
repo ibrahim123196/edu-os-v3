@@ -425,6 +425,12 @@
   .bar.weak .fill { background: var(--warn); }
   .bar .pct { width: 38px; text-align: right; color: var(--ink); }
   .needs-work .concept-row:first-of-type { border-top: 0; }
+  .mistake-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 14px; align-items: center;
+    padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px;
+  }
+  .mistake-row .where { font-size: 12.5px; color: var(--muted); }
 
   /* Course material loaded for every student. Stated, not listed: it is
      background knowledge the assistant draws on, not files to manage. */
@@ -600,6 +606,11 @@
         <h2>Needs work</h2>
         <p class="hint">Weak, and answered often enough to be sure of it.</p>
         <div id="needsWorkList"></div>
+      </section>
+      <section class="panel mistakes" id="mistakesPanel">
+        <h2>Repeated mistakes</h2>
+        <p class="hint" id="mistakesHint"></p>
+        <div id="mistakesList"></div>
       </section>
       <section class="panel" id="progressChapters"></section>
     </div>
@@ -1093,10 +1104,10 @@ async function answerQuestion(optionId) {
     quiz.answered.push(q.id);
 
     $('explanation').textContent = result.explanation;
-    if (!result.correct && result.misconception) {
-      $('diagnosis').hidden = false;
-      $('diagnosis').textContent = result.misconception;
-    }
+    // Only a mistake from the reviewed list, worded for the student.
+    $('diagnosis').hidden = !(!result.correct && result.mistake);
+    $('diagnosis').textContent =
+      !result.correct && result.mistake ? `Common mistake: ${result.mistake}` : '';
     $('nextQuestion').textContent =
       quiz.index + 1 < quiz.questions.length ? 'Next question' : 'See score';
     $('submitAnswer').hidden = true;
@@ -1184,6 +1195,8 @@ async function loadProgress() {
     $('needsWork').hidden = !p.weakest.length;
     $('needsWorkList').innerHTML = p.weakest.map(conceptRow).join('');
 
+    renderMistakes(p.mistakes);
+
     // Every concept, under the chapter that introduces it.
     const chapters = new Map();
     for (const c of p.concepts) {
@@ -1205,6 +1218,28 @@ async function loadProgress() {
     $('progressSummary').innerHTML =
       `<div class="notice bad">${escapeHtml(err.message)}</div>`;
   }
+}
+
+function renderMistakes(m) {
+  const n = m.repeat_threshold;
+  if (m.repeated.length) {
+    $('mistakesHint').textContent =
+      `Made on ${n} or more different questions — more than a one-off slip.`;
+  } else if (!m.wrong_answers) {
+    $('mistakesHint').textContent = 'No wrong answers yet.';
+  } else {
+    // How much there was to go on, so "none repeated" is not read as
+    // "no mistakes".
+    $('mistakesHint').textContent =
+      `None yet. ${m.wrong_answers_named} of ${m.wrong_answers} wrong answers ` +
+      `were linked to a named mistake; one shows here once it turns up on ` +
+      `${n} different questions.`;
+  }
+  $('mistakesList').innerHTML = m.repeated.map((r) =>
+    `<div class="mistake-row"><span>${escapeHtml(r.mistake)}` +
+    `<div class="where">${escapeHtml(r.concept)} · on ${r.questions} different questions</div></span>` +
+    `<button class="quiet" data-practise="${escapeHtml(r.concept_slug)}">Practise</button></div>`
+  ).join('');
 }
 
 function conceptRow(c) {

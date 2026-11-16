@@ -28,6 +28,7 @@ from apps.api.models import Document, DocumentChunk
 from apps.api.quiz import (
     Attempt,
     Difficulty,
+    Misconception,
     Question,
     QuestionKind,
     QuestionOption,
@@ -111,6 +112,16 @@ def generate_for_concept(
         ).all()
     )
 
+    # The concept's named mistakes, so each wrong option can be built on
+    # one -- and so the same mistake on two questions is recognised as one.
+    listed = db.scalars(
+        select(Misconception)
+        .where(Misconception.concept_id == concept.id)
+        .order_by(Misconception.slug)
+    ).all()
+    named = {m.slug: m.id for m in listed}
+    mistakes = [(m.slug, m.label) for m in listed]
+
     for chunk, title, section in passages:
         if outcome.approved >= count:
             break
@@ -128,6 +139,7 @@ def generate_for_concept(
                 location=location,
                 difficulty=difficulty,
                 existing_stems=existing_stems,
+                mistakes=mistakes,
             )
         except GenerationRefused as exc:
             outcome.refused += 1
@@ -164,6 +176,12 @@ def generate_for_concept(
                     misconception=(
                         generated.misconceptions[position]
                         if position < len(generated.misconceptions)
+                        else None
+                    ),
+                    misconception_id=(
+                        named.get(generated.mistake_ids[position])
+                        if position < len(generated.mistake_ids)
+                        and generated.mistake_ids[position]
                         else None
                     ),
                 )
@@ -292,11 +310,16 @@ def grade(
         "correct": is_correct,
         "correct_option_id": str(correct_option.id) if correct_option else None,
         "explanation": question.explanation,
-        # What this particular wrong answer suggests the student was
-        # thinking. This is the whole reason distractors are written
-        # deliberately rather than filled with plausible noise.
-        "misconception": (
-            chosen.misconception if chosen and not is_correct else None
+        # The named mistake behind a wrong answer, from the reviewed list --
+        # never the generator's free-text note about the option. Those notes
+        # were shown here once; some were muddled and some described a
+        # mistake the student had not made (where the answer key itself was
+        # wrong). Most wrong options name no mistake, and then only the
+        # explanation is shown.
+        "mistake": (
+            chosen.named_misconception.label
+            if chosen and not is_correct and chosen.named_misconception
+            else None
         ),
         "source_chunk_id": (
             str(question.source_chunk_id) if question.source_chunk_id else None

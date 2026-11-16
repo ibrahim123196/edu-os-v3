@@ -182,6 +182,21 @@ def init_db() -> None:
                 "ON attempts (session_id, question_id)"
             )
         )
+        # Named misconceptions. The misconceptions table is new, so
+        # create_all made it; the link on question_options is a column added
+        # to a table that already existed.
+        conn.execute(
+            text(
+                "ALTER TABLE question_options ADD COLUMN IF NOT EXISTS misconception_id uuid "
+                "REFERENCES misconceptions(id) ON DELETE SET NULL"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_question_options_misconception_id "
+                "ON question_options (misconception_id)"
+            )
+        )
         # HNSW gives good recall/latency for cosine distance without tuning
         # lists the way IVFFlat requires.
         conn.execute(
