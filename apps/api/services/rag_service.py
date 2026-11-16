@@ -40,6 +40,7 @@ from ai.retrieval.hybrid import (
 from ai.retrieval.intent import detect as detect_intent
 from ai.retrieval.query import prepare_query
 from ai.retrieval.rerank import get_reranker
+from ai.tutor.conversation import Turn, standalone_question
 from apps.api.config import settings
 from apps.api.curriculum import SourceKind
 
@@ -54,12 +55,17 @@ class AskResult:
     # student what was actually searched for.
     corrections: list = field(default_factory=list)
     corrected_question: str | None = None
+    # A follow-up as it was searched ("why is that?" -> "why is the field
+    # zero inside a conductor?"), so the student can see what "that" was
+    # taken to mean -- and say so when it was taken wrongly.
+    searched_as: str | None = None
 
 
 def ask(
     db: Session,
     question: str,
     filters: RetrievalFilters | None = None,
+    history: list[Turn] | None = None,
 ) -> AskResult:
     started = time.perf_counter()
     trace: dict = {"stages": {}}
@@ -74,9 +80,23 @@ def ask(
         log.warning("LLM unavailable: %s", exc)
         trace["llm_error"] = str(exc)
 
+    # --- 0. Follow-ups ---------------------------------------------------
+    # Only when there are earlier turns: a first question costs no extra
+    # call and runs exactly as it did before conversations existed.
+    standalone = None
+    if history:
+        t0 = time.perf_counter()
+        standalone = standalone_question(llm, history, question)
+        trace["stages"]["follow_up"] = {
+            "ms": round((time.perf_counter() - t0) * 1000, 1),
+            "history_messages": len(history),
+            "searched_as": standalone,
+        }
+    search_question = standalone or question
+
     # --- 1. Query preparation --------------------------------------------
     t0 = time.perf_counter()
-    prepared = prepare_query(question, llm=llm, db=db)
+    prepared = prepare_query(search_question, llm=llm, db=db)
     # What kind of answer is wanted -- a formula, or an explanation?
     intent = detect_intent(prepared.corrected or question)
     trace["stages"]["query_preparation"] = {
@@ -160,6 +180,7 @@ def ask(
             trace=_finish(trace, started, abstained="no_candidates"),
             corrections=prepared.corrections,
             corrected_question=prepared.corrected,
+            searched_as=standalone,
         )
 
     # --- 3. Reranking ------------------------------------------------------
@@ -199,6 +220,7 @@ def ask(
             trace=_finish(trace, started, abstained="below_threshold"),
             corrections=prepared.corrections,
             corrected_question=prepared.corrected,
+            searched_as=standalone,
         )
 
     # --- 4. Generation -----------------------------------------------------
@@ -208,7 +230,15 @@ def ask(
         )
 
     t0 = time.perf_counter()
-    raw = llm.complete(system=SYSTEM_PROMPT, messages=build_messages(prepared.original, top))
+    raw = llm.complete(
+        system=SYSTEM_PROMPT,
+        # The student's words, not the rewrite: "more simply" is an
+        # instruction about the answer, and the rewrite travels alongside.
+        messages=build_messages(
+            question if history else prepared.original, top,
+            history=history, standalone=standalone,
+        ),
+    )
     trace["stages"]["generation"] = {
         "ms": round((time.perf_counter() - t0) * 1000, 1),
         "model": llm.model,
@@ -228,6 +258,7 @@ def ask(
         trace=_finish(trace, started),
         corrections=prepared.corrections,
         corrected_question=prepared.corrected,
+        searched_as=standalone,
     )
 
 

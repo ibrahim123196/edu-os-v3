@@ -136,3 +136,29 @@ def test_echo_provider_cites_when_given_sources():
     messages = build_messages("What is mitosis?", CHUNKS)
     reply = EchoClient().complete("system", messages)
     assert "[S1]" in reply
+
+
+# --- a refusal in front of a cited answer ---------------------------------
+
+def test_a_refusal_in_front_of_a_cited_answer_is_dropped():
+    """The page said "answered from 2 passages" above "I couldn't find enough
+    information": the student cannot tell which to believe."""
+    chunks = [chunk("Charges move until E = 0 inside.", 18), chunk("Shielding.", 19)]
+    raw = (f"{INSUFFICIENT_EVIDENCE}\n\nYour textbook explains that charges "
+           f"redistribute [S1], and proves it with Gauss's law [S2].")
+    result = build_answer(raw, chunks)
+    assert result.answer.startswith("Your textbook explains")
+    assert "couldn't find" not in result.answer
+    assert result.grounded and result.used_source_count == 2
+
+
+def test_a_refusal_with_no_valid_citation_is_kept():
+    """Nothing cited means nothing answered: the refusal is the truth."""
+    raw = f"{INSUFFICIENT_EVIDENCE} Maybe ask about something else [S9]."
+    result = build_answer(raw, [chunk("x", 1)])
+    assert result.answer.startswith(INSUFFICIENT_EVIDENCE)
+
+
+def test_the_refusal_sentence_later_in_an_answer_is_left_alone():
+    raw = f"E is zero inside [S1]. {INSUFFICIENT_EVIDENCE}"
+    assert build_answer(raw, [chunk("E = 0", 18)]).answer.startswith("E is zero inside")

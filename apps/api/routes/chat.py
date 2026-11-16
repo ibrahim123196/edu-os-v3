@@ -15,6 +15,7 @@ from ai.retrieval.hybrid import RetrievalFilters
 from apps.api.db import get_db
 from apps.api.models import Conversation, Message
 from apps.api.schemas import AskRequest, AskResponse
+from ai.tutor.conversation import recent_history
 from apps.api.services.rag_service import ask as run_pipeline
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,8 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Type a question first.")
 
     conversation = _resolve_conversation(db, payload.conversation_id, question)
+    # Read before this question is saved, so it is not its own history.
+    history = recent_history(conversation.messages)
 
     db.add(Message(conversation_id=conversation.id, role="user", content=question))
     db.commit()
@@ -42,6 +45,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
                 subject=payload.subject,
                 grade=payload.grade,
             ),
+            history=history,
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -78,6 +82,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
         latency_ms=latency,
         corrections=result.corrections,
         corrected_question=result.corrected_question,
+        searched_as=result.searched_as,
         trace=result.trace if payload.include_trace else None,
     )
 

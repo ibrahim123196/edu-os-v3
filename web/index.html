@@ -400,6 +400,14 @@
   /* display: flex above beats the hidden attribute's own display: none,
      which once showed the form before anyone asked for it. */
   #reportForm[hidden] { display: none; }
+
+  /* --- Conversation ---------------------------------------------------- */
+  .turn { border-top: 1px solid var(--line); padding: 12px 0; }
+  .turn:first-of-type { border-top: 0; padding-top: 4px; }
+  .turn .asked { font-weight: 600; margin-bottom: 6px; }
+  .turn .said { color: var(--muted); font-size: 13.5px; }
+  .you-asked { font-weight: 600; margin-bottom: 8px; }
+  .meant { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
   #reportForm select, #reportForm input { font-size: 13px; padding: 6px 8px; }
   #reportForm input { flex: 1; min-width: 180px; }
 
@@ -531,11 +539,17 @@
         placeholder="Explain the difference between mitosis and meiosis."></textarea>
       <div class="row" style="margin-top:10px; align-items:center;">
         <button id="askBtn" style="flex:0 0 auto;">Ask</button>
+        <button id="newChatBtn" class="quiet" style="flex:0 0 auto;" hidden>New chat</button>
         <label style="flex:1; font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px;">
           <input type="checkbox" id="traceToggle" style="width:auto;">
           Show how the answer was retrieved
         </label>
       </div>
+    </section>
+
+    <section class="panel" id="threadPanel" hidden style="margin-top:16px;">
+      <h2>Earlier in this chat</h2>
+      <div id="thread"></div>
     </section>
 
     <section class="panel" id="answerPanel" style="margin-top:16px;">
@@ -547,6 +561,8 @@
           <div class="verdict" id="verdict"></div>
           <div style="font-size:12.5px; color:var(--muted);" id="timing"></div>
         </div>
+        <div class="you-asked" id="youAsked"></div>
+        <div class="meant" id="meant" hidden></div>
         <div class="corrected" id="corrected" hidden></div>
         <div class="answer-body" id="answerBody"></div>
         <div class="sources" id="sourcesWrap" hidden>
@@ -829,6 +845,12 @@ function renderAnswer(data) {
 
   $('answerBody').innerHTML = renderAnswer_(data.answer);
 
+  // A follow-up is searched as the full question it stands for. Showing
+  // it lets the student spot when "that" was taken to mean the wrong thing.
+  const meant = $('meant');
+  meant.hidden = !data.searched_as;
+  meant.textContent = data.searched_as ? `Understood as: ${data.searched_as}` : '';
+
   const wrap = $('sourcesWrap');
   const list = $('sourceList');
   list.innerHTML = '';
@@ -916,9 +938,45 @@ function renderAnswer_(text) {
 function inline_(text) {
   return text
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // *italic*, after bold so ** is gone. Needs a non-space just inside each
+    // star, so "a * b" in a formula is left alone.
+    .replace(/\*(\S[^*\n]*?\S|\S)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\[S(\d+)\]/g,
       (_, n) => `<button class="cite" data-cite="S${n}" title="Show source ${n}">${n}</button>`);
+}
+
+/* ------------------------------------------------------ conversation */
+// The server remembers the conversation; the page only has to say which
+// one. null starts a new conversation with the next question.
+let chatId = null;
+// The exchange on screen, moved into "Earlier in this chat" when the next
+// answer arrives.
+let shown = null;
+
+function pushToThread(turn) {
+  const div = document.createElement('div');
+  div.className = 'turn';
+  // Source markers are dropped here: the source list they point at
+  // belongs to the answer that replaces this one.
+  const said = turn.answer.replace(/\s*\[S\d+\]/g, '');
+  div.innerHTML = `<div class="asked">${escapeHtml(turn.question)}</div>`
+    + `<div class="said">${renderAnswer_(said)}</div>`;
+  $('thread').appendChild(div);
+  $('threadPanel').hidden = false;
+}
+
+function newChat() {
+  chatId = null;
+  shown = null;
+  $('thread').innerHTML = '';
+  $('threadPanel').hidden = true;
+  $('answerWrap').hidden = true;
+  $('answerEmpty').hidden = false;
+  $('newChatBtn').hidden = true;
+  $('questionInput').value = '';
+  $('questionInput').placeholder = 'Explain the difference between mitosis and meiosis.';
+  $('questionInput').focus();
 }
 
 async function ask() {
@@ -938,9 +996,17 @@ async function ask() {
         question,
         document_ids: scope ? [scope] : [],
         include_trace: $('traceToggle').checked,
+        conversation_id: chatId,
       }),
     });
+    if (shown) pushToThread(shown);
+    chatId = data.conversation_id;
+    shown = { question, answer: data.answer };
+    $('youAsked').textContent = question;
     renderAnswer(data);
+    $('questionInput').value = '';
+    $('questionInput').placeholder = 'Ask a follow-up, e.g. "explain that more simply"';
+    $('newChatBtn').hidden = false;
   } catch (err) {
     $('answerEmpty').hidden = true;
     $('answerWrap').hidden = false;
@@ -948,6 +1014,10 @@ async function ask() {
     $('verdict').textContent = 'That request did not go through';
     $('timing').textContent = '';
     $('answerBody').textContent = err.message;
+    // The question stays in the box to retry, and the chat is unchanged:
+    // the server keeps an unanswered question out of the history.
+    $('youAsked').textContent = question;
+    $('meant').hidden = true;
     $('corrected').hidden = true;
     $('sourcesWrap').hidden = true;
     $('traceWrap').hidden = true;
@@ -958,6 +1028,7 @@ async function ask() {
 }
 
 $('askBtn').addEventListener('click', ask);
+$('newChatBtn').addEventListener('click', newChat);
 $('questionInput').addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask();
 });

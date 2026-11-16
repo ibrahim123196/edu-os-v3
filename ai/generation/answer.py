@@ -19,6 +19,9 @@ from ai.prompts.grounded_answer import INSUFFICIENT_EVIDENCE
 from ai.retrieval.hybrid import RetrievedChunk
 
 _MARKER = re.compile(r"\[S(\d+)\]")
+_LEADING_REFUSAL = re.compile(
+    r"^\s*" + re.escape(INSUFFICIENT_EVIDENCE.rstrip(".")) + r"\.?\s*", re.IGNORECASE
+)
 
 SNIPPET_CHARS = 320
 
@@ -94,6 +97,15 @@ def build_answer(raw: str, chunks: list[RetrievedChunk]) -> GroundedAnswer:
 
     referenced = [int(n) for n in _MARKER.findall(raw)]
     valid = [n for n in referenced if 1 <= n <= len(chunks)]
+
+    # "I couldn't find enough information..." followed by an answer that
+    # cites the sources. The page then said "answered from 2 passages" above
+    # a reply opening with "couldn't answer", and the student cannot tell
+    # which to believe. Seen with a follow-up asking for an example: the
+    # model judged the request not fully covered and used both the refusal
+    # and the partial answer. The cited part is the answer; the refusal goes.
+    if valid:
+        raw = _LEADING_REFUSAL.sub("", raw, count=1)
 
     # Renumber so the student sees a contiguous 1..n list even if the model
     # skipped sources. Order of first appearance keeps markers reading in

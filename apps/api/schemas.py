@@ -64,6 +64,8 @@ class AskResponse(BaseModel):
     latency_ms: float
     corrections: list[dict] = Field(default_factory=list)
     corrected_question: str | None = None
+    # A follow-up rewritten into the full question that was searched.
+    searched_as: str | None = None
     trace: dict | None = None
 
 

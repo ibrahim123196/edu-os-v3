@@ -111,12 +111,56 @@ def format_context(chunks: list[RetrievedChunk], max_chars: int = 14000) -> str:
     return "\n\n".join(parts)
 
 
-def build_messages(question: str, chunks: list[RetrievedChunk]) -> list[dict]:
-    return [
+FOLLOW_UP_TEMPLATE = """Sources:
+
+{context}
+
+---
+
+This continues the conversation above. Earlier answers show what the student \
+has already been told and how; they are not sources. State facts only from the \
+sources above, and cite only these [S#] numbers -- earlier answers had their own \
+sources, numbered differently.
+{meaning}
+Student's question: {question}
+
+Answer using only the sources above, with [S#] markers."""
+
+
+def build_messages(
+    question: str,
+    chunks: list[RetrievedChunk],
+    history: list | None = None,
+    standalone: str | None = None,
+) -> list[dict]:
+    """The request for one answer.
+
+    A first question gets exactly the single message it always has. A
+    follow-up gets the earlier exchanges as real turns before it, so "that"
+    and "more simply" refer to something.
+    """
+    if not history:
+        return [
+            {
+                "role": "user",
+                "content": USER_TEMPLATE.format(
+                    context=format_context(chunks), question=question
+                ),
+            }
+        ]
+
+    # The student's own words are kept -- "more simply" is an instruction
+    # about how to answer -- with the resolved question beside them, so the
+    # model and the search agree on what "that" was.
+    meaning = (
+        f"(In this conversation that means: {standalone})\n" if standalone else ""
+    )
+    turns = [{"role": t.role, "content": t.content} for t in history]
+    return turns + [
         {
             "role": "user",
-            "content": USER_TEMPLATE.format(
-                context=format_context(chunks), question=question
+            "content": FOLLOW_UP_TEMPLATE.format(
+                context=format_context(chunks), meaning=meaning, question=question
             ),
         }
     ]
