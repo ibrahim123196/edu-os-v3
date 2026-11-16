@@ -1,0 +1,211 @@
+{
+ "_about": "Question bank clean-up. Each question is named by one of its wrong options' ids, which is how it was exported. Applied with scripts.apply_question_fixes.",
+ "retire": [
+  {
+   "option_id": "1506f005-ea64-44a0-9d89-7cd8a1d557b2",
+   "reason": "faulty: Answer key is wrong: with C fixed, A = Cd/ε₀, so reducing d needs a SMALLER area. The option marked wrong ('decreases') is correct"
+  },
+  {
+   "option_id": "1aed4909-99a9-4b8e-9da6-5a1264af546a",
+   "reason": "faulty: Option 86, marked wrong, is a correct reason: d² << A keeps fringing negligible so the field is uniform"
+  },
+  {
+   "option_id": "e37e57ee-e246-48e9-81ba-65b35e93c960",
+   "reason": "faulty: Two answers say the same thing: correct 'increase by a factor of 2' and wrong 'It would double'"
+  },
+  {
+   "option_id": "3536eee6-c3e2-47d4-944f-98cdadc2ebfb",
+   "reason": "faulty: False premise: two parallel wires with currents in the same direction attract; the force between them is not zero"
+  },
+  {
+   "option_id": "48d5fffa-fdba-4e19-b814-311f2c090c94",
+   "reason": "faulty: Says a proton and an electron in the same downward field both feel a downward force; the electron is pushed upward, so the 'wrong' option about opposite forces is true"
+  },
+  {
+   "option_id": "97057d5c-4afe-4dc8-afff-8b49c8afbc8d",
+   "reason": "faulty: Key is wrong and contradicts the first radial-field question: a radial field keeps the field IN the coil's plane (perpendicular to the wires), not perpendicular to the plane. Option 170, marked wrong, is correct: a uniform field would make the torque depend on angle"
+  },
+  {
+   "option_id": "1b56da44-3348-4505-99ed-934890e771d5",
+   "reason": "faulty: Option 231, marked wrong, is correct (r parallel to dl makes the cross product zero); its own note admits the student 'correctly identifies' this"
+  },
+  {
+   "option_id": "6bb0eef3-6301-44f3-bb17-8d2faee8deea",
+   "reason": "faulty: Option 236, marked wrong, is the right formula: with θ = 0 it gives zero, the same as the key"
+  },
+  {
+   "option_id": "94b46752-e78d-4494-b5ea-1a8bde728796",
+   "reason": "faulty: Option 237, marked wrong, is correct; its own note says 'both are correct'"
+  },
+  {
+   "option_id": "0367f278-ad14-4c69-8a7e-a8f9d6d3f8e7",
+   "reason": "faulty: Option 248, marked wrong, is correct (ω = qB/m has no speed in it) -- its own note calls it 'correct reasoning'"
+  },
+  {
+   "option_id": "9689fab8-df32-40f3-bfa4-18e5c86d4645",
+   "reason": "faulty: Option 265, marked wrong, is a valid argument: a field component along the surface would change the potential along it, contradicting the definition"
+  },
+  {
+   "option_id": "77dfe2e1-b37a-4b15-9ca7-a4b5e501c6e1",
+   "reason": "faulty: Option 271, marked wrong, is essentially correct: the potential changes only along the normal"
+  },
+  {
+   "option_id": "7d17159b-0406-49b1-8669-7ffd5a68d50b",
+   "reason": "faulty: Key gets the reason backwards: inside, the field is along the axis, so it is perpendicular to the transverse sections; B·dl is zero there because the field has no component ALONG them"
+  },
+  {
+   "option_id": "57f5b188-778f-4d8b-9e71-8a7f01512cb3",
+   "reason": "faulty: Option 290, marked wrong, states the correct mechanism: charge leaving one plate enters the next, by conservation of charge"
+  },
+  {
+   "option_id": "16b5a1a9-3582-40c4-bd37-261c5045c845",
+   "reason": "faulty: Key says the cube network is solved with series and parallel rules; it is not reducible that way -- NCERT uses symmetry and Kirchhoff's rules, so option 311 is closer to right"
+  },
+  {
+   "option_id": "79767a19-8306-4a8b-bce7-f7e1f6bfd0bd",
+   "reason": "faulty: False premise: asks why the current splits UNEQUALLY at the cube's entry corner. By symmetry it splits equally, I/3 in each resistor"
+  },
+  {
+   "option_id": "67752a48-8efa-481a-93dd-568f857afc17",
+   "reason": "faulty: Says doubling the distance quarters the potential 'because it is inversely proportional to distance'. V ∝ 1/r, so it halves: the option marked wrong (one-half) is the right answer"
+  },
+  {
+   "option_id": "41dab751-427b-4d64-8d50-e7b551a51a42",
+   "reason": "faulty: Option 352, marked wrong, is essentially the right reason: the air gap's unchanged field keeps the voltage drop smaller than with a full slab"
+  },
+  {
+   "option_id": "80c3cba2-be04-472f-85d2-d8da1631c27f",
+   "reason": "faulty: Option 389, marked wrong, is a correct explanation: zero enclosed charge inside, all of q enclosed outside -- the same as the 'correct' answer in other words"
+  },
+  {
+   "option_id": "588e2eb4-cc16-404e-8979-08b27d215d66",
+   "reason": "copy of: A conductor carries both positive charges moving forward and negative charges moving forward. In a time interval, 8 × 10¹⁸ elementary charges worth of positive charge move forward, and 3 × 10¹⁸ elemen"
+  },
+  {
+   "option_id": "d12633d4-0cc1-477c-a4f3-6d7bb0fee6c6",
+   "reason": "copy of: A conductor carries both positive charges moving forward and negative charges moving forward. In a time interval, 8 × 10¹⁸ elementary charges worth of positive charge move forward, and 3 × 10¹⁸ elemen"
+  },
+  {
+   "option_id": "95666fc2-9985-4f48-a377-4668d467e0d8",
+   "reason": "copy of: A parallel plate capacitor is charged to store energy. If the potential difference across the capacitor is doubled while keeping the plate separation constant, how does the stored energy change and wh"
+  },
+  {
+   "option_id": "8b6e66fa-61bc-4078-8e83-20b37124a013",
+   "reason": "copy of: The passage compares the drift speed of electrons (about 10⁻³ m/s) with the random thermal speed of copper atoms (about 10² m/s) at room temperature. Why is the drift speed so much smaller than the th"
+  },
+  {
+   "option_id": "7336f8a0-73bb-41f7-8fbc-caa2b8ee694b",
+   "reason": "copy of: In a copper conductor at 300 K, the drift speed of electrons is approximately 10⁻⁵ times the thermal speed of copper atoms. This vast difference arises because the drift speed depends on the current a"
+  },
+  {
+   "option_id": "916a802b-eaa3-42cd-b447-7b4b61bb7a88",
+   "reason": "copy of: A dipole is placed in a uniform electric field. The positive and negative charges of the dipole experience forces in the field. Why does aligning the dipole moment p with the field direction E result "
+  },
+  {
+   "option_id": "73965ed0-fbc9-4541-bf80-e3741016faa3",
+   "reason": "copy of: Two cells with emfs ε₁ and ε₂ and internal resistances r₁ and r₂ are connected in parallel, with positive terminals at B₁ and negative terminals at B₂. The potential difference V(B₁) – V(B₂) calculate"
+  },
+  {
+   "option_id": "03cf501b-fd7e-4caf-b437-0ce8684693ca",
+   "reason": "copy of: In the solution shown, the electric field at point A due to the positive charge q₁ points toward the right, and the electric field at point A due to the negative charge q₂ also points toward the right"
+  },
+  {
+   "option_id": "bc91c398-0fd8-400d-95f4-04ed1e037d48",
+   "reason": "copy of: When calculating the total work needed to assemble two charges q₁ and q₂ in an external field, why is the work done against the field of q₁ included as a separate term rather than combined with the wo"
+  },
+  {
+   "option_id": "2dab0522-271f-4f8f-bbcb-530cf0b5072e",
+   "reason": "copy of: A proton and an electron both move with the same velocity along the positive x-axis through a magnetic field directed along the positive y-axis. In the calculation of the Lorentz force direction using"
+  },
+  {
+   "option_id": "38c95af4-5964-4252-a94d-2be44fc8ed9e",
+   "reason": "copy of: A cup of water contains equal numbers of protons and electrons. Why does the cup not show any observable electric charge?"
+  },
+  {
+   "option_id": "4ad3ffbc-ae9e-42ca-a5a6-af9db978c844",
+   "reason": "copy of: According to Ohm's law in its microscopic form, the current density j and electric field E are related by j = σE, where σ is the conductivity. Why must the current density and electric field vectors p"
+  },
+  {
+   "option_id": "b7c18135-0d68-40ac-a85f-63742a593628",
+   "reason": "copy of: In Example 1.10, the electric field E_x = ax has different magnitudes at the left face (x = a) and right face (x = 2a) of the cube. Why does the net flux through the cube depend on this difference in "
+  },
+  {
+   "option_id": "108cdb62-e9a0-433d-b921-dfe9cdc694d8",
+   "reason": "copy of: In a system of n charges, why does the principle of superposition state that the force on q₁ due to q₂ remains given by Coulomb's law even when other charges q₃, q₄, ..., qₙ are present in the system?"
+  },
+  {
+   "option_id": "e5f24692-5476-47fa-af6b-e67e8ee6b322",
+   "reason": "copy of: When bringing a charge q from infinity to point P against an electric field, the external force must do positive work. Why is it necessary that the work done by this external force equals the potentia"
+  },
+  {
+   "option_id": "4b7de81e-a7cd-4c90-bece-252ad7f5270c",
+   "reason": "copy of: In the solution above, why is Kirchhoff's first rule applied at every junction before writing the loop equations?"
+  },
+  {
+   "option_id": "c33bdf4a-69a7-4e10-9745-5158ecbf9701",
+   "reason": "copy of: In the toaster example, the resistance of the nichrome element increases from 75.3 Ω to 85.8 Ω when it reaches steady state. Why does the current then settle to a constant value of 2.68 A instead of c"
+  },
+  {
+   "option_id": "3d4d5a21-998c-4f67-a0b1-4dd8a62b53ac",
+   "reason": "copy of: When a dielectric is fully inserted between capacitor plates at constant charge Q, the potential difference V across the plates becomes smaller than the original V₀. Which statement correctly explains"
+  },
+  {
+   "option_id": "bc252790-e43f-4575-ad97-7e88320078f6",
+   "reason": "copy of: A dielectric material is inserted between the plates of a charged capacitor. The electric field inside the dielectric becomes weaker than the field in vacuum between the same plates. Why does the diel"
+  },
+  {
+   "option_id": "29496173-aa6c-470e-819a-8085e013ed23",
+   "reason": "copy of: Inside a current-carrying wire of radius a, the magnetic field at distance r from the centre is given by B = (µ₀I)/(2πa²) × r. Why does the magnetic field increase linearly with distance r inside the "
+  },
+  {
+   "option_id": "9dc896e7-f611-4279-9d51-792ad0b376bf",
+   "reason": "copy of: The drift speed of electrons in a conductor is calculated using v_d = I/(neA). Why does this expression show that drift speed depends on the current I but is independent of the electric field strength"
+  },
+  {
+   "option_id": "7c5ebbe0-a3ac-4ed1-a7b7-e21f7ad996ca",
+   "reason": "copy of: A neutral atom has a positively charged nucleus of charge Ze surrounded by electrons distributed uniformly in a spherical shell of radius R. Using Gauss's law, why is the electric field zero at all po"
+  }
+ ],
+ "move": [
+  {
+   "option_id": "1ea277c9-61ac-4602-afea-26d968fe1d45",
+   "from": "kirchhoffs-rules",
+   "to": "emf-internal-resistance"
+  },
+  {
+   "option_id": "8f7871ba-ca34-4220-adb9-9609630b756f",
+   "from": "cyclotron",
+   "to": "motion-in-magnetic-field"
+  },
+  {
+   "option_id": "048f211e-6750-4784-8988-025ca252d53d",
+   "from": "cyclotron",
+   "to": "motion-in-magnetic-field"
+  },
+  {
+   "option_id": "d6ea08ff-340f-444d-bc9f-078a276e5a8b",
+   "from": "resistivity",
+   "to": "drift-velocity"
+  },
+  {
+   "option_id": "2776ee5e-b25f-4e9a-9374-bbe6e6c47925",
+   "from": "charge-quantisation",
+   "to": "electric-charge"
+  },
+  {
+   "option_id": "f236b3e0-7213-4551-a083-3104ee1dd72e",
+   "from": "force-between-currents",
+   "to": "magnetic-force"
+  },
+  {
+   "option_id": "0c1eac3b-9a81-463a-9152-070ae7f72fd0",
+   "from": "electric-charge",
+   "to": "field-lines"
+  },
+  {
+   "option_id": "6bc557a5-533b-4051-98e2-257ddd17d40d",
+   "from": "electric-charge",
+   "to": "field-lines"
+  }
+ ]
+}

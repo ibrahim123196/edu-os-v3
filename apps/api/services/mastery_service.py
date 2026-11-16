@@ -52,6 +52,14 @@ def recompute(
             ConceptMastery.concept_id == concept_id,
         )
     )
+    # No answers left -- a question moved to another concept, or answers
+    # moved to another student: no row, rather than a row saying zero. A
+    # zero row would make an untouched concept look attempted (see
+    # estimates_for).
+    if est.attempts == 0:
+        if row is not None:
+            db.delete(row)
+        return est
     if row is None:
         row = ConceptMastery(student_id=student_id, concept_id=concept_id)
         db.add(row)
