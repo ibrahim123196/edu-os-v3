@@ -208,6 +208,19 @@ def init_db() -> None:
                 "NOT NULL DEFAULT false"
             )
         )
+        # Never filled before; rows from then get it once, here. Same rule
+        # as mastery_service.recompute: answers to faulty questions are not
+        # counted. Rows that already have it are left alone.
+        conn.execute(
+            text(
+                "UPDATE concept_mastery m SET last_attempt_at = ("
+                " SELECT max(a.created_at) FROM attempts a"
+                " JOIN questions q ON q.id = a.question_id"
+                " WHERE a.student_id = m.student_id AND q.concept_id = m.concept_id"
+                " AND NOT q.faulty)"
+                " WHERE m.last_attempt_at IS NULL"
+            )
+        )
         # HNSW gives good recall/latency for cosine distance without tuning
         # lists the way IVFFlat requires.
         conn.execute(

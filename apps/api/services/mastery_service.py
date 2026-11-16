@@ -25,11 +25,12 @@ from apps.api.student import ConceptMastery
 log = logging.getLogger(__name__)
 
 
-def _outcomes(db: Session, student_id: uuid.UUID, concept_id: uuid.UUID) -> list[bool]:
-    """A student's answers for one concept, oldest first."""
+def _answers(db: Session, student_id: uuid.UUID, concept_id: uuid.UUID) -> list:
+    """A student's counted answers for one concept, oldest first:
+    (is_correct, created_at) pairs."""
     return list(
-        db.scalars(
-            select(Attempt.is_correct)
+        db.execute(
+            select(Attempt.is_correct, Attempt.created_at)
             .join(Question, Question.id == Attempt.question_id)
             .where(
                 Attempt.student_id == student_id,
@@ -47,7 +48,8 @@ def recompute(
     db: Session, student_id: uuid.UUID, concept_id: uuid.UUID
 ) -> MasteryEstimate:
     """Recompute and store one concept's estimate."""
-    est = estimate(_outcomes(db, student_id, concept_id))
+    answers = _answers(db, student_id, concept_id)
+    est = estimate([correct for correct, _ in answers])
 
     row = db.scalar(
         select(ConceptMastery).where(
@@ -71,6 +73,10 @@ def recompute(
     row.confidence = est.confidence
     row.attempts = est.attempts
     row.correct = est.correct
+    # The newest answer that counts. Taken from the same answers as the
+    # estimate, so a faulty question's answer never makes a topic look
+    # more recently practised than it was.
+    row.last_attempt_at = answers[-1][1]
     return est
 
 
