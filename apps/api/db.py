@@ -230,4 +230,58 @@ def init_db() -> None:
                 "ON corpus_terms USING gin (term gin_trgm_ops)"
             )
         )
+    ensure_links()
     log.info("Database ready (embedding_dim=%s)", dim)
+
+
+# Links the models declare but an older database may lack: each column was
+# added to a table that already existed, and create_all never revisits one.
+# Without them the database accepts an attempt by a student who does not
+# exist -- which once let a script move answers to a missing student and
+# fail only later, somewhere else.
+#   (table, column, referenced table, on delete, constraint name)
+LINKS = [
+    ("attempts", "student_id", "students", "CASCADE", "attempts_student_id_fkey"),
+    ("documents", "chapter_id", "chapters", "SET NULL", "documents_chapter_id_fkey"),
+]
+
+
+def ensure_links() -> None:
+    """Add each missing link, then check existing rows obey it.
+
+    Added NOT VALID: enforced for every new row, without checking old ones,
+    so it cannot fail on rows that already break it -- a startup that
+    crashed on old data would take the whole app down over one bad row.
+    Validating the old rows is a separate step; if it fails the link still
+    guards new rows, a warning is logged, and the doctor names the rows.
+    """
+    for table, column, target, on_delete, name in LINKS:
+        with engine.begin() as conn:
+            # Looked up by column, not by name: a database that has the
+            # link under another name must not get a second copy.
+            exists = conn.execute(
+                text(
+                    "SELECT 1 FROM pg_constraint c "
+                    "JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey) "
+                    "WHERE c.contype = 'f' AND c.conrelid = CAST(:t AS regclass) "
+                    "AND a.attname = :col"
+                ),
+                {"t": table, "col": column},
+            ).first()
+            if exists:
+                continue
+            conn.execute(
+                text(
+                    f"ALTER TABLE {table} ADD CONSTRAINT {name} FOREIGN KEY ({column}) "
+                    f"REFERENCES {target}(id) ON DELETE {on_delete} NOT VALID"
+                )
+            )
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} VALIDATE CONSTRAINT {name}"))
+        except Exception as exc:  # existing rows break the link
+            log.warning(
+                "%s.%s: link to %s added for new rows, but existing rows break it "
+                "(python -m scripts.doctor names them): %s",
+                table, column, target, str(exc).splitlines()[0],
+            )

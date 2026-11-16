@@ -585,6 +585,35 @@ def check_schema(db) -> bool:
             f"{len(missing_links)} link(s) between tables are not enforced",
             "; ".join(missing_links),
         )
+    # Rows that break a link, named -- the links are added so they cannot
+    # fail on old data, which means old bad rows can sit there unnoticed.
+    from apps.api.db import LINKS
+
+    for table, column, target, _, name in LINKS:
+        broken = db.execute(
+            text(
+                f"SELECT count(*) FROM {table} t WHERE t.{column} IS NOT NULL "
+                f"AND NOT EXISTS (SELECT 1 FROM {target} r WHERE r.id = t.{column})"
+            )
+        ).scalar()
+        if broken:
+            report(
+                FAIL,
+                f"{broken} row(s) in {table} point at a {target} row that does not exist",
+                f"{table}.{column}",
+                fix="ask before deleting: these are real rows with a broken link",
+            )
+        unconfirmed = db.execute(
+            text("SELECT NOT convalidated FROM pg_constraint WHERE conname = :n"),
+            {"n": name},
+        ).scalar()
+        if unconfirmed and not broken:
+            report(
+                WARN,
+                f"{table}.{column} link guards new rows; old rows not yet confirmed",
+                fix="restart the server: it confirms them when they comply",
+            )
+
     if missing_unique:
         report(
             WARN,
