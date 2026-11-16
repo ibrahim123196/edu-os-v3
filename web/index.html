@@ -389,6 +389,20 @@
   .score { font-family: var(--serif); font-size: 20px; margin-bottom: 6px; }
 
   /* Past quizzes. Kept by the server, so they survive closing the tab. */
+  /* "This question looks wrong": quiet, so it is there when needed and
+     never competes with Next question. */
+  .report { margin: 12px 0 14px; font-size: 13px; }
+  button.link {
+    background: none; border: 0; padding: 0; color: var(--muted);
+    text-decoration: underline; cursor: pointer; font-size: 13px;
+  }
+  #reportForm { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  /* display: flex above beats the hidden attribute's own display: none,
+     which once showed the form before anyone asked for it. */
+  #reportForm[hidden] { display: none; }
+  #reportForm select, #reportForm input { font-size: 13px; padding: 6px 8px; }
+  #reportForm input { flex: 1; min-width: 180px; }
+
   .history h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
   .history ol { list-style: none; margin: 0; padding: 0; }
   .history li {
@@ -579,6 +593,17 @@
           <h3>Why</h3>
           <p id="explanation"></p>
           <div class="diagnosis" id="diagnosis" hidden></div>
+          <div class="report">
+            <button class="link" id="reportOpen">This question looks wrong</button>
+            <div id="reportForm" hidden>
+              <select id="reportReason"></select>
+              <input id="reportNote" maxlength="500" placeholder="What looks wrong? (optional)">
+              <button class="quiet" id="reportSend">Send</button>
+            </div>
+            <p class="hint" id="reportDone" hidden>
+              Thanks. This question is out of your quizzes until it has been reviewed.
+            </p>
+          </div>
           <button id="nextQuestion">Next question</button>
         </div>
       </section>
@@ -1111,6 +1136,7 @@ async function answerQuestion(optionId) {
     $('nextQuestion').textContent =
       quiz.index + 1 < quiz.questions.length ? 'Next question' : 'See score';
     $('submitAnswer').hidden = true;
+    resetReport();
     $('feedback').hidden = false;
   } catch (err) {
     buttons.forEach((b) => (b.disabled = false));
@@ -1282,6 +1308,58 @@ $('progressMode').addEventListener('click', async (e) => {
     select.value = '';
     $('quizNotice').innerHTML =
       '<div class="notice bad">There are no questions for that concept yet.</div>';
+  }
+});
+
+/* ------------------------------------------------- reporting a question */
+function resetReport() {
+  $('reportOpen').hidden = false;
+  $('reportForm').hidden = true;
+  $('reportDone').hidden = true;
+  $('reportNote').value = '';
+}
+
+$('reportOpen').addEventListener('click', async () => {
+  if (!$('reportReason').options.length) {
+    try {
+      const reasons = await api('/quiz/flag-reasons');
+      $('reportReason').innerHTML = reasons
+        .map((r) => `<option value="${escapeHtml(r.key)}">${escapeHtml(r.label)}</option>`)
+        .join('');
+    } catch (err) {
+      $('reportDone').hidden = false;
+      $('reportDone').textContent = `Could not load the form: ${err.message}`;
+      return;
+    }
+  }
+  $('reportOpen').hidden = true;
+  $('reportForm').hidden = false;
+});
+
+$('reportSend').addEventListener('click', async () => {
+  const q = quiz.questions[quiz.index];
+  $('reportSend').disabled = true;
+  try {
+    await api('/quiz/flag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question_id: q.id,
+        reason: $('reportReason').value,
+        note: $('reportNote').value || null,
+      }),
+    });
+    $('reportForm').hidden = true;
+    $('reportDone').hidden = false;
+    $('reportDone').textContent =
+      'Thanks. This question is out of your quizzes until it has been reviewed.';
+  } catch (err) {
+    // Said, not swallowed: a report that silently failed would leave the
+    // question in use while the student believes it was withdrawn.
+    $('reportDone').hidden = false;
+    $('reportDone').textContent = `Not sent: ${err.message}`;
+  } finally {
+    $('reportSend').disabled = false;
   }
 });
 </script>

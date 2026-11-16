@@ -201,6 +201,13 @@ def init_db() -> None:
         conn.execute(
             text("ALTER TABLE questions ADD COLUMN IF NOT EXISTS checked_by varchar(80)")
         )
+        # Questions confirmed faulty; their answers stop counting.
+        conn.execute(
+            text(
+                "ALTER TABLE questions ADD COLUMN IF NOT EXISTS faulty boolean "
+                "NOT NULL DEFAULT false"
+            )
+        )
         # HNSW gives good recall/latency for cosine distance without tuning
         # lists the way IVFFlat requires.
         conn.execute(

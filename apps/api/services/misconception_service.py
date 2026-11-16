@@ -31,8 +31,10 @@ def mistake_summary(db: Session, student_id: uuid.UUID) -> dict:
             JOIN question_options o ON o.id = a.selected_option_id
             JOIN misconceptions m   ON m.id = o.misconception_id
             JOIN concepts c         ON c.id = m.concept_id
+            JOIN questions q        ON q.id = a.question_id
             WHERE a.student_id = :sid
               AND NOT a.is_correct
+              AND NOT q.faulty      -- a mistake against a faulty key is not one
             GROUP BY m.id, c.id
             ORDER BY count(DISTINCT a.question_id) DESC, max(a.created_at) DESC
             """
@@ -48,8 +50,9 @@ def mistake_summary(db: Session, student_id: uuid.UUID) -> dict:
             SELECT count(*),
                    count(o.misconception_id)
             FROM attempts a
+            JOIN questions q ON q.id = a.question_id
             LEFT JOIN question_options o ON o.id = a.selected_option_id
-            WHERE a.student_id = :sid AND NOT a.is_correct
+            WHERE a.student_id = :sid AND NOT a.is_correct AND NOT q.faulty
             """
         ),
         {"sid": student_id},

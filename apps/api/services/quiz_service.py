@@ -32,6 +32,7 @@ from apps.api.quiz import (
     Difficulty,
     Misconception,
     Question,
+    QuestionFlag,
     QuestionKind,
     QuestionOption,
     QuestionStatus,
@@ -250,7 +251,13 @@ def select_questions(
     valuable as remediating, and a topic never seen can never be shown to
     be weak.
     """
-    query = select(Question).where(Question.status == QuestionStatus.approved)
+    query = select(Question).where(
+        Question.status == QuestionStatus.approved,
+        # A question someone flagged stays out until a reviewer decides.
+        ~Question.id.in_(
+            select(QuestionFlag.question_id).where(QuestionFlag.resolved_at.is_(None))
+        ),
+    )
 
     if concept_ids:
         query = query.where(Question.concept_id.in_(concept_ids))

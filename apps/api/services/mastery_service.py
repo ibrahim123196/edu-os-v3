@@ -34,6 +34,9 @@ def _outcomes(db: Session, student_id: uuid.UUID, concept_id: uuid.UUID) -> list
             .where(
                 Attempt.student_id == student_id,
                 Question.concept_id == concept_id,
+                # Wrong against a wrong key is not wrong: answers to a
+                # question confirmed faulty say nothing about the student.
+                ~Question.faulty,
             )
             .order_by(Attempt.created_at)
         ).all()

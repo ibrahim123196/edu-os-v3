@@ -23,6 +23,7 @@ import apps.api.models  # noqa: F401  (registers every table the flush may touch
 from apps.api.curriculum import Concept
 from apps.api.db import session_scope
 from apps.api.quiz import Attempt, Question, QuestionOption, QuestionStatus
+from apps.api.services.flag_service import mark_faulty, reason_means_faulty
 from apps.api.services.mastery_service import recompute
 
 FILE = Path(__file__).resolve().parents[1] / "content" / "question_fixes.json"
@@ -94,8 +95,12 @@ def main(apply: bool) -> int:
 
 def apply_fixes(db, retire: list, move: list) -> int:
     for q, reason in retire:
-        q.status = QuestionStatus.rejected
-        q.rejection_reason = reason
+        if reason_means_faulty(reason):
+            # Its answers stop counting, not only the question.
+            mark_faulty(db, q, reason)
+        else:
+            q.status = QuestionStatus.rejected
+            q.rejection_reason = reason
 
     touched: set[tuple[uuid.UUID, uuid.UUID]] = set()
     for q, old, new in move:

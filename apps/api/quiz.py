@@ -111,6 +111,11 @@ class Question(Base):
     # verified, and a review of them found faulty keys. Added after the
     # table shipped, so init_db adds it to existing databases.
     checked_by: Mapped[str | None] = mapped_column(String(80))
+    # Confirmed wrong: a bad answer key, two right answers, a false
+    # premise. Answers given to it say nothing about the student -- someone
+    # "wrong" against a wrong key was right -- so they stop counting toward
+    # mastery and mistakes. Added after the table shipped; init_db adds it.
+    faulty: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -227,6 +232,46 @@ class Attempt(Base):
         # treats NULLs as distinct, so attempts without a session are free.
         Index("uq_attempt_session_question", "session_id", "question_id", unique=True),
     )
+
+
+FLAG_REASONS = {
+    "wrong_key": "The answer key is wrong",
+    "two_right": "More than one answer is right",
+    "unclear": "The question is unclear",
+    "other": "Something else",
+}
+
+
+class QuestionFlag(Base):
+    """A student saying a question looks wrong.
+
+    The checker is a model and misses things; this is the human path the
+    roadmap asks for. An open flag takes the question out of every quiz
+    until someone reviews it (scripts.review_flags). Flags are kept after
+    review, so a question flagged again and again stays visible as one.
+
+    Withdrawing on a single flag suits one user. With many students, one
+    who disagrees with a correct answer would pull it for everyone; a pilot
+    should hide it only for the flagger until a reviewer confirms.
+    """
+
+    __tablename__ = "question_flags"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    reason: Mapped[str] = mapped_column(String(20), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # Set by the reviewer: "retired" or "restored". Null means still open.
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolution: Mapped[str | None] = mapped_column(String(20))
 
 
 class QuizSession(Base):

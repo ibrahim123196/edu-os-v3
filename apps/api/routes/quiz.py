@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from apps.api.curriculum import Concept
 from apps.api.db import get_db
 from apps.api.quiz import Question
-from apps.api.services import session_service
+from apps.api.quiz import FLAG_REASONS
+from apps.api.services import flag_service, session_service
 from apps.api.services.quiz_service import select_questions, shuffled
 from apps.api.student import active_student_id
 
@@ -99,6 +100,35 @@ def answer(payload: AnswerRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=err.status_code, detail=err.message) from err
     db.commit()
     return result
+
+
+class FlagRequest(BaseModel):
+    question_id: uuid.UUID
+    reason: str
+    note: str | None = None
+
+
+@router.post("/flag")
+def flag_question(payload: FlagRequest, db: Session = Depends(get_db)):
+    """'This question looks wrong.' The question leaves every quiz until
+    it is reviewed (python -m scripts.review_flags)."""
+    try:
+        flag_service.flag(
+            db,
+            student_id=active_student_id(),
+            question_id=payload.question_id,
+            reason=payload.reason,
+            note=payload.note,
+        )
+    except flag_service.FlagError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+    db.commit()
+    return {"flagged": True}
+
+
+@router.get("/flag-reasons")
+def flag_reasons():
+    return [{"key": k, "label": v} for k, v in FLAG_REASONS.items()]
 
 
 @router.get("/sessions")

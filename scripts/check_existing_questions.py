@@ -37,6 +37,7 @@ from apps.api.curriculum import Concept
 from apps.api.db import session_scope
 from apps.api.models import DocumentChunk
 from apps.api.quiz import Question, QuestionStatus
+from apps.api.services.flag_service import mark_faulty, reason_means_faulty
 
 RESULTS = Path("question_check_results.json")
 REPORT = Path("question_check_report.md")
@@ -127,7 +128,10 @@ def apply_results(keep: set[int] | None = None) -> int:
                 changed += 1
                 continue
             q.checked_by = saved["checked_by"]
-            if not r["ok"]:
+            if not r["ok"] and reason_means_faulty(r["reason"]):
+                # Its answers stop counting, not only the question.
+                mark_faulty(db, q, r["reason"])
+            elif not r["ok"]:
                 q.status = QuestionStatus.rejected
                 q.rejection_reason = r["reason"]
             changed += 1
