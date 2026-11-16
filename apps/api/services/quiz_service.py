@@ -22,6 +22,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ai.generation.llm import LLMError, get_llm
+from ai.quiz.checking import check_question
+from apps.api.config import settings
 from ai.quiz.generation import GenerationRefused, generate_question
 from apps.api.curriculum import Concept, chunk_concepts
 from apps.api.models import Document, DocumentChunk
@@ -103,12 +105,22 @@ def generate_for_concept(
         return outcome
 
     llm = get_llm()
+    checker = get_llm(settings.check_model) if settings.check_model else llm
 
     # Everything already written for this concept, so the model is not
     # asked to invent a second question in ignorance of the first.
     existing_stems = list(
         db.scalars(
             select(Question.stem).where(Question.concept_id == concept.id)
+        ).all()
+    )
+    # Only questions in use count as something a new one could repeat.
+    approved_stems = list(
+        db.scalars(
+            select(Question.stem).where(
+                Question.concept_id == concept.id,
+                Question.status == QuestionStatus.approved,
+            )
         ).all()
     )
 
@@ -150,6 +162,28 @@ def generate_for_concept(
             outcome.reasons.append(f"model error: {exc}"[:90])
             break
 
+        ok, reason, checked_by = generated.validation.ok, generated.validation.reason, None
+        # Only a question that is well formed is worth paying to check.
+        if ok:
+            try:
+                check = check_question(
+                    checker,
+                    concept=concept.name,
+                    passage=chunk.content,
+                    stem=generated.stem,
+                    options=generated.options,
+                    correct_index=generated.correct_index,
+                    existing_stems=approved_stems,
+                )
+            except LLMError as exc:
+                # Nothing is saved unchecked: stop rather than approve a
+                # question nobody verified.
+                log.warning("Check failed for %s: %s", concept.name, exc)
+                outcome.reasons.append(f"checker error: {exc}"[:90])
+                break
+            checked_by = checker.model
+            ok, reason = check.ok, (None if check.ok else check.reason)
+
         question = Question(
             concept_id=concept.id,
             source_chunk_id=chunk.id,
@@ -158,14 +192,9 @@ def generate_for_concept(
             explanation=generated.explanation,
             difficulty=difficulty,
             generated_by=llm.model,
-            status=(
-                QuestionStatus.approved
-                if generated.validation.ok
-                else QuestionStatus.rejected
-            ),
-            rejection_reason=(
-                None if generated.validation.ok else generated.validation.reason
-            ),
+            checked_by=checked_by,
+            status=QuestionStatus.approved if ok else QuestionStatus.rejected,
+            rejection_reason=None if ok else reason,
         )
         for position, text in enumerate(generated.options):
             question.options.append(
@@ -190,11 +219,12 @@ def generate_for_concept(
 
         existing_stems.append(generated.stem)
 
-        if generated.validation.ok:
+        if ok:
+            approved_stems.append(generated.stem)
             outcome.approved += 1
         else:
             outcome.rejected += 1
-            outcome.reasons.append(generated.validation.reason[:90])
+            outcome.reasons.append(reason[:90])
 
     return outcome
 

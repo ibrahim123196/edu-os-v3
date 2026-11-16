@@ -274,6 +274,23 @@ def check_questions(db) -> None:
             "SELECT stem, rejection_reason FROM questions WHERE status='rejected'",
         )
 
+    # Approved before the independent check existed means never verified;
+    # a review of such questions found wrong answer keys.
+    unchecked = db.scalar(
+        select(func.count())
+        .select_from(Question)
+        .where(Question.status == QuestionStatus.approved, Question.checked_by.is_(None))
+    ) or 0
+    if unchecked:
+        report(
+            WARN,
+            f"{unchecked} of {approved} approved questions were never independently checked",
+            "their answer keys have not been verified",
+            fix="python -m scripts.check_existing_questions",
+        )
+    elif approved:
+        report(PASS, f"all {approved} approved questions independently checked")
+
     orphan = db.scalar(
         select(func.count())
         .select_from(Question)

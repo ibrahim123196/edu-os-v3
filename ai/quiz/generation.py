@@ -43,7 +43,11 @@ what happens to one quantity when another changes, identify the correct \
 form of an expression, apply it to a described situation.
 - If the passage cannot support a question at the requested difficulty, say \
 so rather than inventing one.
-- Exactly one option is correct.
+- Exactly one option is correct, and it must be the only defensible one. \
+Prefer questions with a single clear answer: what happens to a quantity, \
+which expression holds, a short calculation. Ask "why" only when the \
+wrong options are plainly false statements -- never the right reason in \
+other words.
 - Every wrong option must be a mistake a real student would make, and you \
 must name that mistake. An option nobody would pick teaches nothing.
 - Keep all four options a similar length. A longer correct answer can be \
@@ -71,7 +75,12 @@ Set "stem" to null if the passage cannot support a fair question."""
 
 DIFFICULTY_GUIDE = {
     1: "recall a definition, unit or stated fact",
-    2: "show understanding of why something is so",
+    # Was "show understanding of why something is so". It is the default
+    # difficulty, so nearly every question became "Why does X?" -- and the
+    # wrong options of a why-question are other reasons, which the model
+    # kept writing as the right reason in other words, marked wrong.
+    2: "show understanding: predict what happens when something changes, or "
+       "pick the relationship that holds",
     3: "apply a relationship to a situation described in the passage",
     4: "compare two ideas in the passage, or reason about a limiting case",
     5: "combine two statements from the passage to reach a conclusion",

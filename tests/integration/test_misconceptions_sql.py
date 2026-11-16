@@ -200,45 +200,71 @@ def test_matches_are_checked_before_anything_is_stored(listed):
 
 # ------------------------------------------- generating with the list
 
-def test_a_generated_option_is_stored_with_its_named_mistake(listed, monkeypatch):
-    class FakeLLM:
-        model = "fake"
+class FakeLLM:
+    """Writes one question; as the checker, picks `checker_picks`."""
 
-        def complete(self, system, messages, max_tokens):
+    model = "fake"
+
+    def __init__(self, checker_picks: int = 0):
+        self.checker_picks = checker_picks
+
+    def complete(self, system, messages, max_tokens):
+        if system.startswith("You check physics exam questions"):
             return json.dumps({
-                "stem": "What happens to the force?",
-                "options": [
-                    {"text": "Quartered", "misconception": None, "mistake": None},
-                    {"text": "Halved", "misconception": "1/r", "mistake": f"{A}/m1"},
-                    {"text": "Doubled", "misconception": "?", "mistake": "other"},
-                    {"text": "Same", "misconception": "?", "mistake": "invented/id"},
-                ],
-                "correct_index": 0,
-                "explanation": "Force goes as one over r squared, so it is quartered.",
+                "options": [{"correct": i == self.checker_picks, "why": "-"} for i in range(4)],
+                "false_premise": None, "tests_concept": True, "concept_note": "", "repeats": None,
             })
+        return json.dumps({
+            "stem": "What happens to the force?",
+            "options": [
+                {"text": "Quartered", "misconception": None, "mistake": None},
+                {"text": "Halved", "misconception": "1/r", "mistake": f"{A}/m1"},
+                {"text": "Doubled", "misconception": "?", "mistake": "other"},
+                {"text": "Same", "misconception": "?", "mistake": "invented/id"},
+            ],
+            "correct_index": 0,
+            "explanation": "Force goes as one over r squared, so it is quartered.",
+        })
 
-    monkeypatch.setattr(quiz_service, "get_llm", lambda: FakeLLM())
+
+def _generate(db, monkeypatch, llm: FakeLLM) -> Question:
+    # *args: the checker is fetched with get_llm(model) when one is set.
+    monkeypatch.setattr(quiz_service, "get_llm", lambda *a, **k: llm)
+    concept = db.scalar(select(Concept).where(Concept.slug == A))
+    doc = Document(title="t", filename="t.pdf", content_type="application/pdf",
+                   storage_path="x", byte_size=1, status=IngestStatus.ready)
+    db.add(doc)
+    db.flush()
+    chunk = DocumentChunk(document_id=doc.id, chunk_index=0, page_start=1, page_end=1,
+                          word_count=80, content="word " * 80)
+    db.add(chunk)
+    db.flush()
+    db.execute(chunk_concepts.insert().values(chunk_id=chunk.id, concept_id=concept.id))
+    quiz_service.generate_for_concept(db, concept, count=1)
+    db.flush()
+    return db.scalar(select(Question).where(Question.concept_id == concept.id,
+                                            Question.stem == "What happens to the force?"))
+
+
+def test_a_generated_option_is_stored_with_its_named_mistake(listed, monkeypatch):
     with session_scope() as db:
-        concept = db.scalar(select(Concept).where(Concept.slug == A))
-        doc = Document(title="t", filename="t.pdf", content_type="application/pdf",
-                       storage_path="x", byte_size=1, status=IngestStatus.ready)
-        db.add(doc)
-        db.flush()
-        chunk = DocumentChunk(document_id=doc.id, chunk_index=0, page_start=1, page_end=1,
-                              word_count=80, content="word " * 80)
-        db.add(chunk)
-        db.flush()
-        db.execute(chunk_concepts.insert().values(chunk_id=chunk.id, concept_id=concept.id))
-
-        quiz_service.generate_for_concept(db, concept, count=1)
-        db.flush()
-
-        q = db.scalar(select(Question).where(Question.concept_id == concept.id,
-                                             Question.stem == "What happens to the force?"))
+        q = _generate(db, monkeypatch, FakeLLM(checker_picks=0))
         named = [o.named_misconception.slug if o.named_misconception else None
                  for o in sorted(q.options, key=lambda o: o.position)]
         assert named == [None, f"{A}/m1", None, None]
-        db.execute(delete(Document).where(Document.id == doc.id))
+        assert q.status == QuestionStatus.approved and q.checked_by == "fake"
+        db.execute(delete(Document))
+
+
+def test_a_question_the_checker_disagrees_with_is_not_used(listed, monkeypatch):
+    """Answered blind, the checker picks another option: the key is
+    suspect, so the question is kept for the record but never handed out."""
+    with session_scope() as db:
+        q = _generate(db, monkeypatch, FakeLLM(checker_picks=1))
+        assert q.status == QuestionStatus.rejected
+        assert "key says option 1, checker says 2" in q.rejection_reason
+        assert q.checked_by == "fake"
+        db.execute(delete(Document))
 
 
 # ------------------------------------------------ what the student sees

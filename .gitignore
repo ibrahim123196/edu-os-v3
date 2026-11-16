@@ -13,3 +13,5 @@ node_modules/
 # Working file for matching old options to named mistakes; regenerate it
 # with scripts.export_options_for_matching rather than keeping it.
 options_to_match.json
+question_check_results.json
+question_check_report.md

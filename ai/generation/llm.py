@@ -148,12 +148,15 @@ class EchoClient(LLMClient):
 
 
 @lru_cache
-def get_llm() -> LLMClient:
+def get_llm(model: str | None = None) -> LLMClient:
+    """The configured client; `model` overrides the configured model, for
+    the question checker."""
     provider = settings.llm_provider
+    model = model or settings.llm_model
     if provider == "anthropic":
-        return AnthropicClient(settings.llm_model, settings.anthropic_api_key)
+        return AnthropicClient(model, settings.anthropic_api_key)
     if provider == "openai":
-        return OpenAIClient(settings.llm_model, settings.openai_api_key)
+        return OpenAIClient(model, settings.openai_api_key)
     if provider == "echo":
         return EchoClient()
     raise LLMError(f"Unknown LLM provider: {provider}")

@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # --- Generation -------------------------------------------------------
     llm_provider: Literal["anthropic", "openai", "echo"] = "anthropic"
     llm_model: str = "claude-sonnet-4-6"
+    # The model that checks each generated question without seeing its
+    # answer key. Unset means the generation model. A checker that is the
+    # same model as the writer tends to share its slips, so a stronger one
+    # here is worth its cost: it runs once per question, not per student.
+    check_model: str | None = None
     llm_max_tokens: int = 1200
     llm_temperature: float = 0.2
 

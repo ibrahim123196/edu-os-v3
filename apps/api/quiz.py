@@ -106,6 +106,11 @@ class Question(Base):
     unit: Mapped[str | None] = mapped_column(String(40))
 
     generated_by: Mapped[str | None] = mapped_column(String(80))
+    # The model that answered this question blind and agreed with its key.
+    # Null for questions from before the check existed: they were never
+    # verified, and a review of them found faulty keys. Added after the
+    # table shipped, so init_db adds it to existing databases.
+    checked_by: Mapped[str | None] = mapped_column(String(80))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

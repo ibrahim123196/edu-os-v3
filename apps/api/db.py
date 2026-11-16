@@ -197,6 +197,10 @@ def init_db() -> None:
                 "ON question_options (misconception_id)"
             )
         )
+        # Which model independently checked a question.
+        conn.execute(
+            text("ALTER TABLE questions ADD COLUMN IF NOT EXISTS checked_by varchar(80)")
+        )
         # HNSW gives good recall/latency for cosine distance without tuning
         # lists the way IVFFlat requires.
         conn.execute(
