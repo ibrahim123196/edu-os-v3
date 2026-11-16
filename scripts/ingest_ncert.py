@@ -30,6 +30,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from ai.ingestion import PIPELINE_VERSION
 from ai.retrieval.spelling import rebuild_vocabulary
 from apps.api.config import settings
 from apps.api.curriculum import Chapter, License, SourceKind, Subject

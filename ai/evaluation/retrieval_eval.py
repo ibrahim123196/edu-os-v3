@@ -16,6 +16,12 @@ cover, and the model will then answer it.
 
 Usage:
     python -m ai.evaluation.retrieval_eval ai/evaluation/datasets/sample.jsonl
+    python -m ai.evaluation.retrieval_eval <dataset> --messy
+
+--messy also asks every question the way students type them, with words a
+textbook never contains ("explain ... in simple words", "... really").
+The dataset is written cleanly, and keyword search once required every
+word: one such word made it find nothing, which a clean dataset never shows.
 """
 
 from __future__ import annotations
@@ -72,7 +78,15 @@ def _hit(chunk, case: Case) -> bool:
     return any(p in span for p in case.expect_pages)
 
 
-def evaluate(dataset: Path, k: int = 5) -> dict:
+# How students actually phrase things. Each wraps a question in words the
+# textbook does not use, so keyword search has something to trip over.
+MESSY_STYLES = {
+    "explain ... in simple words": lambda q: f"explain {q} in simple words",
+    "... really": lambda q: f"{q} really",
+}
+
+
+def evaluate(dataset: Path, k: int = 5, phrase=lambda q: q) -> dict:
     """Score retrieval against a dataset of questions with known answers.
 
     Abstention is measured by similarity, not by whether anything came back.
@@ -95,15 +109,16 @@ def evaluate(dataset: Path, k: int = 5) -> dict:
 
     with session_scope() as db:
         for case in cases:
-            embedding = provider.embed_query(case.question)
+            question = phrase(case.question)
+            embedding = provider.embed_query(question)
             candidates = hybrid_search(
                 db,
-                query=to_lexical(case.question),
+                query=to_lexical(question),
                 query_embedding=embedding,
                 filters=RetrievalFilters(),
             )
             best = max((c.vector_score or 0.0 for c in candidates), default=0.0)
-            top = reranker.rerank(case.question, candidates, k)
+            top = reranker.rerank(question, candidates, k)
 
             if case.expect_abstain:
                 abstain_best.append(best)
@@ -167,6 +182,21 @@ def main() -> int:
 
     report = evaluate(path)
     rows = report.pop("rows")
+
+    if "--messy" in sys.argv[2:]:
+        # The clean run first, unchanged, so it stays comparable with every
+        # earlier baseline; then the same questions as students type them.
+        recall_key = f"recall@{report['k']}"
+        print(f"{'question style':<30}{recall_key:>10}{'mrr':>8}{'abstained right':>18}")
+        styles = [("as written", report)] + [
+            (name, evaluate(path, phrase=make)) for name, make in MESSY_STYLES.items()
+        ]
+        for name, r in styles:
+            print(
+                f"{name:<30}{r[recall_key]:>10}{r['mrr']:>8}"
+                f"{r['at_threshold']['correctly_abstained']:>18}"
+            )
+        print()
 
     print(json.dumps(report, indent=2))
     print("\nPer case:")

@@ -145,16 +145,36 @@ def keyword_search(
 
     # websearch_to_tsquery tolerates natural phrasing and quoted phrases
     # instead of erroring on stray punctuation the way to_tsquery does.
+    #
+    # Its words are then joined with OR, not the AND it produces: a passage
+    # counts if it has ANY of the words, and ts_rank_cd ranks those with
+    # more of them higher. Requiring every word meant one word a textbook
+    # never uses -- "explain", "really", "in simple words", or a synonym the
+    # query rewrite added -- made keyword search find nothing at all. On the
+    # NCERT evaluation set, "explain ... in simple words" took keyword-only
+    # recall@5 from 0% to 83%; as written, from 71% to 88%.
+    #
+    # A query that excludes a word ("drift -magnetic", parsed as !magnet)
+    # keeps the strict all-words form. Loosening it cannot be done by
+    # swapping operators: & binds tighter than |, so "drift | veloc &
+    # !magnet" means "drift, or velocity without magnetic", and a passage
+    # about drift and magnetism slips through. Students rarely exclude
+    # words; when they do, they mean it. Quoted phrases (<->) are untouched.
+    strict = "websearch_to_tsquery('english', :q)"
+    tsquery = (
+        f"(CASE WHEN position('!' IN {strict}::text) > 0 THEN {strict} "
+        f"ELSE to_tsquery('english', replace({strict}::text, ' & ', ' | ')) END)"
+    )
     sql = text(
         f"""
         SELECT c.id, c.document_id, d.title, c.content, c.page_start, c.page_end,
                c.section, c.chunk_index, c.notation_score,
                d.source_kind, d.publisher,
-               ts_rank_cd(c.content_tsv, websearch_to_tsquery('english', :q)) AS rank
+               ts_rank_cd(c.content_tsv, {tsquery}) AS rank
         FROM document_chunks c
         JOIN documents d ON d.id = c.document_id
         WHERE {where}
-          AND c.content_tsv @@ websearch_to_tsquery('english', :q)
+          AND c.content_tsv @@ {tsquery}
         ORDER BY rank DESC
         LIMIT :limit
         """
