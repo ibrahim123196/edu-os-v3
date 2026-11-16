@@ -103,3 +103,22 @@ def test_a_limit_checks_only_that_many(bank):
     script.run_checks(limit=1)
     saved = json.loads((bank / "question_check_results.json").read_text(encoding="utf-8"))
     assert len(saved["results"]) == 1
+
+
+def test_a_verdict_can_be_overruled_on_review(bank):
+    """The checker is a model too: a person reads the report and keeps
+    the ones it got wrong."""
+    script.run_checks()
+    report = (bank / "question_check_report.md").read_text(encoding="utf-8")
+    number = 1 if report.index("*Question:* BADKEY") < report.index("*Question:* COPY") else 2
+    script.apply_results(keep={number})
+    q = _questions()
+    assert q["BADKEY"][0] == QuestionStatus.approved
+    assert q["BADKEY"][1] == "fake-checker, kept on review"
+    assert q["COPY"][0] == QuestionStatus.rejected
+
+
+def test_a_keep_number_not_in_the_report_stores_nothing(bank):
+    script.run_checks()
+    assert script.apply_results(keep={9}) == 1
+    assert all(checked is None for _, checked, _ in _questions().values())
