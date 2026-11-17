@@ -1,0 +1,746 @@
+{
+  "source": "haloalkanes and haloarenes.pdf",
+  "model": "claude-sonnet-5-5",
+  "items": [
+    {
+      "page": 2,
+      "after": "atoms in their structures. For example,",
+      "text": "C2H5X (labelled Monohaloalkane)"
+    },
+    {
+      "page": 2,
+      "after": "atoms in their structures. For example,",
+      "text": "XCH2-CH2X (CH2X over CH2X, labelled Dihaloalkane)"
+    },
+    {
+      "page": 2,
+      "after": "atoms in their structures. For example,",
+      "text": "XCH2-CHX-CH2X (CH2X, CHX, CH2X stacked, labelled Trihaloalkane)"
+    },
+    {
+      "page": 2,
+      "after": "atoms in their structures. For example,",
+      "text": "benzene ring with one X substituent (Monohaloarene)"
+    },
+    {
+      "page": 2,
+      "after": "atoms in their structures. For example,",
+      "text": "benzene ring with two X on adjacent carbons (Dihaloarene)"
+    },
+    {
+      "page": 2,
+      "after": "atoms in their structures. For example,",
+      "text": "benzene ring with three X on adjacent carbons (1,2,3-positions) (Trihaloarene)"
+    },
+    {
+      "page": 2,
+      "after": "secondary alkyl halide (2°) and tertiary (3°) alkyl halide, respectively.",
+      "text": "Primary (1°): carbon bearing X, two H and R' (R'-CH(H)-X drawn as R'-C(H)(H)-X)"
+    },
+    {
+      "page": 2,
+      "after": "secondary alkyl halide (2°) and tertiary (3°) alkyl halide, respectively.",
+      "text": "Secondary (2°): carbon bearing X, one H, R' and R'' (R'R''CH-X)"
+    },
+    {
+      "page": 2,
+      "after": "secondary alkyl halide (2°) and tertiary (3°) alkyl halide, respectively.",
+      "text": "Tertiary (3°): carbon bearing X, R', R'' and R''' (R'R''R'''C-X)"
+    },
+    {
+      "page": 2,
+      "after": "Allylic carbon",
+      "text": "CH2=CH-CH2X, with CH2X carbon labelled Allylic carbon (double bond highlighted)"
+    },
+    {
+      "page": 2,
+      "after": "Allylic carbon",
+      "text": "cyclohexene ring (one C=C drawn) with X on the sp3 carbon adjacent to the double bond, labelled Allylic carbon (3-halocyclohexene)"
+    },
+    {
+      "page": 3,
+      "after": null,
+      "text": "benzene ring with CH2X substituent (benzyl halide, 1°)"
+    },
+    {
+      "page": 3,
+      "after": null,
+      "text": "benzene ring bearing a carbon that carries X, R' and R''; R' = CH3, R'' = H (2°); R' = R'' = CH3 (3°)"
+    },
+    {
+      "page": 3,
+      "after": "(C = C).",
+      "text": "CH2=CH-X (vinylic halide, X on the sp2 carbon of the C=C)"
+    },
+    {
+      "page": 3,
+      "after": "(C = C).",
+      "text": "cyclohexene ring with X on one of the two double-bond carbons (one C=C drawn)"
+    },
+    {
+      "page": 3,
+      "after": "bonded to the sp^2-hybridised carbon atom of an aromatic ring.",
+      "text": "benzene ring with X (aryl halide)"
+    },
+    {
+      "page": 3,
+      "after": "bonded to the sp^2-hybridised carbon atom of an aromatic ring.",
+      "text": "benzene ring with X and CH3 (H3C) para to each other"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "CH3CH2CH2Br; Common name: n-Propyl bromide; IUPAC name: 1-Bromopropane"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "H3C-CH(Cl)-CH3; Isopropyl chloride; 2-Chloropropane"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "H3C-CH(CH3)-CH2Cl; Isobutyl chloride; 1-Chloro-2-methylpropane"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "benzene ring with one Br; Common name: Bromobenzene; IUPAC name: Bromobenzene"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "benzene ring with two Br meta to each other; m-Dibromobenzene; 1,3-Dibromobenzene"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "benzene ring with three Br at 1,3,5 positions; sym-Tribromobenzene; 1,3,5-Tribromobenzene"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "H3C-C(CH3)(CH3)-CH2-Cl; IUPAC name: 1-Chloro-2,2-dimethylpropane"
+    },
+    {
+      "page": 3,
+      "after": "XI, the numerals 1,2; 1,3 and 1,4 are used.",
+      "text": "H3C-CH(Br)-CH3; IUPAC name: 2-Bromopropane"
+    },
+    {
+      "page": 4,
+      "after": "dihalides. In IUPAC system, they are named as dihaloalkanes.",
+      "text": "H3C-CHCl2 (ethylidene chloride, gem-dihalide; IUPAC: 1,1-Dichloroethane)"
+    },
+    {
+      "page": 4,
+      "after": "dihalides. In IUPAC system, they are named as dihaloalkanes.",
+      "text": "ClCH2-CH2Cl drawn as H2C-CH2 with a Cl on each carbon (ethylene dichloride, vic-dihalide; IUPAC: 1,2-Dichloroethane)"
+    },
+    {
+      "page": 4,
+      "after": "CH_2 = CHCH_2Br Allyl bromide 3-Bromopropene",
+      "text": "benzene ring with Cl and CH3 on adjacent carbons (o-chlorotoluene; 1-chloro-2-methylbenzene or 2-chlorotoluene)"
+    },
+    {
+      "page": 4,
+      "after": "2-Chlorotoluene",
+      "text": "benzene ring with CH2Cl substituent (benzyl chloride; chlorophenylmethane)"
+    },
+    {
+      "page": 5,
+      "after": "Write IUPAC names of the following:",
+      "text": "(i) CH3CH=CHCH(Br)CH3 (drawn as a skeletal structure with H3C, H, Br labels; 4-bromopent-2-ene)"
+    },
+    {
+      "page": 5,
+      "after": "Write IUPAC names of the following:",
+      "text": "(ii) CH2=C(CH3)CH(Br)CH3 (3-bromo-2-methylbut-1-ene)"
+    },
+    {
+      "page": 5,
+      "after": "Write IUPAC names of the following:",
+      "text": "(iii) CH3CH=C(CH3)CH(Br)CH3 (4-bromo-3-methylpent-2-ene)"
+    },
+    {
+      "page": 5,
+      "after": "Write IUPAC names of the following:",
+      "text": "(iv) CH3CH=C(CH3)CH2Br (1-bromo-2-methylbut-2-ene)"
+    },
+    {
+      "page": 5,
+      "after": "Write IUPAC names of the following:",
+      "text": "(v) CH3CH=CHCH2Br (1-bromobut-2-ene)"
+    },
+    {
+      "page": 5,
+      "after": "Write IUPAC names of the following:",
+      "text": "(vi) CH2=C(CH3)CH2Br (3-bromo-2-methylpropene)"
+    },
+    {
+      "page": 5,
+      "after": "negative charge.",
+      "text": "Polarised C-X bond: carbon with three other bonds, bonded to halogen X, C marked δ+ and X marked δ-: C(δ+)-X(δ-)"
+    },
+    {
+      "page": 6,
+      "after": "reaction of red phosphorus with bromine and iodine respectively.",
+      "text": "R-OH + HCl --(ZnCl2)--> R-Cl + H2O"
+    },
+    {
+      "page": 6,
+      "after": "reaction of red phosphorus with bromine and iodine respectively.",
+      "text": "R-OH + NaBr + H2SO4 --> R-Br + NaHSO4 + H2O"
+    },
+    {
+      "page": 6,
+      "after": "reaction of red phosphorus with bromine and iodine respectively.",
+      "text": "3R-OH + PX3 --> 3R-X + H3PO3 (X = Cl, Br)"
+    },
+    {
+      "page": 6,
+      "after": "reaction of red phosphorus with bromine and iodine respectively.",
+      "text": "R-OH + PCl5 --> R-Cl + POCl3 + HCl"
+    },
+    {
+      "page": 6,
+      "after": "reaction of red phosphorus with bromine and iodine respectively.",
+      "text": "R-OH --(red P/X2, X2 = Br2, I2)--> R-X"
+    },
+    {
+      "page": 6,
+      "after": "reaction of red phosphorus with bromine and iodine respectively.",
+      "text": "R-OH + SOCl2 --> R-Cl + SO2 + HCl"
+    },
+    {
+      "page": 7,
+      "after": "compound is low.",
+      "text": "CH3CH2CH2CH3 --(Cl2/UV light or heat)--> CH3CH2CH2CH2Cl + CH3CH2CHClCH3"
+    },
+    {
+      "page": 7,
+      "after": "hydrogen bromide or hydrogen iodide.",
+      "text": ">C=C< + HX --> >CH-CX< (H on one carbon and X on the other carbon of the former double bond)"
+    },
+    {
+      "page": 7,
+      "after": "per Markovnikov’s rule. (Unit 13, Class XI)",
+      "text": "CH3CH=CH2 + H-I --> CH3CH2CH2I (minor) + CH3CHICH3 (major)"
+    },
+    {
+      "page": 7,
+      "after": "of vic-dibromides, which are colourless (Unit 9, Class XI).",
+      "text": "H2C=CH2 (each carbon drawn with two H) + Br2 --(CCl4)--> BrCH2-CH2Br (vic-Dibromide)"
+    },
+    {
+      "page": 7,
+      "after": "reaction.",
+      "text": "R-X + NaI --> R-I + NaX (X = Cl, Br)"
+    },
+    {
+      "page": 8,
+      "after": "AgF, Hg_2F_2, CoF_2 or SbF_3. The reaction is termed as Swartsreaction.",
+      "text": "H3C-Br + AgF --> H3C-F + AgBr"
+    },
+    {
+      "page": 8,
+      "after": "presence of Lewis acid catalysts like iron or iron(III) chloride.",
+      "text": "toluene (benzene ring with three alternating double bonds, CH3 substituent) + X2 --(Fe, dark)--> o-halotoluene (benzene ring with CH3 and X on adjacent carbons) + p-halotoluene (benzene ring with CH3 and X para to each other)"
+    },
+    {
+      "page": 8,
+      "after": "replacement of the diazonium group by –Cl or –Br.",
+      "text": "aniline (benzene ring with NH2) --(NaNO2 + HX, 273-278 K)--> benzene diazonium halide (benzene ring with N2+ X-); label: Benzene diazonium halide"
+    },
+    {
+      "page": 8,
+      "after": "replacement of the diazonium group by –Cl or –Br.",
+      "text": "benzene diazonium halide (benzene ring with N2+ X-) --(Cu2X2)--> aryl halide (benzene ring with X) + N2; labels: Aryl halide, X = Cl, Br"
+    },
+    {
+      "page": 8,
+      "after": "salt with potassium iodide.",
+      "text": "benzene diazonium halide (benzene ring with N2+ X-) --(KI)--> iodobenzene (benzene ring with I) + N2"
+    },
+    {
+      "page": 9,
+      "after": null,
+      "text": "(i) C6H5-CH=CH2 (styrene: benzene ring with vinyl group, drawn with H atoms) + HBr -->"
+    },
+    {
+      "page": 9,
+      "after": null,
+      "text": "(ii) CH3-CH2-CH=CH2 + HCl -->"
+    },
+    {
+      "page": 9,
+      "after": null,
+      "text": "(iii) C6H5-CH2-CH=CH2 (benzene ring with CH2-CH=CH2, drawn with H on the middle carbon) + HBr --(Peroxide)-->"
+    },
+    {
+      "page": 9,
+      "after": "Solution",
+      "text": "(i) C6H5-CHBr-CH3 (benzene ring attached to carbon bearing Br and H, next to CH2... drawn as ring-CH(Br)-CH2... with H's: ring-CH(Br)-CH3, i.e. 1-bromo-1-phenylethane)"
+    },
+    {
+      "page": 9,
+      "after": "Solution",
+      "text": "(ii) CH3-CH2-CHCl-CH3 (2-chlorobutane)"
+    },
+    {
+      "page": 9,
+      "after": "Solution",
+      "text": "(iii) C6H5-CH2-CH2-CH2-Br (benzene ring with CH2CH2CH2Br chain)"
+    },
+    {
+      "page": 9,
+      "after": "reactions:",
+      "text": "(i) cyclohexane ring with OH (cyclohexanol) + SOCl2 -->"
+    },
+    {
+      "page": 9,
+      "after": "reactions:",
+      "text": "(ii) benzene ring with CH2CH3 and NO2 para to each other (1-ethyl-4-nitrobenzene) --(Br2, heat or UV light)-->"
+    },
+    {
+      "page": 9,
+      "after": "reactions:",
+      "text": "(iii) benzene ring with CH2OH and OH para to each other (4-hydroxybenzyl alcohol) + HCl --(heat)-->"
+    },
+    {
+      "page": 9,
+      "after": "reactions:",
+      "text": "(iv) cyclohexene ring with CH3 on a double-bonded carbon (1-methylcyclohexene) + HI -->"
+    },
+    {
+      "page": 9,
+      "after": "reactions:",
+      "text": "(v) CH3CH2Br + NaI -->"
+    },
+    {
+      "page": 9,
+      "after": "reactions:",
+      "text": "(vi) cyclohexene (ring with one double bond) + Br2 --(heat, UV light)-->"
+    },
+    {
+      "page": 10,
+      "after": "boiling point among the three isomers.",
+      "text": "CH3CH2CH2CH2Br, b.p./K 375"
+    },
+    {
+      "page": 10,
+      "after": "boiling point among the three isomers.",
+      "text": "CH3CH2CH(Br)CH3 (Br on the second carbon), b.p./K 364"
+    },
+    {
+      "page": 10,
+      "after": "boiling point among the three isomers.",
+      "text": "(CH3)3CBr, drawn as H3C-C(CH3)(Br)-CH3 with CH3 above and Br below the central carbon, b.p./K 346"
+    },
+    {
+      "page": 11,
+      "after": null,
+      "text": "Benzene ring (three alternating double bonds) with two adjacent Cl (1,2-dichlorobenzene, ortho); b.p/K 453; m.p/K 256"
+    },
+    {
+      "page": 11,
+      "after": null,
+      "text": "Benzene ring (three alternating double bonds) with two Cl meta to each other (1,3-dichlorobenzene); b.p/K 446; m.p/K 249"
+    },
+    {
+      "page": 11,
+      "after": null,
+      "text": "Benzene ring (three alternating double bonds) with two Cl para to each other (1,4-dichlorobenzene); b.p/K 448; m.p/K 323"
+    },
+    {
+      "page": 12,
+      "after": "substitution reaction.",
+      "text": "Nu^- + C(δ+)–X(δ-) (carbon with three other bonds drawn) --> Nu–C (carbon with three other bonds) + X^-"
+    },
+    {
+      "page": 12,
+      "after": "KCN RCN Nitrile",
+      "text": "Nucleophile for KCN: (-)C≡N: (carbon bearing negative charge, triple bond to N with lone pair)"
+    },
+    {
+      "page": 13,
+      "after": "upon the concentration of both the reactants.",
+      "text": "OH(-) + CH3Cl --> [HO---CH3---Cl]‡ with δ- on both HO and Cl (transition state, carbon bearing three H, drawn in brackets) --> CH3OH + Cl(-)"
+    },
+    {
+      "page": 14,
+      "after": "See the structures (A) and (B) given below carefully.",
+      "text": "Mirror-image pair of structures about a vertical line labelled 'Mirror'. (A): central C with Br up (plain bond), H on a hashed bond to the lower left, Cl on a bold wedge to the lower right, I on a plain bond down. (B): central C with Br up (plain bond), Cl on a bold wedge to the lower left, H on a hashed bond to the lower right, I on a plain bond down. Labels (A) and (B)."
+    },
+    {
+      "page": 15,
+      "after": "bromide.",
+      "text": "(CH3)3CBr + OH- --> (CH3)3COH + Br-  (2-Bromo-2-methylpropane --> 2-Methylpropan-2-ol)"
+    },
+    {
+      "page": 15,
+      "after": "to complete the substitution reaction.",
+      "text": "step I: (CH3)3CBr <==> (CH3)3C+ (tert-butyl carbocation, drawn as central C+ with CH3, H3C, CH3) + Br-"
+    },
+    {
+      "page": 15,
+      "after": "to complete the substitution reaction.",
+      "text": "step II: (CH3)3C+ (carbocation drawn as central C+ with CH3, H3C, CH3) + OH- --> (CH3)3COH"
+    },
+    {
+      "page": 16,
+      "after": "of alkyl halides towards SN1 and SN2 reactions as follows:",
+      "text": "Reactivity-order diagram: right-pointing arrow labelled 'For SN2 reaction' above the series 'Tertiary halide; Secondary halide; Primary halide; CH3X'; below it a left-pointing arrow labelled 'For SN1 reaction'"
+    },
+    {
+      "page": 16,
+      "after": "shown below:",
+      "text": "Allyl cation resonance: H2C=CH-CH2(+) <--> (+)H2C-CH=CH2 (curved arrow from the C=C to the C+ in the first form, with H on the central carbon)"
+    },
+    {
+      "page": 16,
+      "after": "shown below:",
+      "text": "Benzyl cation resonance: benzene ring with CH2(+) attached <--> ring with exocyclic C=CH2 and (+) on the ring ortho carbon <--> exocyclic C=CH2 with (+) at the next (meta) ring position <--> exocyclic C=CH2 with (+) at the para position; double-headed arrows between the forms, curved arrows showing electron shifts"
+    },
+    {
+      "page": 16,
+      "after": "S_N2 reaction faster?",
+      "text": "Example 6.6 pairs: (cyclohexane ring)-CH2Cl and chlorocyclohexane (cyclohexane ring with Cl); 1-iodobutane (zigzag chain, I at end) and 1-chlorobutane (zigzag chain, Cl at end)"
+    },
+    {
+      "page": 16,
+      "after": null,
+      "text": "Solution: cyclohexane ring-CH2Cl (primary halide)"
+    },
+    {
+      "page": 16,
+      "after": "reaction faster.",
+      "text": "Solution: zigzag chain with terminal I (1-iodobutane, CH3CH2CH2CH2I)"
+    },
+    {
+      "page": 19,
+      "after": "compounds. (Wedge and Dash representations according to Class XI.",
+      "text": "(i) pair, first structure: tetrahedral carbon with H (up), H3C (dashed, left), Br (wedge, lower left) and OH (lower right), i.e. CH3CHBr(OH); labelled (i)"
+    },
+    {
+      "page": 19,
+      "after": "compounds. (Wedge and Dash representations according to Class XI.",
+      "text": "(i) pair, second structure: tetrahedral carbon with H (up), H3C (dashed, left), Br (wedge, lower left) and Br (lower right), i.e. CH3CHBr2; labelled (ii)"
+    },
+    {
+      "page": 19,
+      "after": "compounds. (Wedge and Dash representations according to Class XI.",
+      "text": "(ii) pair, first structure: zigzag chain H3C-CH(OH)-CH2-CH2-CH3 (2-pentanol skeleton) with HO on a wedge and H on a dash at the stereocentre; labelled (i)"
+    },
+    {
+      "page": 19,
+      "after": "compounds. (Wedge and Dash representations according to Class XI.",
+      "text": "(ii) pair, second structure: zigzag chain H3C-CH2-CH(OH)-CH2-CH3 (3-pentanol skeleton) with H on a wedge and OH on a dash at the central carbon; labelled (ii)"
+    },
+    {
+      "page": 19,
+      "after": "compounds. (Wedge and Dash representations according to Class XI.",
+      "text": "(iii) (i) CH3CHCH2CH3 with Br on the CH below (CH3CHBrCH2CH3)"
+    },
+    {
+      "page": 19,
+      "after": "compounds. (Wedge and Dash representations according to Class XI.",
+      "text": "(iii) (ii) CH3CH2CH2CH2Br"
+    },
+    {
+      "page": 20,
+      "after": "Solution",
+      "text": "(i) Stereostructure: central carbon bearing H (up, plain bond), OH (lower right, plain bond), Br (lower left, wedge bond) and H3C (left, hashed bond); this is the carbon with H, CH3, Br, OH (1-bromoethanol type centre)"
+    },
+    {
+      "page": 20,
+      "after": "Solution",
+      "text": "(ii) Skeletal zigzag structure: H3C–C(OH)(H)–CH2–CH2–CH3 with HO on a wedge bond and H on a hashed bond at the stereocentre (2-pentanol)"
+    },
+    {
+      "page": 20,
+      "after": "Solution",
+      "text": "(iii) CH3CHCH2CH3 with Br attached to the second carbon (2-bromobutane, CH3CH(Br)CH2CH3)"
+    },
+    {
+      "page": 20,
+      "after": "is heated with concentrated hydrochloric acid.",
+      "text": "(–)-2-Methylbutan-1-ol (drawn with stereocentre carrying CH3 (hashed), H (wedge), CH2–OH, and CH2CH3) + HCl --(heat)--> (+)-1-Chloro-2-methylbutane (stereocentre carrying CH3 (hashed), H (wedge), CH2–Cl, and CH2CH3) + H-OH; the C–OH and C–Cl bonds are shown dashed/broken"
+    },
+    {
+      "page": 20,
+      "after": "replacement of a group X by Y in the following reaction;",
+      "text": "Substrate: stereocentre carbon with C2H5 (up), H (hashed), CH3 (wedge, lower right), X (lower left). --(Y)--> A: stereocentre with C2H5 (up), H (hashed), CH3 (wedge, lower right), Y (lower left) (retention)"
+    },
+    {
+      "page": 20,
+      "after": "replacement of a group X by Y in the following reaction;",
+      "text": "Substrate (C2H5, H hashed, CH3 wedge, X) --(Y)--> B: stereocentre with C2H5 (up), H (hashed, left), CH3 (wedge, lower left), Y (lower right) (inversion)"
+    },
+    {
+      "page": 20,
+      "after": "replacement of a group X by Y in the following reaction;",
+      "text": "Substrate (C2H5, H, CH3, X) --(Y)--> A + B"
+    },
+    {
+      "page": 21,
+      "after": "opposite to what bromide had occupied.",
+      "text": "SN2: (–)-2-bromooctane (H3C and C6H13 on the stereocentre, H hashed, Br on the right) + OH(-) --> (+)-octan-2-ol (HO on the left, CH3 on top, H hashed, C6H13 below; inverted configuration) + Br(-)"
+    },
+    {
+      "page": 21,
+      "after": null,
+      "text": "SN1 step 1: 2-bromobutane (H3C, H hashed, H3CH2C, Br) <==> carbocation (CH3, H hashed, CH2CH3 on a C+ centre) + Br(-)"
+    },
+    {
+      "page": 21,
+      "after": null,
+      "text": "Planar carbocation (C+ with CH3, CH2CH3, H; empty p orbital lobes above and below) attacked by HO(-) from the top and by -OH from the bottom"
+    },
+    {
+      "page": 21,
+      "after": null,
+      "text": "Carbocation + HO(-) (attack from the left-hand side, arrow pointing left) --> (+)-Butan-2-ol (HO, CH3, H hashed, CH2CH3)"
+    },
+    {
+      "page": 21,
+      "after": null,
+      "text": "Carbocation + -OH (arrow pointing right) --> (–)Butan-2-ol (H3C, OH, H hashed, H3CCH2)"
+    },
+    {
+      "page": 21,
+      "after": "atom from β-carbon and a halogen atom from the α-carbon atom.",
+      "text": "Elimination mechanism: B: + H–C(β)–C(α)–X (curved arrows: B: takes the H from the β-carbon, the C–H electrons form the C=C, and X leaves from the α-carbon) --> C=C + B–H + X(-); B = Base, X = Leaving group"
+    },
+    {
+      "page": 21,
+      "after": "β-carbon.",
+      "text": "Sidebar diagram: carbon chain fragment –C(γ)–, C(β), C(α)–X, each carbon with vertical bonds, labelled γ, β, α with X on the α-carbon"
+    },
+    {
+      "page": 22,
+      "after": "pent-2-ene as the major product.",
+      "text": "2-Bromopentane, CH3CH2CH2CH(Br)CH3 (Br on C2, H on the adjacent CH2 [C3]), --(-OH)--> Pent-2-ene (81%): CH3CH2CH=CHCH3 (left arrow); --(-OH)--> Pent-1-ene (19%): CH3CH2CH2CH=CH2 (right arrow)"
+    },
+    {
+      "page": 22,
+      "after": "elimination depending upon the stability of carbocation or the more substituted alkene.",
+      "text": "Elimination: mechanism diagram. (CH3)3C-O(-) (tert-butoxide, drawn as H3C-C(CH3)(CH3)-O with negative charge) abstracts the H from a CH3 group of the bromoalkane (ball-and-stick model); curved arrows show H removed, C=C formed, and Br leaving as Br-. Label: Elimination"
+    },
+    {
+      "page": 22,
+      "after": "elimination depending upon the stability of carbocation or the more substituted alkene.",
+      "text": "Substitution: mechanism diagram. CH3CH2-O(-) (ethoxide, lone pairs shown, negative charge) attacks the carbon bearing Br (ball-and-stick model), with curved arrows showing the nucleophile attack and Br leaving. Label: Substitution (shown as 'vs' with Elimination)"
+    },
+    {
+      "page": 22,
+      "after": "haloalkanes with magnesium metal in dry ether.",
+      "text": "CH3CH2Br + Mg --(dry ether)--> CH3CH2MgBr (Grignard reagent)"
+    },
+    {
+      "page": 23,
+      "after": "magnesium; the magnesium halogen bond is essentially ionic.",
+      "text": "R-Mg-X with partial charges: δ- on R, δ+ on Mg, δ- on X"
+    },
+    {
+      "page": 23,
+      "after": "acidic to convert them to corresponding hydrocarbons.",
+      "text": "RMgX + H2O ---> RH + Mg(OH)X"
+    },
+    {
+      "page": 23,
+      "after": "This reaction is known as Wurtz reaction.",
+      "text": "2RX + 2Na ---> RR + 2NaX"
+    },
+    {
+      "page": 23,
+      "after": "following resonating structures are possible.",
+      "text": "Resonance structures of chlorobenzene: (1) benzene ring (three alternating double bonds) with Cl bearing lone pairs, curved arrows from Cl lone pair to the ring C-Cl bond and within the ring <--> (2) ring carbon double-bonded to Cl+ (circled plus), two ring double bonds, negative charge (circled minus) on the ortho carbon, curved arrows shown <--> (3) ring carbon double-bonded to Cl+ (circled plus), two ring double bonds, negative charge on the para carbon, curved arrows shown <--> (4) ring carbon double-bonded to Cl+ (circled plus), two ring double bonds, negative charge on the other ortho carbon"
+    },
+    {
+      "page": 24,
+      "after": "to halogen is sp^2-hybridised.",
+      "text": "Benzene ring (three alternating double bonds) with X (green) on one carbon, arrow from label 'sp2-hybrid carbon' pointing to the ring carbon bearing X (haloarene)"
+    },
+    {
+      "page": 24,
+      "after": "to halogen is sp^2-hybridised.",
+      "text": "RCH2X drawn as carbon with H (up), H (down), R (left), X (right, green); arrow from label 'sp3-hybrid carbon' pointing to the carbon (haloalkane)"
+    },
+    {
+      "page": 24,
+      "after": "of 300 atmospheres.",
+      "text": "C6H5Cl (chlorobenzene, Cl with lone pairs drawn) --((i) NaOH, 623K, 300 atm; (ii) H+)--> C6H5OH (phenol)"
+    },
+    {
+      "page": 24,
+      "after": "para-positions increases the reactivity of haloarenes.",
+      "text": "benzene ring with Cl and NO2 para to each other (1-chloro-4-nitrobenzene, Cl with lone pairs) --((i) NaOH, 443K; (ii) H+)--> benzene ring with OH and NO2 para to each other (4-nitrophenol)"
+    },
+    {
+      "page": 24,
+      "after": "para-positions increases the reactivity of haloarenes.",
+      "text": "benzene ring with Cl at C1, NO2 at C2 (ortho) and NO2 at C4 (para) (1-chloro-2,4-dinitrobenzene, Cl with lone pairs) --((i) NaOH, 368K; (ii) H+)--> benzene ring with OH at C1, NO2 at C2 and NO2 at C4 (2,4-dinitrophenol)"
+    },
+    {
+      "page": 25,
+      "after": null,
+      "text": "2,4,6-trinitrochlorobenzene (benzene ring with Cl at top, NO2 at both ortho positions and NO2 at para position; Cl shown with lone pairs) --(warm H2O)--> 2,4,6-trinitrophenol (benzene ring with OH, two ortho NO2 and para NO2)"
+    },
+    {
+      "page": 25,
+      "after": "Mechanism of the reaction is as depicted:",
+      "text": "p-isomer: 1-chloro-4-nitrobenzene (benzene ring with Cl and NO2 para to each other; NO2 drawn as N+ with O and O-) + OH- (curved arrow from OH- to the ring carbon bearing Cl) --(Slow step)--> [resonance-stabilised carbanion (Meisenheimer complex): sp3 carbon bearing Cl and OH, negative charge on ring, three resonance structures linked by double-headed arrows, in the last the negative charge is on the carbon bearing NO2 and delocalised onto the nitro group (O-)] = resonance hybrid (ring with dotted circle and minus sign, Cl and OH on the sp3 carbon, para NO2)"
+    },
+    {
+      "page": 25,
+      "after": "Mechanism of the reaction is as depicted:",
+      "text": "resonance hybrid carbanion (Cl and OH on sp3 carbon, para NO2) --(Fast step)--> 4-nitrophenol (benzene ring with OH and NO2 para) + Cl-"
+    },
+    {
+      "page": 25,
+      "after": "Mechanism of the reaction is as depicted:",
+      "text": "o-isomer: 1-chloro-2-nitrobenzene (benzene ring with Cl and NO2 ortho) + OH- (curved arrow from OH- to ring carbon bearing Cl) --(Slow step)--> [carbanion resonance structures (three, linked by double-headed arrows), sp3 carbon bearing Cl and OH adjacent to carbon bearing NO2; negative charge delocalised, in one structure on the carbon bearing NO2 and onto the nitro group]"
+    },
+    {
+      "page": 25,
+      "after": "Mechanism of the reaction is as depicted:",
+      "text": "resonance hybrid carbanion (ring with dotted circle and minus sign, Cl and OH on sp3 carbon, ortho NO2) --(Fast step)--> 2-nitrophenol (benzene ring with OH and NO2 ortho) + Cl-"
+    },
+    {
+      "page": 25,
+      "after": "Mechanism of the reaction is as depicted:",
+      "text": "m-isomer: 1-chloro-3-nitrobenzene (benzene ring with Cl and NO2 meta) + OH- (curved arrow from OH- to ring carbon bearing Cl) --(Slow step)--> [carbanion resonance structures (three, linked by double-headed arrows), sp3 carbon bearing Cl and OH; negative charge placed on ring carbons that are not the carbon bearing NO2]"
+    },
+    {
+      "page": 25,
+      "after": "Mechanism of the reaction is as depicted:",
+      "text": "resonance hybrid carbanion (ring with dotted circle and minus sign, Cl and OH on sp3 carbon, meta NO2) --(Fast step)--> 3-nitrophenol (benzene ring with OH and NO2 meta) + Cl-"
+    },
+    {
+      "page": 26,
+      "after": "structures of halobenzene as shown:",
+      "text": "Resonance structures of halobenzene (I <-> II <-> III <-> IV): I = benzene ring (three alternating double bonds) bearing X with lone pairs (X: with dots), curved arrows from X lone pair toward the ring carbon and from ring pi bond toward the ring; II = cyclohexadiene ring (two double bonds in ring) with exocyclic C=X(+) double bond, negative charge on the ring carbon ortho to the C=X+, curved arrows shown; III = ring with C=X(+) and negative charge on the carbon para to it (two ring double bonds), curved arrows shown; IV = ring with C=X(+) and negative charge on the other ortho carbon (two ring double bonds). Labels: I, II, III, IV; structures joined by double-headed resonance arrows"
+    },
+    {
+      "page": 26,
+      "after": "(i) Halogenation",
+      "text": "(i) Halogenation: C6H5Cl (chlorobenzene) + Cl2 --(Anhyd. FeCl3)--> 1,4-dichlorobenzene (benzene ring with Cl at para positions) (Major) + 1,2-dichlorobenzene (benzene ring with two adjacent Cl) (Minor)"
+    },
+    {
+      "page": 26,
+      "after": "(ii) Nitration",
+      "text": "(ii) Nitration: C6H5Cl (chlorobenzene) --(HNO3, conc. H2SO4)--> 1-chloro-2-nitrobenzene (benzene ring with Cl and NO2 ortho) (Minor) + 1-chloro-4-nitrobenzene (benzene ring with Cl and NO2 para) (Major)"
+    },
+    {
+      "page": 26,
+      "after": "(iii) Sulphonation",
+      "text": "(iii) Sulphonation: C6H5Cl (chlorobenzene) --(conc. H2SO4, heat Δ)--> 2-chlorobenzenesulfonic acid (benzene ring with Cl and SO3H ortho) (Minor) + 4-chlorobenzenesulfonic acid (benzene ring with Cl and SO3H para) (Major)"
+    },
+    {
+      "page": 27,
+      "after": "(iv) Friedel-Crafts reaction",
+      "text": "C6H5Cl (chlorobenzene) + CH3Cl --(Anhyd. AlCl3)--> 1-Chloro-2-methylbenzene (benzene ring with Cl and CH3 ortho to each other) (Minor) + 1-Chloro-4-methylbenzene (benzene ring with Cl and CH3 para to each other) (Major)"
+    },
+    {
+      "page": 27,
+      "after": "(iv) Friedel-Crafts reaction",
+      "text": "C6H5Cl (chlorobenzene) + H3C-C(=O)-Cl (acetyl chloride) --(Anhyd. AlCl3)--> 2-Chloroacetophenone (benzene ring with Cl and C(=O)CH3 ortho to each other) (Minor) + 4-Chloroacetophenone (benzene ring with Cl and C(=O)CH3 para to each other) (Major)"
+    },
+    {
+      "page": 27,
+      "after": "substitution.",
+      "text": "Chlorobenzene (:Cl: lone pairs shown, curved arrow from ring to E+) + E+ --> arenium carbocation with Cl, ring positive charge, and sp3 carbon bearing H and E; arrow from Cl toward ring. Label: Inductive effect destabilises the intermediate carbocation"
+    },
+    {
+      "page": 27,
+      "after": "substitution.",
+      "text": "Chlorobenzene (:Cl:) + E+ --> ortho-attack carbocation: ring with + charge, sp3 carbon bearing H and E ortho to Cl, curved arrow from Cl lone pair into ring (attack at ortho-position)"
+    },
+    {
+      "page": 27,
+      "after": "substitution.",
+      "text": "Chlorobenzene (:Cl:) + E+ --> para-attack carbocation: ring with + charge, sp3 carbon bearing E and H para to Cl, curved arrow from Cl lone pair into ring (attack at para-position). Label: Resonance effect stabilises the intermediate carbocation"
+    },
+    {
+      "page": 29,
+      "after": "completely filled so that air is kept out.",
+      "text": "2CHCl3 + O2 --(light)--> 2COCl2 + 2HCl (COCl2 labelled Phosgene)"
+    },
+    {
+      "page": 30,
+      "after": "although it is still in use in some other parts of the world.",
+      "text": "DDT structure: (ClC6H4)2CH-CCl3 — central CH carbon (H shown) bonded to two benzene rings, each with Cl para to the attachment point, and to a CCl3 group (three Cl drawn on the adjacent carbon); labelled \"DDT\" (p,p'-dichlorodiphenyltrichloroethane)"
+    },
+    {
+      "page": 32,
+      "after": null,
+      "text": "(i) CH3CH2CH2Cl + NaI --(acetone, heat)--> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": null,
+      "text": "(ii) (CH3)3CBr + KOH --(ethanol, heat)--> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": null,
+      "text": "(iii) CH3CH(Br)CH2CH3 + NaOH --(water)--> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": null,
+      "text": "(iv) CH3CH2Br + KCN --(aq. ethanol)--> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": null,
+      "text": "(v) C6H5ONa + C2H5Cl --> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": "(v) C_6H_5ONa + C_2H_5Cl",
+      "text": "(vi) CH3CH2CH2OH + SOCl2 --> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": "(vi) CH_3CH_2CH_2OH + SOCl_2",
+      "text": "(vii) CH3CH2CH=CH2 + HBr --(peroxide)--> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": "(vii) CH_3CH_2CH = CH_2 + HBr",
+      "text": "(viii) CH3CH=C(CH3)2 + HBr --> [product not drawn]"
+    },
+    {
+      "page": 32,
+      "after": null,
+      "text": "nBuBr + KCN --(EtOH-H2O)--> nBuCN"
+    },
+    {
+      "page": 33,
+      "after": "6.1",
+      "text": "6.1 (i) CH3CH2CH(CH3)CHClCH3"
+    },
+    {
+      "page": 33,
+      "after": "6.1",
+      "text": "6.1 (ii) cyclohexane ring (no double bonds) with Cl on one carbon and C2H5 on the carbon 1,3 to it (1-chloro-3-ethylcyclohexane)"
+    },
+    {
+      "page": 33,
+      "after": "6.1",
+      "text": "6.1 (iii) CH3CH2CH2CH(CH2CH3... [unclear]: CH3CH2CH2 CH CH(I)CH2CH3, where the middle CH is bonded down to a carbon bearing H3C, CH3 and CH3 (C(CH3)3)"
+    },
+    {
+      "page": 33,
+      "after": "6.1",
+      "text": "6.1 (iv) BrCH2CH=CHCH2Br"
+    },
+    {
+      "page": 33,
+      "after": "6.1",
+      "text": "6.1 (v) benzene ring (three alternating double bonds) with Br and CH3 on adjacent carbons, and a CH(C2H5)(CH3) group (CH with C2H5 and H3C) on the carbon adjacent to the Br-bearing carbon... [unclear] positions: CH group para to CH3? drawn: CH group at left, Br at top right, CH3 at lower right"
+    }
+  ]
+}

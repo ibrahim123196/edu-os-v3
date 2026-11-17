@@ -23,6 +23,7 @@ from ai.ingestion.chunking import chunk_pages
 from ai.ingestion import PIPELINE_VERSION
 from ai.ingestion.boilerplate import strip_boilerplate
 from ai.ingestion.corrections import apply_corrections, load_corrections
+from ai.ingestion.transcriptions import apply_transcriptions, load_transcriptions
 from ai.ingestion.extract import EmptyDocument, UnsupportedFileType, extract
 from ai.ingestion.notation import notation_score
 from ai.ingestion.tagging import tag_chunks
@@ -83,6 +84,15 @@ def ingest_document(document_id, rebuild_vocab: bool = True) -> None:
             result = apply_corrections(pages, corrections)
             pages = result.pages
             log.info("Corrections for %s: %s", doc_filename, result.summary)
+
+        # Reactions and structures printed as pictures, written out once by
+        # scripts.transcribe_images (Chemistry): otherwise they are missing
+        # from the index entirely.
+        transcribed = load_transcriptions(Path(doc_filename).stem)
+        if transcribed:
+            placed = apply_transcriptions(pages, transcribed)
+            pages = placed.pages
+            log.info("Transcriptions for %s: %s", doc_filename, placed.summary)
 
         chunks = chunk_pages(
             pages,
