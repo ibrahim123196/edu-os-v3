@@ -61,6 +61,19 @@ class AskResult:
     searched_as: str | None = None
 
 
+def resolve_follow_up(question: str, history: list[Turn]) -> str | None:
+    """"Quiz me on this" as the full request it stands for, or None.
+
+    For the learning modes, which need the topic before deciding whether to
+    search at all. Same rewrite as a follow-up question gets in ask().
+    """
+    try:
+        llm = get_llm()
+    except LLMError:
+        return None
+    return standalone_question(llm, history, question)
+
+
 def ask(
     db: Session,
     question: str,

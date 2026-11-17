@@ -66,6 +66,15 @@ class AskResponse(BaseModel):
     corrected_question: str | None = None
     # A follow-up rewritten into the full question that was searched.
     searched_as: str | None = None
+    # The learning mode guessed from the message, and the one line the page
+    # shows for it ("Practice questions on Gauss's law"). For a plain
+    # question this is the follow-up rewrite, if there was one.
+    mode: str = "clarify"
+    understood_as: str | None = None
+    # A button for the page: start a quiz, or open the Practise tab.
+    action: dict | None = None
+    # Review: the student's record on the topic, from the database.
+    progress_note: str | None = None
     trace: dict | None = None
 
 

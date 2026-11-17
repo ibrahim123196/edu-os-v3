@@ -408,6 +408,10 @@
   .turn .said { color: var(--muted); font-size: 13.5px; }
   .you-asked { font-weight: 600; margin-bottom: 8px; }
   .meant { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .progress-note { font-size: 13.5px; margin-bottom: 10px; padding: 8px 10px;
+    background: var(--paper); border-radius: 4px; }
+  .progress-note[hidden], .action-row[hidden] { display: none; }
+  .action-row { margin-top: 12px; }
   #reportForm select, #reportForm input { font-size: 13px; padding: 6px 8px; }
   #reportForm input { flex: 1; min-width: 180px; }
 
@@ -563,8 +567,10 @@
         </div>
         <div class="you-asked" id="youAsked"></div>
         <div class="meant" id="meant" hidden></div>
+        <div class="progress-note" id="progressNote" hidden></div>
         <div class="corrected" id="corrected" hidden></div>
         <div class="answer-body" id="answerBody"></div>
+        <div class="action-row" id="actionRow" hidden><button id="actionBtn"></button></div>
         <div class="sources" id="sourcesWrap" hidden>
           <h3>Where this came from</h3>
           <div id="sourceList"></div>
@@ -821,7 +827,12 @@ function renderAnswer(data) {
   $('answerWrap').hidden = false;
 
   const verdict = $('verdict');
-  if (data.grounded) {
+  const doorway = data.mode === 'practice' || data.mode === 'test';
+  if (doorway) {
+    // Not a textbook answer, so not "answered from N passages".
+    verdict.className = 'verdict';
+    verdict.textContent = data.mode === 'test' ? 'Test yourself' : 'Practice';
+  } else if (data.grounded) {
     verdict.className = 'verdict';
     verdict.textContent =
       `Answered from ${data.used_source_count} of your ` +
@@ -847,9 +858,19 @@ function renderAnswer(data) {
 
   // A follow-up is searched as the full question it stands for. Showing
   // it lets the student spot when "that" was taken to mean the wrong thing.
+  // One line for every guess the tutor makes -- a follow-up's meaning or
+  // a learning mode -- so the student learns one habit: if the grey line
+  // is wrong, rephrase.
   const meant = $('meant');
-  meant.hidden = !data.searched_as;
-  meant.textContent = data.searched_as ? `Understood as: ${data.searched_as}` : '';
+  const guess = data.understood_as || data.searched_as;
+  meant.hidden = !guess;
+  meant.textContent = guess ? `Understood as: ${guess}` : '';
+
+  const note = $('progressNote');
+  note.hidden = !data.progress_note;
+  note.textContent = data.progress_note || '';
+
+  renderAction(data.action);
 
   const wrap = $('sourcesWrap');
   const list = $('sourceList');
@@ -946,6 +967,31 @@ function inline_(text) {
       (_, n) => `<button class="cite" data-cite="S${n}" title="Show source ${n}">${n}</button>`);
 }
 
+/* ------------------------------------------------------- mode actions */
+// The chat offers; the quiz that already exists does the work, so a quiz
+// started here is scored and saved like one started from the Practise tab.
+let pendingAction = null;
+
+function renderAction(action) {
+  pendingAction = action || null;
+  const row = $('actionRow');
+  if (!action) { row.hidden = true; return; }
+  row.hidden = false;
+  $('actionBtn').textContent = action.kind === 'quiz'
+    ? `Start the ${action.count}-question quiz${action.concept ? ' on ' + action.concept : ''}`
+    : 'Open the Practise tab';
+}
+
+async function runAction() {
+  const action = pendingAction;
+  if (!action) return;
+  await switchMode('quiz');
+  if (action.kind !== 'quiz') return;
+  $('quizConcept').value = action.concept_slug || '';
+  $('quizCount').value = String(action.count);
+  await startQuiz();
+}
+
 /* ------------------------------------------------------ conversation */
 // The server remembers the conversation; the page only has to say which
 // one. null starts a new conversation with the next question.
@@ -1018,6 +1064,8 @@ async function ask() {
     // the server keeps an unanswered question out of the history.
     $('youAsked').textContent = question;
     $('meant').hidden = true;
+    $('progressNote').hidden = true;
+    $('actionRow').hidden = true;
     $('corrected').hidden = true;
     $('sourcesWrap').hidden = true;
     $('traceWrap').hidden = true;
@@ -1029,6 +1077,7 @@ async function ask() {
 
 $('askBtn').addEventListener('click', ask);
 $('newChatBtn').addEventListener('click', newChat);
+$('actionBtn').addEventListener('click', runAction);
 $('questionInput').addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask();
 });

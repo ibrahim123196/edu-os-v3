@@ -16,7 +16,11 @@ from apps.api.db import get_db
 from apps.api.models import Conversation, Message
 from apps.api.schemas import AskRequest, AskResponse
 from ai.tutor.conversation import recent_history
+from ai.tutor.modes import Mode, detect, points_back
+from apps.api.student import active_student_id
+from apps.api.services import tutor_service
 from apps.api.services.rag_service import ask as run_pipeline
+from apps.api.services.rag_service import resolve_follow_up
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -36,16 +40,63 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
     db.commit()
 
     started = time.perf_counter()
+    guess = detect(question)
+    topic = guess.topic
+    mode_trace: dict = {"mode": guess.mode.value, "cue": guess.cue, "topic": topic}
+    # "Quiz me on this": the topic is in the conversation, not the message.
+    if guess.mode in (Mode.practice, Mode.test, Mode.review) and points_back(topic) and history:
+        resolved = resolve_follow_up(question, history)
+        if resolved:
+            topic = detect(resolved).topic or resolved
+            mode_trace["resolved_from_conversation"] = resolved
+
+    # Practice and test: a quiz, not a textbook answer.
+    if guess.mode in (Mode.practice, Mode.test):
+        reply = tutor_service.quiz_reply(db, guess.mode, topic)
+        mode_trace.update(reply.trace)
+        return _mode_response(db, conversation, guess.mode, reply, started, mode_trace,
+                              payload.include_trace)
+
+    if guess.mode == Mode.review and not topic:
+        reply = tutor_service.ModeReply(
+            text="Which topic would you like to revise? For example: revise Gauss's law.",
+            understood_as="Revision (no topic yet)")
+        return _mode_response(db, conversation, guess.mode, reply, started, mode_trace,
+                              payload.include_trace)
+
+    ask_text, ask_history = question, history
+    understood_as = None
+    progress_note = None
+    action = None
+    if guess.mode == Mode.review:
+        # A revision summary of the topic, searched as one. Asked on its
+        # own: earlier turns would pull the summary towards whatever was
+        # discussed last instead of the whole topic.
+        match = tutor_service.find_concept(db, topic)
+        name = match.concept.name if match else topic
+        ask_text, ask_history = tutor_service.REVIEW_REQUEST.format(topic=name), None
+        understood_as = f"Revision of {name}"
+        if match:
+            mode_trace.update(matched=match.concept.slug, how=match.how)
+            progress_note = tutor_service.progress_note(db, active_student_id(), match.concept)
+            questions = tutor_service.concepts_with_questions(db).get(match.concept.id)
+            if questions:
+                action = {"kind": "quiz", "concept_slug": match.concept.slug,
+                          "concept": match.concept.name,
+                          "count": min(tutor_service.PRACTICE_COUNT, questions)}
+    elif guess.mode == Mode.learn:
+        understood_as = f"Learning about {topic}" if topic else None
+
     try:
         result = run_pipeline(
             db,
-            question=question,
+            question=ask_text,
             filters=RetrievalFilters(
                 document_ids=payload.document_ids,
                 subject=payload.subject,
                 grade=payload.grade,
             ),
-            history=history,
+            history=ask_history,
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -57,6 +108,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
 
     latency = round((time.perf_counter() - started) * 1000, 1)
     answer = result.answer
+    result.trace["mode"] = mode_trace
 
     message = Message(
         conversation_id=conversation.id,
@@ -83,7 +135,39 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
         corrections=result.corrections,
         corrected_question=result.corrected_question,
         searched_as=result.searched_as,
+        mode=guess.mode.value,
+        understood_as=understood_as or result.searched_as,
+        action=action if answer.grounded else None,
+        progress_note=progress_note,
         trace=result.trace if payload.include_trace else None,
+    )
+
+
+def _mode_response(db, conversation, mode, reply, started, mode_trace, include_trace):
+    """A reply that is not a textbook answer: an offer, or a question back.
+
+    Saved like any answer, so the conversation stays question-answer pairs
+    and "and on capacitors too?" has something to follow on from.
+    """
+    trace = {"mode": mode_trace}
+    message = Message(conversation_id=conversation.id, role="assistant",
+                      content=reply.text, retrieval_trace=trace, grounded=None)
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return AskResponse(
+        answer=reply.text,
+        citations=[],
+        grounded=False,
+        used_source_count=0,
+        retrieved_count=0,
+        conversation_id=conversation.id,
+        message_id=message.id,
+        latency_ms=round((time.perf_counter() - started) * 1000, 1),
+        mode=mode.value,
+        understood_as=reply.understood_as,
+        action=reply.action,
+        trace=trace if include_trace else None,
     )
 
 
