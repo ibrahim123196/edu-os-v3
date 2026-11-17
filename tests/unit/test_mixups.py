@@ -63,3 +63,14 @@ def test_the_mistakes_go_after_everything_else():
     content = msgs[0]["content"]
     assert content.index("C = Q/V.") < content.index("Common mistakes")
     assert content.rstrip().endswith("do not write that line.")
+
+
+def test_a_divider_left_above_the_label_is_removed():
+    """Seen: "---" showed under an answer once its label line was taken out."""
+    text, _ = read_label(f"Answer [S1].\n\n---\n[MIX-UP: {OFFERED[0].slug}]", OFFERED)
+    assert text == "Answer [S1]."
+
+
+def test_a_divider_inside_an_answer_stays():
+    text, _ = read_label("Part one [S1].\n\n---\n\nPart two [S1].", OFFERED)
+    assert "---" in text

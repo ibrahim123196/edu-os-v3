@@ -31,6 +31,9 @@ from sqlalchemy.orm import Session
 MAX_OFFERED = 12
 
 _LABEL = re.compile(r"^[ \t]*\[MIX-UP:[ \t]*([A-Za-z0-9/_-]+)[ \t]*\][ \t]*$", re.MULTILINE)
+# A divider the model sometimes puts just above its label line; left behind
+# once the label is removed, it showed as a stray "---" under the answer.
+_TRAILING_RULE = re.compile(r"(\n[ \t]*(-{3,}|\*{3,}|_{3,})[ \t]*)+\s*$")
 
 
 @dataclass(frozen=True)
@@ -83,7 +86,7 @@ def read_label(raw: str, offered: list[MixUp]) -> tuple[str, MixUp | None]:
     list, and an id from nowhere is a guess.
     """
     found = _LABEL.findall(raw)
-    text = _LABEL.sub("", raw).strip()
+    text = _TRAILING_RULE.sub("", _LABEL.sub("", raw).strip()).strip()
     if not found:
         return text, None
     by_slug = {m.slug: m for m in offered}
