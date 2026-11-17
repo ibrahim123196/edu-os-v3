@@ -109,7 +109,7 @@ def test_practice_on_a_named_topic_offers_that_quiz(world):
     body = ask(f"quiz me on {ZORB}")
     assert body["mode"] == "practice"
     assert body["understood_as"] == f"Practice questions on {ZORB}"
-    assert body["action"] == {"kind": "quiz", "concept_slug": f"zorb-{TAG}",
+    assert body["action"] == {"kind": "quiz", "concept_slugs": [f"zorb-{TAG}"],
                               "concept": ZORB, "count": 3}
     assert "only 3 on this topic" in body["answer"]
     assert model.answers == []                       # no textbook answer, no cost
@@ -135,7 +135,7 @@ def test_test_me_is_a_mixed_quiz(world):
     ask, _, _ = world
     body = ask("test me")
     assert body["mode"] == "test"
-    assert body["action"]["concept_slug"] is None and body["action"]["count"] >= 3
+    assert body["action"]["concept_slugs"] == [] and body["action"]["count"] >= 3
     assert body["understood_as"] == "Test across all topics"
 
 
@@ -143,7 +143,7 @@ def test_quiz_me_on_this_takes_the_topic_from_the_conversation(world):
     ask, _, _ = world
     first = ask("what links flibber and resonance")
     body = ask("quiz me on this", first["conversation_id"])
-    assert body["action"]["concept_slug"] == f"zorb-{TAG}"
+    assert body["action"]["concept_slugs"] == [f"zorb-{TAG}"]
     assert body["trace"]["mode"]["resolved_from_conversation"] == f"Give me practice questions on {ZORB}"
 
 
@@ -152,7 +152,7 @@ def test_test_me_after_a_question_is_still_mixed(world):
     ask, _, _ = world
     first = ask("what links flibber and resonance")
     body = ask("test me", first["conversation_id"])
-    assert body["action"]["concept_slug"] is None
+    assert body["action"]["concept_slugs"] == []
     assert body["understood_as"] == "Test across all topics"
 
 
@@ -174,7 +174,11 @@ def test_review_asks_for_a_summary_and_shows_the_record(world):
     assert body["understood_as"] == f"Revision of {ZORB}"
     assert body["progress_note"] == f"Your progress on {ZORB}: not practised yet."
     assert f"revision summary of {ZORB}" in model.answers[-1][-1]["content"]
-    assert body["action"]["concept_slug"] == f"zorb-{TAG}"
+    # Searched by topic: the request's own wording once went through the
+    # spelling fixer as if the student had typed it ("exam" -> "example").
+    assert body["trace"]["stages"]["query_preparation"]["original"] == ZORB
+    assert body["corrections"] == []
+    assert body["action"]["concept_slugs"] == [f"zorb-{TAG}"]
     assert body["action"]["count"] == 3              # all there are, not 5
 
 
@@ -216,5 +220,114 @@ def test_learn_is_answered_and_labelled(world):
 def test_a_topic_not_named_is_found_through_the_passages_tagged_with_it(world):
     _, _, ids = world
     with session_scope() as db:
-        match = tutor_service.find_concept(db, "flibber resonance")
-        assert match.concept.id == ids["zorb"] and match.how == "search"
+        match = tutor_service.find_topic(db, "flibber resonance")
+        assert match.slugs == [f"zorb-{TAG}"] and match.how == "search"
+
+
+# --- topic groups --------------------------------------------------------------
+
+@pytest.fixture
+def grouped(world, monkeypatch):
+    """A group named like its main concept, as Capacitors/Capacitance and
+    Gauss's law are in the real course, with a second concept in it."""
+    from apps.api import topic_groups
+    from apps.api.topic_groups import TopicGroup
+
+    ask, model, ids = world
+    with session_scope() as db:
+        apps = Concept(slug=f"zorb-apps-{TAG}", name=f"Applications of {ZORB}")
+        db.add(apps)
+        db.flush()
+        for i in range(4):
+            q = Question(concept_id=apps.id, kind=QuestionKind.multiple_choice,
+                         stem=f"Zorb app {i}?", explanation="b", status=QuestionStatus.approved)
+            q.options = [QuestionOption(position=0, text="yes", is_correct=True),
+                         QuestionOption(position=1, text="no", is_correct=False)]
+            db.add(q)
+        apps_id = apps.id
+    group = TopicGroup(f"zg-{TAG}", ZORB, (f"zorb-{TAG}", f"zorb-apps-{TAG}"),
+                       aliases=(f"zorbery {TAG}",))
+    monkeypatch.setattr(topic_groups, "GROUPS", (group,))
+    yield ask, model, ids
+    with session_scope() as db:
+        db.execute(delete(Question).where(Question.concept_id == apps_id))
+        db.execute(delete(Concept).where(Concept.id == apps_id))
+
+
+def test_naming_the_subject_quizzes_the_whole_group(grouped):
+    """'Quiz me on capacitance' once offered 2 questions: one concept of four."""
+    ask, _, _ = grouped
+    body = ask(f"quiz me on {ZORB}")
+    assert body["action"]["concept_slugs"] == [f"zorb-{TAG}", f"zorb-apps-{TAG}"]
+    assert body["action"]["count"] == 5                  # 3 + 4 available
+    assert f"It covers {ZORB} and Applications of {ZORB}." in body["answer"]
+    assert body["trace"]["mode"]["matched"] == f"zg-{TAG}"
+
+
+def test_another_name_for_the_group_works(grouped):
+    ask, _, _ = grouped
+    body = ask(f"quiz me on zorbery {TAG}")
+    assert body["action"]["concept_slugs"] == [f"zorb-{TAG}", f"zorb-apps-{TAG}"]
+
+
+def test_naming_one_part_gets_only_that_part(grouped):
+    """The longest name wins: 'parallel plate capacitor' is not 'capacitor'."""
+    ask, _, _ = grouped
+    body = ask(f"quiz me on applications of {ZORB}")
+    assert body["action"]["concept_slugs"] == [f"zorb-apps-{TAG}"]
+    assert body["action"]["count"] == 4
+
+
+def test_revising_a_group_covers_its_parts(grouped):
+    ask, model, _ = grouped
+    body = ask(f"revise {ZORB}")
+    assert body["action"]["concept_slugs"] == [f"zorb-{TAG}", f"zorb-apps-{TAG}"]
+    request = model.answers[-1][-1]["content"]
+    assert f"revision summary of {ZORB} ({ZORB}, Applications of {ZORB})" in request
+    assert body["progress_note"] == (
+        f"Your progress on {ZORB}: none of its 2 topics practised yet.")
+
+
+def test_a_group_record_names_each_part(grouped):
+    ask, _, ids = grouped
+    with session_scope() as db:
+        for q in db.query(Question).filter(Question.concept_id == ids["zorb"]):
+            grade(db, q, q.options[0].id, student_id=active_student_id())
+    note = ask(f"revise {ZORB}")["progress_note"]
+    assert note.startswith(f"Your progress on {ZORB}: {ZORB} ")
+    assert note.endswith(f". Not practised yet: Applications of {ZORB}.")
+
+
+def test_the_practise_list_offers_the_group(grouped):
+    with TestClient(app) as client:
+        groups = client.get("/quiz/groups").json()
+    assert groups == [{"slug": f"zg-{TAG}", "name": ZORB, "chapter": False,
+                       "concept_slugs": [f"zorb-{TAG}", f"zorb-apps-{TAG}"], "questions": 7}]
+
+
+def test_the_quiz_takes_several_topics(grouped):
+    """The page sends a group's topics to the quiz that already exists."""
+    with TestClient(app) as client:
+        r = client.post("/quiz", json={"concept_slugs": [f"zorb-{TAG}", f"zorb-apps-{TAG}"],
+                                       "count": 7})
+    assert r.status_code == 200
+    stems = {q["stem"] for q in r.json()["questions"]}
+    assert len(stems) == 7 and any("app" in s for s in stems) and "Zorb 0?" in stems
+
+
+def test_test_me_on_a_topic_is_practice_on_it(grouped):
+    """A test is the whole syllabus; naming a topic makes it practice."""
+    ask, _, _ = grouped
+    body = ask(f"test me on {ZORB}")
+    assert body["mode"] == "practice"
+    assert body["action"]["concept_slugs"] == [f"zorb-{TAG}", f"zorb-apps-{TAG}"]
+
+
+def test_faulty_questions_are_not_counted_in_the_list(world):
+    ask, _, ids = world
+    with session_scope() as db:
+        q = db.query(Question).filter(Question.concept_id == ids["zorb"]).first()
+        q.faulty = True
+    with TestClient(app) as client:
+        listed = {c["slug"]: c["questions"] for c in client.get("/quiz/concepts").json()}
+    assert listed[f"zorb-{TAG}"] == 2

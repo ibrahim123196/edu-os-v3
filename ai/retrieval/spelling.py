@@ -42,6 +42,20 @@ _WORD = re.compile(r"[A-Za-z]+")
 
 MIN_LENGTH = 4
 
+# Ordinary words students use about studying that a textbook never prints.
+# The vocabulary is the textbook's own, so to the corrector these looked
+# like typos of the nearest textbook word: "exam" became "example", which
+# changes what is being asked. A misspelling of one of these is still left
+# alone -- the cost of that is a slightly worse search, not a different one.
+STUDY_WORDS = frozenset({
+    "exam", "exams", "examination", "boards", "board", "jee", "neet", "cbse",
+    "ncert", "syllabus", "revise", "revising", "revision", "recap", "quiz",
+    "test", "tests", "mock", "marks", "notes", "homework", "teacher", "doubt",
+    "doubts", "definitions", "formulas", "formulae", "derivations", "numericals",
+    "mcq", "mcqs", "pyq", "pyqs", "important", "simply", "simpler", "easier",
+    "explain", "please", "thanks", "summary", "summarise", "summarize",
+})
+
 
 @dataclass(frozen=True)
 class Correction:
@@ -85,7 +99,7 @@ def _candidates(query: str) -> list[str]:
     seen: dict[str, None] = {}
     for match in _WORD.finditer(query):
         word = match.group(0).lower()
-        if len(word) >= MIN_LENGTH:
+        if len(word) >= MIN_LENGTH and word not in STUDY_WORDS:
             seen.setdefault(word, None)
     return list(seen)
 

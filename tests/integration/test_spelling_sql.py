@@ -32,6 +32,7 @@ PASSAGES = [
     "Meiosis produces four haploid gametes and halves the chromosome number.",
     "Photosynthesis converts light energy into chemical energy inside the "
     "chloroplast of a plant cell.",
+    "For example, a charged comb attracts small bits of paper.",
 ]
 
 
@@ -144,3 +145,18 @@ def test_vocabulary_rebuild_is_idempotent(vocabulary):
     with session_scope() as db:
         second = rebuild_vocabulary(db)
     assert first == second
+
+
+def test_study_words_are_not_typos(vocabulary):
+    """The textbook never says "exam", so it once became "example" --
+    changing the question, not fixing it."""
+    with session_scope() as db:
+        fixed, corrections = correct_query(db, "important exam definitions for boards")
+    assert fixed == "important exam definitions for boards"
+    assert corrections == []
+
+
+def test_a_real_typo_beside_a_study_word_is_still_fixed(vocabulary):
+    with session_scope() as db:
+        fixed, _ = correct_query(db, "exam question on coulumb force")
+    assert fixed == "exam question on coulomb force"

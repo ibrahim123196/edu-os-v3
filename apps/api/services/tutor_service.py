@@ -28,8 +28,16 @@ TEST_COUNT = 10
 
 @dataclass
 class TopicMatch:
-    concept: Concept
-    how: str          # "name" or "search", for the trace
+    """What a student's words refer to: one concept, or a group of them."""
+
+    name: str                 # as the student will see it: "Capacitors"
+    concepts: list[Concept]   # in the textbook's order
+    how: str                  # "name" or "search", for the trace
+    group: str | None = None  # the group's slug, when it is one
+
+    @property
+    def slugs(self) -> list[str]:
+        return [c.slug for c in self.concepts]
 
 
 @dataclass
@@ -51,31 +59,50 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", text)).strip()
 
 
-def find_concept(db: Session, topic: str) -> TopicMatch | None:
-    """The concept a student's words refer to, or None.
+def find_topic(db: Session, topic: str) -> TopicMatch | None:
+    """The concept or topic group a student's words refer to, or None.
 
-    A concept named in the message wins: "quiz me on gauss's law" means
-    Gauss's law, and searching could rank its applications above it. The
-    longest name wins, so "applications of gauss's law" is not read as
-    "Gauss's law". Otherwise the textbook is searched and the concept
-    tagged on the best passages is taken -- that is how "capacitors"
-    finds Capacitance without a list of synonyms.
+    Names first: every concept name and every group name and alias in
+    topic_groups. The longest name found in the message wins, so "parallel
+    plate capacitor" is that one concept, while "capacitors" is the group.
+    Where a group and a concept share a name -- "Capacitance", "Electric
+    field" -- the group wins: a student naming the subject means all of it.
 
-    Whether the concept has questions is the caller's business. Choosing
-    only among concepts with questions turned "quiz me on X" into a quiz on
+    Otherwise the textbook is searched and the concept tagged on the best
+    passages is taken, which finds topics nobody listed a name for.
+
+    Whether there are questions is the caller's business. Choosing only
+    among topics with questions turned "quiz me on X" into a quiz on
     whatever other topic the search ranked next.
     """
+    from apps.api.topic_groups import CONCEPT_ALIASES, GROUPS
+
     if not topic.strip():
         return None
     concepts = db.scalars(select(Concept)).all()
-
+    by_slug = {c.slug: c for c in concepts}
     wanted = f" {_norm(topic)} "
-    named = [c for c in concepts if f" {_norm(c.name)} " in wanted]
-    if named:
-        return TopicMatch(max(named, key=lambda c: len(c.name)), "name")
 
-    found = _concept_by_search(db, topic)
-    return TopicMatch(found, "search") if found else None
+    # (length of the name matched, group beats concept on a tie, the match)
+    found: list[tuple[int, int, TopicMatch]] = []
+    for c in concepts:
+        for name in (c.name, *CONCEPT_ALIASES.get(c.slug, ())):
+            label = _norm(name)
+            if f" {label} " in wanted:
+                found.append((len(label), 0, TopicMatch(c.name, [c], "name")))
+    for g in GROUPS:
+        members = [by_slug[m] for m in g.members if m in by_slug]
+        if not members:
+            continue
+        for name in (g.name, *g.aliases):
+            label = _norm(name)
+            if f" {label} " in wanted:
+                found.append((len(label), 1, TopicMatch(g.name, members, "name", g.slug)))
+    if found:
+        return max(found, key=lambda f: (f[0], f[1]))[2]
+
+    concept = _concept_by_search(db, topic)
+    return TopicMatch(concept.name, [concept], "search") if concept else None
 
 
 def _concept_by_search(db: Session, topic: str) -> Concept | None:
@@ -148,11 +175,11 @@ def quiz_reply(db: Session, mode: Mode, topic: str) -> ModeReply:
                   f"all topics, weighted towards the ones you are weakest at. "
                   f"It is scored and saved in your quiz history."),
             understood_as=f"{kind.capitalize()} across all topics",
-            action={"kind": "quiz", "concept_slug": None, "concept": None, "count": n},
+            action=quiz_action([], None, n),
             trace=trace,
         )
 
-    match = find_concept(db, topic)
+    match = find_topic(db, topic)
     if match is None:
         trace["matched"] = None
         return ModeReply(
@@ -163,27 +190,40 @@ def quiz_reply(db: Session, mode: Mode, topic: str) -> ModeReply:
             trace=trace,
         )
 
-    concept = match.concept
-    trace.update(matched=concept.slug, how=match.how)
-    if not available.get(concept.id):
+    members = [c for c in match.concepts if available.get(c.id)]
+    trace.update(matched=match.group or match.slugs[0], how=match.how,
+                 covers=[c.slug for c in members])
+    if not members:
         return ModeReply(
-            text=(f"There are no practice questions on {concept.name} yet. "
+            text=(f"There are no practice questions on {match.name} yet. "
                   f"Pick another topic in the Practise tab."),
-            understood_as=f"{kind.capitalize()} on {concept.name}",
+            understood_as=f"{kind.capitalize()} on {match.name}",
             action={"kind": "open_practice"},
             trace=trace,
         )
-    n = min(count, available[concept.id])
-    short = (f" There are only {available[concept.id]} on this topic so far."
-             if available[concept.id] < count else "")
+    total = sum(available[c.id] for c in members)
+    n = min(count, total)
+    covers = f" It covers {_listing([c.name for c in members])}." if len(members) > 1 else ""
+    short = f" There are only {total} on this topic so far." if total < count else ""
     return ModeReply(
         text=(f"A {n}-question {'test' if mode == Mode.test else 'quiz'} on "
-              f"{concept.name}. It is scored and saved in your quiz history.{short}"),
-        understood_as=f"{kind.capitalize()} on {concept.name}",
-        action={"kind": "quiz", "concept_slug": concept.slug,
-                "concept": concept.name, "count": n},
+              f"{match.name}.{covers} It is scored and saved in your quiz "
+              f"history.{short}"),
+        understood_as=f"{kind.capitalize()} on {match.name}",
+        action=quiz_action(members, match.name, n),
         trace=trace,
     )
+
+
+def _listing(names: list[str]) -> str:
+    """"A", "A and B", "A, B and C"."""
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def quiz_action(members: list[Concept], label: str | None, count: int) -> dict:
+    """What the page's Start button sends to the quiz."""
+    return {"kind": "quiz", "concept_slugs": [c.slug for c in members],
+            "concept": label, "count": count}
 
 
 # --- review: an answer plus the student's own record -------------------------
@@ -194,15 +234,28 @@ REVIEW_REQUEST = (
 )
 
 
-def progress_note(db: Session, student_id: uuid.UUID, concept: Concept) -> str:
-    """One line from the student's record. Written here, not by the model:
+def progress_note(db: Session, student_id: uuid.UUID, match: TopicMatch) -> str:
+    """The student's record on the topic. Written here, not by the model:
     a number the model was asked to repeat is a number it can change."""
     from apps.api.services.mastery_service import estimates_for
 
-    est = estimates_for(db, student_id, [concept.id]).get(concept.id)
-    if est is None:
-        return f"Your progress on {concept.name}: not practised yet."
-    note = f"Your progress on {concept.name}: {est.describe()}"
-    if est.is_reliable and est.is_weak:
-        note += " — one to work on."
+    found = estimates_for(db, student_id, [c.id for c in match.concepts])
+    if len(match.concepts) == 1:
+        est = found.get(match.concepts[0].id)
+        if est is None:
+            return f"Your progress on {match.name}: not practised yet."
+        return f"Your progress on {match.name}: {_described(est)}."
+
+    done = [f"{c.name} {_described(found[c.id])}" for c in match.concepts if c.id in found]
+    left = [c.name for c in match.concepts if c.id not in found]
+    if not done:
+        return f"Your progress on {match.name}: none of its {len(left)} topics practised yet."
+    note = f"Your progress on {match.name}: " + "; ".join(done)
+    if left:
+        note += f". Not practised yet: {_listing(left)}"
     return note + "."
+
+
+def _described(est) -> str:
+    text = est.describe()
+    return text + " — one to work on" if est.is_reliable and est.is_weak else text

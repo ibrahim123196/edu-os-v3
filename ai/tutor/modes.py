@@ -3,7 +3,7 @@
     learn     "teach me capacitance"            -> an answer (a lesson, later)
     review    "revise Gauss's law"              -> key points + their progress
     practice  "quiz me on capacitors"           -> a quiz on that topic
-    test      "test me" / "mock test"           -> a longer quiz
+    test      "test me" / "mock test"           -> a longer quiz, all topics
     clarify   anything else                     -> an answer, as before
 
 Phrase rules, not a model call. A mode decides whether the textbook is
@@ -98,7 +98,12 @@ def detect(message: str) -> ModeGuess:
     for mode, rule in _RULES:
         match = rule.search(text)
         if match:
-            return ModeGuess(mode, _topic(text, match), match.group(0))
+            topic = _topic(text, match)
+            # A test is the whole syllabus. "Test me on electric flux" names
+            # a topic, so it is practice on that topic.
+            if mode == Mode.test and topic:
+                mode = Mode.practice
+            return ModeGuess(mode, topic, match.group(0))
     return ModeGuess(Mode.clarify, message.strip(), None)
 
 

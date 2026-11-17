@@ -148,8 +148,30 @@ def concepts_with_questions(db: Session = Depends(get_db)):
     rows = db.execute(
         select(Concept.slug, Concept.name, func.count(Question.id))
         .join(Question, Question.concept_id == Concept.id)
-        .where(Question.status == QuestionStatus.approved)
+        # Faulty questions are never served, so they must not be counted:
+        # the list once promised more questions than a quiz could give.
+        .where(Question.status == QuestionStatus.approved, ~Question.faulty)
         .group_by(Concept.slug, Concept.name)
         .order_by(func.count(Question.id).desc())
     ).all()
     return [{"slug": s, "name": n, "questions": c} for s, n, c in rows]
+
+
+@router.get("/groups")
+def groups_with_questions(db: Session = Depends(get_db)):
+    """Topic groups a quiz can be built from, chapters first: the same
+    groups the chat understands, so "Capacitors" means the same thing in
+    the list as typed."""
+    from apps.api.services.tutor_service import concepts_with_questions
+    from apps.api.topic_groups import GROUPS
+
+    available = concepts_with_questions(db)
+    by_slug = {c.slug: c for c in db.scalars(select(Concept)).all()}
+    out = []
+    for g in sorted(GROUPS, key=lambda g: not g.chapter):
+        members = [by_slug[m] for m in g.members if m in by_slug and available.get(by_slug[m].id)]
+        if members:
+            out.append({"slug": g.slug, "name": g.name, "chapter": g.chapter,
+                        "concept_slugs": [c.slug for c in members],
+                        "questions": sum(available[c.id] for c in members)})
+    return out

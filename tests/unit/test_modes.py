@@ -19,7 +19,8 @@ CASES = [
     ("test me", Mode.test, ""),
     ("give me a mock test", Mode.test, ""),
     ("can you test me on the whole chapter", Mode.test, ""),
-    ("test me on electric flux", Mode.test, "electric flux"),
+    # a test is the whole syllabus: naming a topic makes it practice
+    ("test me on electric flux", Mode.practice, "electric flux"),
     # review
     ("revise capacitors in series", Mode.review, "capacitors in series"),
     ("let's revise the electric field of a dipole", Mode.review, "electric field of a dipole"),

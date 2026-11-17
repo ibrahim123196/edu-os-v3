@@ -64,7 +64,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
         return _mode_response(db, conversation, guess.mode, reply, started, mode_trace,
                               payload.include_trace)
 
-    ask_text, ask_history = question, history
+    ask_text, ask_history, search_as = question, history, None
     understood_as = None
     progress_note = None
     action = None
@@ -72,18 +72,25 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
         # A revision summary of the topic, searched as one. Asked on its
         # own: earlier turns would pull the summary towards whatever was
         # discussed last instead of the whole topic.
-        match = tutor_service.find_concept(db, topic)
-        name = match.concept.name if match else topic
-        ask_text, ask_history = tutor_service.REVIEW_REQUEST.format(topic=name), None
+        match = tutor_service.find_topic(db, topic)
+        name = match.name if match else topic
+        # A group is revised as its parts, named, so the search reaches each
+        # of them rather than whichever one its name sounds most like.
+        scope = name
+        if match and len(match.concepts) > 1:
+            scope = f"{name} ({', '.join(c.name for c in match.concepts)})"
+        ask_text, ask_history = tutor_service.REVIEW_REQUEST.format(topic=scope), None
+        search_as = scope
         understood_as = f"Revision of {name}"
         if match:
-            mode_trace.update(matched=match.concept.slug, how=match.how)
-            progress_note = tutor_service.progress_note(db, active_student_id(), match.concept)
-            questions = tutor_service.concepts_with_questions(db).get(match.concept.id)
+            mode_trace.update(matched=match.group or match.slugs[0], how=match.how)
+            progress_note = tutor_service.progress_note(db, active_student_id(), match)
+            available = tutor_service.concepts_with_questions(db)
+            members = [c for c in match.concepts if available.get(c.id)]
+            questions = sum(available[c.id] for c in members)
             if questions:
-                action = {"kind": "quiz", "concept_slug": match.concept.slug,
-                          "concept": match.concept.name,
-                          "count": min(tutor_service.PRACTICE_COUNT, questions)}
+                action = tutor_service.quiz_action(
+                    members, name, min(tutor_service.PRACTICE_COUNT, questions))
     elif guess.mode == Mode.learn:
         understood_as = f"Learning about {topic}" if topic else None
 
@@ -97,6 +104,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
                 grade=payload.grade,
             ),
             history=ask_history,
+            search_as=search_as,
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

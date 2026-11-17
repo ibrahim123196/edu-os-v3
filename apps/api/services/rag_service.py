@@ -79,6 +79,7 @@ def ask(
     question: str,
     filters: RetrievalFilters | None = None,
     history: list[Turn] | None = None,
+    search_as: str | None = None,
 ) -> AskResult:
     started = time.perf_counter()
     trace: dict = {"stages": {}}
@@ -105,7 +106,10 @@ def ask(
             "history_messages": len(history),
             "searched_as": standalone,
         }
-    search_question = standalone or question
+    # search_as: the caller already knows what to search for -- a revision
+    # request searches for its topic, not for the wording of the request,
+    # which once went through the spelling fixer as if the student typed it.
+    search_question = search_as or standalone or question
 
     # --- 1. Query preparation --------------------------------------------
     t0 = time.perf_counter()
@@ -248,7 +252,7 @@ def ask(
         # The student's words, not the rewrite: "more simply" is an
         # instruction about the answer, and the rewrite travels alongside.
         messages=build_messages(
-            question if history else prepared.original, top,
+            question if (history or search_as) else prepared.original, top,
             history=history, standalone=standalone,
         ),
     )
