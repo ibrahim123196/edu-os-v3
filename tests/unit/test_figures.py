@@ -43,7 +43,8 @@ def make_pdf(path: Path, label: str = "2.24", caption: bool = True, pages_before
         page.insert_text((200, 360), f"FIGURE {label} Two plates.", fontsize=9, color=BLUE)
     else:
         page.insert_text((200, 360), f"Figure {label} is self-explanatory.", fontsize=9)
-    if second_caption:
+    if second_caption:                      # a second figure, close beside the first
+        page.draw_rect(pymupdf.Rect(370, 200, 380, 320), color=(0, 0, 0), fill=BLUE)
         page.insert_text((360, 360), f"FIGURE {second_caption} More.", fontsize=9, color=BLUE)
     for i in range(12):
         page.insert_text((80, 420 + 14 * i), BODY[:90], fontsize=10)

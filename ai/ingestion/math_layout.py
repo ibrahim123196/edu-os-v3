@@ -92,6 +92,15 @@ PARAGRAPH_GAP_RATIO = 1.35
 # size says nothing about whether the small span is raised or dropped.
 MAX_ANCHOR_DISTANCE = 40.0
 
+# A gap between spans, as a share of the font size, that is a space no
+# character stands in.
+WORD_GAP_RATIO = 0.5
+
+# How far, in points (see _script_distance), a script may sit from the text
+# it belongs to. A small page number in the header is further, and was made
+# the superscript of the first line of the page ("if R is^3").
+MAX_SCRIPT_DISTANCE = 14.0
+
 
 @dataclass
 class Span:
@@ -111,6 +120,13 @@ class Span:
     # reads as nonsense.
     is_math: bool = False
     consumed: bool = False
+    # For a script: the full-size span it was marked against, and for a span
+    # taken into a fraction, the fraction. The second grouping, after
+    # fractions are rebuilt, puts a script back beside its own character:
+    # measuring again sent the subscripts of a denominator ("4πε0r1P") to
+    # whichever line of prose sat just below the fraction.
+    anchor: "Span | None" = field(default=None, repr=False, compare=False)
+    owner: "Span | None" = field(default=None, repr=False, compare=False)
 
     @property
     def cx(self) -> float:
@@ -153,6 +169,8 @@ class Line:
 
 
 def collect_spans(page) -> list[Span]:
+    from ai.ingestion.symbol_font import decode, is_symbol_font
+
     spans: list[Span] = []
     for index, block in enumerate(page.get_text("dict", sort=True).get("blocks", [])):
         for line in block.get("lines", []):
@@ -160,6 +178,8 @@ def collect_spans(page) -> list[Span]:
                 text = raw.get("text", "")
                 if not text.strip():
                     continue
+                if is_symbol_font(raw.get("font")):
+                    text = decode(text)       # "D" drawn as Δ is Δ
                 x0, y0, x1, y1 = raw["bbox"]
                 spans.append(
                     Span(
@@ -172,7 +192,11 @@ def collect_spans(page) -> list[Span]:
 
 def collect_bars(page) -> list[Bar]:
     """Horizontal rules that are short enough to be fraction bars."""
+    from ai.ingestion.heavy import too_heavy
+
     bars: list[Bar] = []
+    if too_heavy(page):
+        return bars                     # traced artwork, not fraction bars
     try:
         drawings = page.get_drawings()
     except Exception:
@@ -277,7 +301,26 @@ def join_spans(spans: list[Span]) -> str:
             continue
         kept.append(span)
 
-    return "".join(s.text for s in kept).strip()
+    # A real gap between two spans is a space the PDF did not store: the
+    # columns of a table are placed apart, not separated by spaces, and
+    # "Ti 469 656 1309 -1866 -1.63" arrived as "Ti4696561309-1866-1.63".
+    # Only a gap of half a character or more: the pieces of one word sit
+    # touching.
+    out: list[str] = []
+    previous: Span | None = None
+    for span in kept:
+        if previous is not None and out:
+            gap = span.x0 - previous.x1
+            size = max(previous.size, span.size, 1.0)
+            # Not beside a script: "q1 q2" is set apart for the eye, and
+            # "q_1q_2" is how every formula here is written.
+            scripted = span.text.startswith(("^", "_")) or previous.text.startswith(("^", "_"))
+            if (gap > size * WORD_GAP_RATIO and not scripted
+                    and not out[-1][-1:].isspace() and not span.text[:1].isspace()):
+                out.append(" ")
+        out.append(span.text)
+        previous = span
+    return "".join(out).strip()
 
 
 def _join(spans: list[Span]) -> str:
@@ -303,27 +346,26 @@ def reconstruct_fractions(spans: list[Span], bars: list[Bar]) -> list[Span]:
         if not numerator or not denominator:
             continue
 
-        for span in above + below:
-            span.consumed = True
-
         # A display fraction is centred on the maths axis rather than
         # sitting on the text baseline, so the rebuilt span is given the
         # baseline the surrounding equation uses -- roughly half a body
         # height below the bar. Without this it lands on a line of its own
         # and "F = k" ends up separated from the fraction it introduces.
         body_height = max(s.height for s in above + below)
-        rebuilt.append(
-            Span(
-                text=f" ({numerator})/({denominator}) ",
-                x0=bar.x0,
-                y0=bar.y - body_height,
-                x1=bar.x1,
-                y1=bar.y + body_height * 0.45,
-                size=max(s.size for s in above + below),
-                block=above[0].block,
-                is_math=True,
-            )
+        fraction = Span(
+            text=f" ({numerator})/({denominator}) ",
+            x0=bar.x0,
+            y0=bar.y - body_height,
+            x1=bar.x1,
+            y1=bar.y + body_height * 0.45,
+            size=max(s.size for s in above + below),
+            block=above[0].block,
+            is_math=True,
         )
+        for span in above + below:
+            span.consumed = True
+            span.owner = fraction
+        rebuilt.append(fraction)
 
     return rebuilt
 
@@ -394,24 +436,57 @@ def _group_into_lines(spans: list[Span]) -> list[Line]:
         else:
             lines.append(Line(spans=[span]))
 
-    # Attach each script to the line holding its nearest full-size span.
+    # Attach each script to the line holding its nearest full-size span,
+    # measured to the span's edges, not its centre. A span is often a whole
+    # phrase: the "2" of "is congruent to T2" sits at the end of a span
+    # hundreds of points wide, whose centre is further away than the short
+    # span on the next line -- and the subscript moved to the line below.
     for script in scripts:
+        home = None
+        if script.anchor is not None:
+            target = script.anchor.owner or script.anchor
+            home = next((ln for ln in lines if any(sp is target for sp in ln.spans)), None)
+        if home is not None:
+            home.spans.append(script)
+            continue
         nearest_line = None
         nearest_distance = float("inf")
         for line in lines:
             for candidate in line.spans:
-                dx = candidate.cx - script.cx
-                dy = candidate.cy - script.cy
-                distance = (dx * dx + dy * dy) ** 0.5
+                # Touching two lines at once is common: a subscript hangs
+                # down to the top of the line below. Then the one it
+                # overlaps more wins -- its own character, or the stacked
+                # fraction whose denominator it belongs to.
+                distance = _script_distance(candidate, script)
                 if distance < nearest_distance:
                     nearest_distance = distance
                     nearest_line = line
-        if nearest_line is not None:
+        # Nowhere near any text -- a page number in the header -- it is not
+        # a script, and stands as its own line.
+        if nearest_line is not None and nearest_distance <= MAX_SCRIPT_DISTANCE:
             nearest_line.spans.append(script)
         else:
             lines.append(Line(spans=[script]))
 
     return lines
+
+
+def _horizontal_gap(a: Span, b: Span) -> float:
+    return max(a.x0 - b.x1, b.x0 - a.x1, 0.0)
+
+
+def _script_distance(body: Span, script: Span) -> float:
+    """How far a script sits from a full-size span: across, to the span's
+    nearer end; up or down, between their middles.
+
+    Across is measured to the end because a span is often a whole phrase:
+    the "2" of "is congruent to T2" ends a span hundreds of points wide,
+    whose middle is further away than a short span on the next line, and
+    the subscript moved there. Up and down stays middle to middle: glyph
+    boxes are tall, and their edges touch the lines above and below."""
+    dx = _horizontal_gap(body, script)
+    dy = body.cy - script.cy
+    return (dx * dx + dy * dy) ** 0.5
 
 
 def mark_scripts(line: Line) -> None:
@@ -468,8 +543,12 @@ def mark_scripts(line: Line) -> None:
         if all(c in NEVER_SCRIPT for c in span.text.strip()):
             continue
 
-        anchor = min(body_spans, key=lambda b: abs(b.cx - span.cx))
-        if abs(anchor.cx - span.cx) > MAX_ANCHOR_DISTANCE:
+        # The full-size span the script sits against: nearest by its edges,
+        # for the same reason as above -- "T" ends a long span.
+        anchor = min(body_spans, key=lambda b: _script_distance(b, span))
+        if _horizontal_gap(anchor, span) > MAX_ANCHOR_DISTANCE:
+            continue
+        if _script_distance(anchor, span) > MAX_SCRIPT_DISTANCE:
             continue
         threshold = anchor.height * SCRIPT_OFFSET_RATIO
 
@@ -479,8 +558,10 @@ def mark_scripts(line: Line) -> None:
 
         if anchor.y1 - span.y1 > threshold:
             span.text = f"{lead}^{core}{trail}"
+            span.anchor = anchor
         elif span.y1 - anchor.y1 > -threshold and span.y0 - anchor.y0 > threshold:
             span.text = f"{lead}_{core}{trail}"
+            span.anchor = anchor
 
 
 def page_text_with_math(page) -> str:

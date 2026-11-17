@@ -20,11 +20,11 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-LABEL = re.compile(r"\bFIG(?:URE|\.)?\s*(\d+\.\d+)\b", re.IGNORECASE)
+LABEL = re.compile(r"\bFIG(?:URE|\.)?\s*(\d+\.\d+)(?!\.\d)", re.IGNORECASE)
 
 # Raised whenever the cutting rules change, so figures kept on disk -- and
 # figures remembered as impossible to cut -- are cut again by the new rules.
-VERSION = 2
+VERSION = 3
 
 # A text block with at least this many characters is a paragraph, not a
 # label inside a figure ("Conductor 1", "+Q").
@@ -69,12 +69,14 @@ def render(pdf: Path, label: str, page_hint: int | None = None) -> bytes | None:
 def _from_page(page, label: str) -> bytes | None:
     import pymupdf
 
-    found = _caption(page, label)
-    if found is None:
-        return None
-    caption, colour = found
+    from ai.ingestion.heavy import too_heavy
 
-    pieces, labels = _pieces(page, caption, colour)
+    found = _caption(page, label)
+    if found is None or too_heavy(page):
+        return None                     # not here, or too many drawings to read
+    caption, style = found
+
+    pieces, labels = _pieces(page, caption, style)
     # Start from the drawings just above the caption, then take whatever
     # drawing touches what has been taken -- lines, arrows, the (a) and (b)
     # of a figure -- until nothing more does. Labels are added afterwards in
@@ -198,35 +200,74 @@ MIN_PAIR_HEIGHT = 80
 EQUATION_NUMBER = re.compile(r"^\(\d+\.\d+\)$")
 
 
-def _caption(page, label: str):
-    """The caption's full extent: its "FIGURE 2.24" span and every line
-    below it in the same colour. "FIGURE" in capitals only: body text says
-    "Figure 1.20 is self-explanatory", and once passed for a caption."""
+# How a caption begins: "FIGURE 2.24" (Physics), "Fig. 6.1:" and "Fig 4.7"
+# (Chemistry), "Fig 1.1" (Maths), "Figure 1.3" (Biology).
+CAPTION_START = r"^\s*(?:FIGURE|Figure|Fig\.?)\s*"
+# Weights a caption is set in. Body text mentions figures too -- "Figure
+# 1.20 is self-explanatory", "Fig. 6.2." mid-sentence -- in the light body
+# face; a caption is set heavier or in capitals.
+_CAPTION_WEIGHTS = ("bold", "demi", "black", "heavy", "semibold")
+
+
+def _text_lines(page):
+    """Each line of text: its rectangle, first span's colour and font, the
+    fonts of all its spans, and its text."""
     import pymupdf
 
-    wanted = re.compile(rf"^\s*FIGURE\s*{re.escape(label)}\b")
-    lines = []
+    out = []
     for b in page.get_text("dict")["blocks"]:
         for line in b.get("lines", []):
             spans = [sp for sp in line["spans"] if sp["text"].strip()]
             if spans:
-                lines.append((pymupdf.Rect(line["bbox"]), spans[0]["color"],
-                              "".join(sp["text"] for sp in spans)))
-    start = next((ln for ln in lines if wanted.match(ln[2])), None)
+                out.append((pymupdf.Rect(line["bbox"]), spans[0]["color"], spans[0]["font"],
+                            {sp["font"] for sp in spans}, "".join(sp["text"] for sp in spans)))
+    return out
+
+
+def _is_caption_start(text: str, font: str, label: str | None = None) -> bool:
+    number = re.escape(label) if label else r"\d+\.\d+"
+    if not re.match(rf"{CAPTION_START}{number}(?![\d.]\d)", text):
+        return False
+    return text.lstrip().startswith("FIGURE") or any(w in font.lower() for w in _CAPTION_WEIGHTS)
+
+
+def _caption(page, label: str):
+    """The caption's full extent and style: its first line and every line
+    below it in the same colour and fonts.
+
+    Returns (rectangle, style), style being the caption's colour and fonts:
+    other captions on the page share them, and must not be taken into this
+    figure as labels."""
+    lines = _text_lines(page)
+    start = next((ln for ln in lines if _is_caption_start(ln[4], ln[2], label)), None)
     if start is None:
         return None
-    # Returns the caption's colour too: other captions on the page share it,
-    # and must not be taken into this figure.
-    box, colour = pymupdf.Rect(start[0]), start[1]
-    for rect, c, _ in sorted(lines, key=lambda ln: ln[0].y0):
-        # The caption's later lines: same colour, just below, overlapping it.
-        if (c == colour and rect.y0 >= box.y0 and rect.y0 <= box.y1 + 4
+    box, colour, fonts = start[0], start[1], set(start[3])
+    for rect, c, font, _, _ in sorted(lines, key=lambda ln: ln[0].y0):
+        # The caption's later lines: same colour and face, just below,
+        # overlapping it. The face matters where captions are printed in
+        # the body's colour (Chemistry), or the paragraph below would join.
+        if (c == colour and (font in fonts or "italic" in font.lower())
+                and rect.y0 >= box.y0 and rect.y0 <= box.y1 + 4
                 and rect.x0 < box.x1 + 20 and rect.x1 > box.x0 - 20):
+            if font not in fonts and font.lower() == _body_font(lines).lower():
+                continue
             box |= rect
-    return box, colour
+            fonts.add(font)
+    return box, (colour, frozenset(fonts))
 
 
-def _pieces(page, caption, colour):
+def _body_font(lines) -> str:
+    """The font most of the page's text is set in."""
+    from collections import Counter
+
+    counts = Counter()
+    for rect, _, font, _, text in lines:
+        counts[font] += len(text)
+    return counts.most_common(1)[0][0] if counts else ""
+
+
+def _pieces(page, caption, style):
     """The drawings and pictures a figure is made of, and the short text
     labels that may sit on it."""
     import pymupdf
@@ -256,10 +297,12 @@ def _pieces(page, caption, colour):
     for b in page.get_text("dict")["blocks"]:
         lines = b.get("lines", [])
         text = "".join(sp["text"] for ln in lines for sp in ln["spans"]).strip()
-        colours = {sp["color"] for ln in lines for sp in ln["spans"] if sp["text"].strip()}
+        looks = {(sp["color"], sp["font"]) for ln in lines for sp in ln["spans"] if sp["text"].strip()}
+        colour, fonts = style
+        caption_like = any(c == colour and f in fonts for c, f in looks)
         # A short label, and not another figure's caption: the end of the
         # caption above once headed the next figure's picture.
-        if (text and len(text) <= MAX_LABEL_CHARS and colour not in colours
+        if (text and len(text) <= MAX_LABEL_CHARS and not caption_like
                 and not EQUATION_NUMBER.match(text)):
             labels.append(pymupdf.Rect(b["bbox"]))
     return [r for r in drawn if keep(r)], [r for r in labels if keep(r)]
@@ -325,9 +368,13 @@ def _other_caption(page, box, label) -> bool:
     by side grew into one picture, which would show under either number."""
     import pymupdf
 
-    for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
-        for m in re.finditer(r"FIGURE\s*(\d+\.\d+)", text):
-            if m.group(1) != label and pymupdf.Rect(x0, y0, x1, y1).intersects(box):
+    for rect, _, font, _, text in _text_lines(page):
+        if not rect.intersects(box):
+            continue
+        # Every caption start on the line: two captions side by side can
+        # come out as one line of text.
+        for m in re.finditer(r"(?:FIGURE|Figure|Fig\.?)\s*(\d+\.\d+)", text):
+            if m.group(1) != label and _is_caption_start(text[m.start():], font):
                 return True
     return False
 
