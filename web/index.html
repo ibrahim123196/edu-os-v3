@@ -627,6 +627,7 @@
         <div class="you-asked" id="youAsked"></div>
         <div class="meant" id="meant" hidden></div>
         <div class="progress-note" id="progressNote" hidden></div>
+        <div class="diagnosis" id="mixup" hidden style="margin:0 0 10px;"></div>
         <div class="corrected" id="corrected" hidden></div>
         <div class="answer-body" id="answerBody"></div>
         <div class="action-row" id="actionRow" hidden><button id="actionBtn"></button></div>
@@ -968,6 +969,11 @@ function renderAnswer(data) {
   note.hidden = !data.progress_note;
   note.textContent = data.progress_note || '';
 
+  // A known mistake the question stated; the answer below corrects it.
+  $('mixup').hidden = !data.misconception;
+  $('mixup').textContent = data.misconception
+    ? `Common mix-up: ${data.misconception.label}` : '';
+
   renderAction(data.action);
 
   const wrap = $('sourcesWrap');
@@ -1169,6 +1175,7 @@ async function ask() {
     $('youAsked').textContent = question;
     $('meant').hidden = true;
     $('progressNote').hidden = true;
+    $('mixup').hidden = true;
     $('actionRow').hidden = true;
     $('corrected').hidden = true;
     $('sourcesWrap').hidden = true;

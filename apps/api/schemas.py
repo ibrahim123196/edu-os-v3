@@ -75,6 +75,9 @@ class AskResponse(BaseModel):
     action: dict | None = None
     # Review: the student's record on the topic, from the database.
     progress_note: str | None = None
+    # A known mistake the student's message stated, which the answer
+    # corrects: {"slug": ..., "label": ...}.
+    misconception: dict | None = None
     trace: dict | None = None
 
 

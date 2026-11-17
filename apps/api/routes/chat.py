@@ -105,6 +105,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             ),
             history=ask_history,
             search_as=search_as,
+            watch_for_mixups=guess.mode != Mode.review,
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -147,6 +148,10 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
         understood_as=understood_as or result.searched_as,
         action=action if answer.grounded else None,
         progress_note=progress_note,
+        misconception=(
+            {"slug": result.misconception.slug, "label": result.misconception.label}
+            if result.misconception else None
+        ),
         trace=result.trace if payload.include_trace else None,
     )
 

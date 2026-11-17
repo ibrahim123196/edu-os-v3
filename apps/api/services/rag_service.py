@@ -40,6 +40,7 @@ from ai.retrieval.hybrid import (
 from ai.retrieval.intent import detect as detect_intent
 from ai.retrieval.query import prepare_query
 from ai.retrieval.rerank import get_reranker
+from ai.tutor import mixups
 from ai.tutor.conversation import Turn, standalone_question
 from apps.api.config import settings
 from apps.api.curriculum import SourceKind
@@ -59,6 +60,8 @@ class AskResult:
     # zero inside a conductor?"), so the student can see what "that" was
     # taken to mean -- and say so when it was taken wrongly.
     searched_as: str | None = None
+    # A known mistake the student's message stated, corrected in the answer.
+    misconception: mixups.MixUp | None = None
 
 
 def resolve_follow_up(question: str, history: list[Turn]) -> str | None:
@@ -80,6 +83,7 @@ def ask(
     filters: RetrievalFilters | None = None,
     history: list[Turn] | None = None,
     search_as: str | None = None,
+    watch_for_mixups: bool = True,
 ) -> AskResult:
     started = time.perf_counter()
     trace: dict = {"stages": {}}
@@ -246,6 +250,11 @@ def ask(
             trace.get("llm_error", "No language model is configured.")
         )
 
+    # Known mistakes for these passages' topics, to correct if the message
+    # states one. Not for a request the student did not write (a revision
+    # summary): there is no student sentence to find a mistake in.
+    offered = mixups.offered_for(db, [c.chunk_id for c in top]) if watch_for_mixups else []
+
     t0 = time.perf_counter()
     raw = llm.complete(
         system=SYSTEM_PROMPT,
@@ -254,12 +263,20 @@ def ask(
         messages=build_messages(
             question if (history or search_as) else prepared.original, top,
             history=history, standalone=standalone,
+            extra=mixups.instruction(offered) if offered else None,
         ),
     )
     trace["stages"]["generation"] = {
         "ms": round((time.perf_counter() - t0) * 1000, 1),
         "model": llm.model,
         "sources_in_context": len(top),
+    }
+    raw, spotted = mixups.read_label(raw, offered)
+    # Kept in the trace, which is saved with the message: how often this
+    # is right decides whether it ever counts towards progress.
+    trace["stages"]["mix_up"] = {
+        "offered": [m.slug for m in offered],
+        "spotted": spotted.slug if spotted else None,
     }
 
     # --- 5. Citation validation -------------------------------------------
@@ -276,6 +293,9 @@ def ask(
         corrections=prepared.corrections,
         corrected_question=prepared.corrected,
         searched_as=standalone,
+        # Only alongside an answer that stands on the sources: a correction
+        # with no citation behind it is the model's opinion.
+        misconception=spotted if answer.grounded else None,
     )
 
 

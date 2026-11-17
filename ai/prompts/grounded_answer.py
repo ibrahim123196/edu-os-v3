@@ -132,6 +132,7 @@ def build_messages(
     chunks: list[RetrievedChunk],
     history: list | None = None,
     standalone: str | None = None,
+    extra: str | None = None,
 ) -> list[dict]:
     """The request for one answer.
 
@@ -139,13 +140,17 @@ def build_messages(
     follow-up gets the earlier exchanges as real turns before it, so "that"
     and "more simply" refer to something.
     """
+    # extra: further instructions for this one request (the known mistakes
+    # to watch for), after everything else. Absent, the request is exactly
+    # what it always was.
+    tail = f"\n\n{extra}" if extra else ""
     if not history:
         return [
             {
                 "role": "user",
                 "content": USER_TEMPLATE.format(
                     context=format_context(chunks), question=question
-                ),
+                ) + tail,
             }
         ]
 
@@ -161,6 +166,6 @@ def build_messages(
             "role": "user",
             "content": FOLLOW_UP_TEMPLATE.format(
                 context=format_context(chunks), meaning=meaning, question=question
-            ),
+            ) + tail,
         }
     ]
