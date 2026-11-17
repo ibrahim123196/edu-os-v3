@@ -18,6 +18,7 @@ from apps.api.db import get_db
 from apps.api.models import Conversation, Message
 from apps.api.schemas import AskRequest, AskResponse
 from ai.tutor.conversation import recent_history
+from ai.tutor import socratic
 from ai.tutor.modes import Mode, ModeGuess, detect, points_back
 from apps.api.student import active_student_id
 from apps.api.services import tutor_service
@@ -42,8 +43,14 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
     db.commit()
 
     started = time.perf_counter()
+    if payload.lesson and payload.socratic:
+        raise HTTPException(status_code=422, detail="Ask for a lesson or to work it out, not both.")
     guess = detect(question)
-    if payload.lesson:
+    if payload.socratic:
+        # The Work it out section: the box holds the question to work out,
+        # whatever its words -- "quiz me" is not a quiz here.
+        guess = ModeGuess(Mode.socratic, question, "work it out section")
+    elif payload.lesson:
         # The Lesson section: the box holds a topic ("capacitance"), or a
         # request for one ("teach me capacitance"), whose request words are
         # dropped. Never a quiz or a revision summary, whatever the words.
@@ -99,6 +106,10 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             if questions:
                 action = tutor_service.quiz_action(
                     members, name, min(tutor_service.PRACTICE_COUNT, questions))
+    elif payload.socratic:
+        understood_as = f"Working out: {question}"
+        # Worked out on its own: earlier turns would steer the plan.
+        ask_history = None
     elif payload.lesson:
         understood_as = f"Lesson on {topic}"
         # A lesson teaches the topic whole: earlier turns would pull it
@@ -126,6 +137,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             # box gets an ordinary answer: the long lesson is asked for, not
             # guessed from the wording.
             lesson_topic=topic if payload.lesson else None,
+            socratic_question=question if payload.socratic else None,
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -138,12 +150,21 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
     answer = result.answer
     result.trace["mode"] = mode_trace
     lesson = _lesson_payload(db, result) if result.lesson else None
+    socratic_out = None
+    content = answer.answer
+    if result.socratic_plan is not None:
+        # The plan stays out of sight; the student gets its first question.
+        state = socratic.start_state(result.socratic_plan)
+        state["chunk_ids"] = [str(c) for c in result.chunk_ids]
+        result.trace["socratic_state"] = state
+        content = socratic.opening(state)
+        socratic_out = _socratic_out(state, event="start")
     latency = round((time.perf_counter() - started) * 1000, 1)
 
     message = Message(
         conversation_id=conversation.id,
         role="assistant",
-        content=answer.answer,
+        content=content,
         citations=[c.__dict__ for c in answer.citations],
         retrieval_trace=result.trace,
         grounded=answer.grounded,
@@ -154,7 +175,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
     db.refresh(message)
 
     return AskResponse(
-        answer=answer.answer,
+        answer=content,
         citations=[c.__dict__ for c in answer.citations],
         grounded=answer.grounded,
         used_source_count=answer.used_source_count,
@@ -175,6 +196,7 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             if result.misconception else None
         ),
         lesson=lesson,
+        socratic=socratic_out,
         trace=result.trace if payload.include_trace else None,
     )
 
@@ -263,6 +285,77 @@ def lesson_feedback(message_id: uuid.UUID, payload: FeedbackRequest, db: Session
     db.commit()
     return {"feedback": feedback.answer, "grounded": feedback.grounded,
             "citations": [c.__dict__ for c in feedback.citations]}
+
+
+def _socratic_out(state: dict, event: str, message_id=None) -> dict:
+    return {
+        "step": min(state["step"] + 1, len(state["steps"])),
+        "total": len(state["steps"]),
+        "done": state["done"],
+        "event": event,
+        "message_id": str(message_id) if message_id else None,
+    }
+
+
+class SocraticReply(BaseModel):
+    reply: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/socratic/{message_id}/reply")
+def socratic_reply(message_id: uuid.UUID, payload: SocraticReply, db: Session = Depends(get_db)):
+    """The student's answer to the step they were asked, judged against the
+    same passages the plan came from; the tutor's next turn.
+
+    Only the newest tutor turn of a working-out can be answered: answering an
+    older one again would fork the chain."""
+    from ai.prompts.grounded_answer import SYSTEM_PROMPT, format_context
+    from apps.api.services import rag_service
+    from apps.api.services.lesson_sources import load_chunks
+
+    message = db.get(Message, message_id)
+    state = (message.retrieval_trace or {}).get("socratic_state") if message else None
+    if not state:
+        raise HTTPException(status_code=404, detail="Nothing being worked out here.")
+    if state.get("done"):
+        raise HTTPException(status_code=409, detail="This one is already worked out.")
+    newest = db.scalars(
+        select(Message).where(Message.conversation_id == message.conversation_id,
+                              Message.role == "assistant")
+        .order_by(Message.created_at.desc()).limit(1)
+    ).first()
+    if newest is None or newest.id != message.id:
+        raise HTTPException(status_code=409, detail="Answer the tutor's latest question.")
+
+    reply = payload.reply.strip()
+    step = state["steps"][state["step"]]
+    chunks = load_chunks(db, [uuid.UUID(c) for c in state.get("chunk_ids", [])])
+    try:
+        raw = rag_service.get_llm().complete(system=SYSTEM_PROMPT, messages=[{
+            "role": "user",
+            "content": f"Sources:\n\n{format_context(chunks)}\n\n---\n\n"
+                       + socratic.JUDGE.format(question=step["question"], point=step["point"],
+                                               reply=reply),
+        }], max_tokens=300)
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    verdict, feedback = socratic.read_verdict(raw)
+    new_state, text, event = socratic.advance(state, verdict, feedback)
+
+    # Committed apart: created_at is the transaction's start, and in one
+    # commit the reply and the tutor's turn would carry the same time,
+    # leaving their order to chance.
+    db.add(Message(conversation_id=message.conversation_id, role="user", content=reply))
+    db.commit()
+    tutor = Message(conversation_id=message.conversation_id, role="assistant", content=text,
+                    citations=message.citations, grounded=True,
+                    retrieval_trace={"socratic_state": new_state,
+                                     "socratic_turn": {"verdict": verdict, "event": event,
+                                                       "step": state["step"] + 1}})
+    db.add(tutor)
+    db.commit()
+    db.refresh(tutor)
+    return {"text": text, "verdict": verdict,
+            "socratic": _socratic_out(new_state, event, tutor.id)}
 
 
 def _mode_response(db, conversation, mode, reply, started, mode_trace, include_trace):

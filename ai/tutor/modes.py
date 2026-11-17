@@ -31,6 +31,8 @@ class Mode(str, Enum):
     practice = "practice"
     test = "test"
     clarify = "clarify"
+    # Only from the Work it out section, never detected from wording.
+    socratic = "socratic"
 
 
 @dataclass

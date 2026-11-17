@@ -57,6 +57,12 @@ class AskRequest(BaseModel):
                     "step-by-step lesson. Without it, every message is answered "
                     "in the ordinary way, however it is worded.",
     )
+    socratic: bool = Field(
+        default=False,
+        description="From the Work it out section: lead the student to the "
+                    "answer to `question` with a chain of questions instead "
+                    "of answering it.",
+    )
 
 
 class AskResponse(BaseModel):
@@ -83,6 +89,7 @@ class AskResponse(BaseModel):
     progress_note: str | None = None
     # "Teach me ...": steps, mini-question and check, when it is a lesson.
     lesson: dict | None = None
+    socratic: dict | None = None
     # Why the answer was pitched simpler or deeper, when it was.
     pitch_note: str | None = None
     # A known mistake the student's message stated, which the answer

@@ -41,6 +41,7 @@ from ai.retrieval.intent import detect as detect_intent
 from ai.retrieval.query import prepare_query
 from ai.retrieval.rerank import get_reranker
 from ai.tutor import lesson as lessons
+from ai.tutor import socratic
 from ai.tutor import mixups, pitch
 from ai.tutor.conversation import Turn, standalone_question
 from apps.api.config import settings
@@ -70,6 +71,9 @@ class AskResult:
     # on the student's own explanation can be checked against the same.
     lesson: lessons.Lesson | None = None
     chunk_ids: list = field(default_factory=list)
+    # "Work it out": the plan of questions, when one was asked for and the
+    # model kept to the format.
+    socratic_plan: socratic.Plan | None = None
 
 
 def _shown_mix_up(spotted, grounded: bool, pitched: pitch.Pitch):
@@ -150,6 +154,7 @@ def ask(
     watch_for_mixups: bool = True,
     student_id=None,
     lesson_topic: str | None = None,
+    socratic_question: str | None = None,
 ) -> AskResult:
     started = time.perf_counter()
     trace: dict = {"stages": {}}
@@ -331,6 +336,10 @@ def ask(
         ) if part
     ) or None
 
+    if socratic_question:
+        return _socratic(llm, socratic_question, top, pitched, trace, started, prepared,
+                         standalone)
+
     if lesson_topic:
         return _lesson(llm, lesson_topic, top, pitched, trace, started, prepared, standalone,
                        offered=mixups.offered_for(db, [c.chunk_id for c in top]))
@@ -432,6 +441,51 @@ def _lesson(llm, topic, top, pitched, trace, started, prepared, standalone, offe
         pitch=pitched,
         lesson=lesson,
         chunk_ids=[c.chunk_id for c in top],
+    )
+
+
+def _socratic(llm, question, top, pitched, trace, started, prepared, standalone) -> AskResult:
+    """Plan the chain of questions from the passages already found.
+
+    Checked for citations as one text, then split. A plan that does not
+    stand on the sources, or not in the form asked for, is not used: the
+    student is told the material does not cover it, never led along an
+    invented chain.
+    """
+    from ai.prompts.grounded_answer import format_context
+
+    content = f"Sources:\n\n{format_context(top)}\n\n---\n\n"
+    if pitched.instruction:
+        content += pitched.instruction + "\n\n"
+    content += socratic.instruction(question)
+
+    t0 = time.perf_counter()
+    raw = llm.complete(system=SYSTEM_PROMPT, messages=[{"role": "user", "content": content}],
+                       max_tokens=1500)
+    trace["stages"]["generation"] = {
+        "ms": round((time.perf_counter() - t0) * 1000, 1),
+        "model": llm.model,
+        "sources_in_context": len(top),
+        "socratic": True,
+    }
+    answer = build_answer(raw, top)
+    plan = socratic.split(answer.answer) if answer.grounded else None
+    if plan is None:
+        answer = replace(answer, answer=INSUFFICIENT_EVIDENCE, grounded=False, citations=[],
+                         used_source_count=0)
+    trace["stages"]["socratic"] = {"steps": len(plan.steps) if plan else 0}
+    trace["stages"]["citations"] = {
+        "cited": answer.used_source_count, "offered": len(top), "grounded": answer.grounded,
+    }
+    return AskResult(
+        answer=answer,
+        trace=_finish(trace, started),
+        corrections=prepared.corrections,
+        corrected_question=prepared.corrected,
+        searched_as=standalone,
+        pitch=pitched,
+        chunk_ids=[c.chunk_id for c in top],
+        socratic_plan=plan,
     )
 
 

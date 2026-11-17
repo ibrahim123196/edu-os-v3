@@ -215,6 +215,19 @@
   .lesson-step-title { font-family: var(--sans, inherit); font-size: 15px; font-weight: 600;
     margin: 0 0 8px; }
   .lesson-panel { border-left: 4px solid var(--focus); }
+  .socratic-panel { border-left: 4px solid #2f9e6b; }
+  .socratic-progress { font-family: var(--sans, inherit); font-size: 13px; font-weight: 600;
+    margin-bottom: 10px; }
+  .socratic-turn { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; }
+  .socratic-turn.tutor { background: var(--panel-alt, rgba(127,127,127,0.08)); }
+  .socratic-turn.student { margin-left: 15%; border: 1px solid var(--line, #ddd);
+    font-family: var(--sans, inherit); white-space: pre-wrap; }
+  .socratic-turn .who { font-family: var(--sans, inherit); font-size: 12px; opacity: 0.7;
+    margin-bottom: 4px; }
+  .socratic-reply textarea { width: 100%; min-height: 64px; margin: 4px 0 8px; }
+  .socratic-reply .row { display: flex; gap: 8px; }
+  .socratic-done { font-family: var(--sans, inherit); font-size: 13px; color: #2f9e6b;
+    font-weight: 600; }
   .lesson-figure { margin: 4px 0 14px; padding: 10px; background: #fff;
     border: 1px solid var(--line, #ddd); border-radius: 8px; text-align: center; }
   .lesson-figure img { max-width: 100%; max-height: 420px; height: auto; }
@@ -629,6 +642,20 @@
       </div>
     </section>
 
+    <!-- Work it out: the tutor asks, the student reasons. Its own section,
+         like the lesson: never guessed from words in the ask box. -->
+    <section class="panel socratic-panel">
+      <h2>Work it out</h2>
+      <p class="hint">Don't get the answer &mdash; get there yourself. The tutor asks
+        you small questions one at a time, gives a hint if you're stuck, and shows
+        the step after three tries.</p>
+      <div class="row" style="align-items:center; gap:8px;">
+        <input type="text" id="socraticQuestion" autocomplete="off"
+               placeholder="A question, e.g. why is the field inside a conductor zero?" style="flex:1;">
+        <button id="socraticBtn" style="flex:0 0 auto;">Start</button>
+      </div>
+    </section>
+
     <section class="panel">
       <h2>Ask your tutor</h2>
       <p class="hint">Answers come only from your uploaded material, not from general knowledge.</p>
@@ -998,6 +1025,8 @@ function renderAnswer(data) {
 
   if (data.lesson) {
     startLesson(data);
+  } else if (data.socratic) {
+    startSocratic(data);
   } else {
     $('answerBody').innerHTML = renderAnswer_(data.answer);
   }
@@ -1085,6 +1114,70 @@ function wireCites(container) {
 // saved); the check asks for the idea in the student's own words and gets
 // feedback judged against the lesson's own sources.
 let lessonState = null;
+
+/* Work it out: a back-and-forth inside the answer panel. The tutor's
+   turns may cite sources ([S1]); they link to the list under the answer,
+   which the first turn brought. */
+let socraticState = null;
+
+function startSocratic(data) {
+  socraticState = {
+    messageId: data.message_id,
+    turns: [{ who: 'tutor', text: data.answer }],
+    step: data.socratic.step, total: data.socratic.total, done: data.socratic.done,
+  };
+  drawSocratic();
+}
+
+function drawSocratic() {
+  const st = socraticState;
+  const turns = st.turns.map((t) => t.who === 'tutor'
+    ? `<div class="socratic-turn tutor"><div class="who">Tutor</div>${renderAnswer_(t.text)}</div>`
+    : `<div class="socratic-turn student"><div class="who">You</div>${escapeHtml(t.text)}</div>`).join('');
+  const progress = st.done
+    ? `<div class="socratic-done">Worked out &mdash; all ${st.total} steps</div>`
+    : `<div class="socratic-progress">Step ${st.step} of ${st.total}</div>`;
+  const form = st.done ? '' : `<div class="socratic-reply">
+      <textarea id="socraticReply" placeholder="Your answer, in a sentence"></textarea>
+      <div class="row"><button id="socraticSend">Send</button>
+      <button id="socraticStuck" class="quiet">I don't know</button></div>
+      <p class="hint" id="socraticError" hidden></p></div>`;
+  $('answerBody').innerHTML = progress + turns + form;
+  wireCites($('answerBody'));
+  if (st.done) return;
+  const send = (text) => sendSocratic(text);
+  $('socraticSend').addEventListener('click', () => send($('socraticReply').value.trim()));
+  $('socraticStuck').addEventListener('click', () => send("I don't know"));
+  $('socraticReply').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send($('socraticReply').value.trim()); }
+  });
+  $('socraticReply').focus({ preventScroll: true });
+}
+
+async function sendSocratic(text) {
+  if (!text) return;
+  const st = socraticState;
+  const btn = $('socraticSend');
+  btn.disabled = true; $('socraticStuck').disabled = true;
+  btn.textContent = 'Checking…';
+  try {
+    const turn = await api(`/chat/socratic/${st.messageId}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: text }),
+    });
+    st.turns.push({ who: 'student', text }, { who: 'tutor', text: turn.text });
+    st.messageId = turn.socratic.message_id;
+    st.step = turn.socratic.step;
+    st.done = turn.socratic.done;
+    drawSocratic();
+  } catch (err) {
+    btn.disabled = false; $('socraticStuck').disabled = false;
+    btn.textContent = 'Send';
+    $('socraticError').hidden = false;
+    $('socraticError').textContent = err.message;
+  }
+}
 
 function startLesson(data) {
   const l = data.lesson;
@@ -1346,18 +1439,29 @@ function newChat() {
   $('questionInput').focus();
 }
 
-async function ask(lesson = false) {
-  const box = lesson ? $('lessonTopic') : $('questionInput');
+// kind: 'ask' (the ask box), 'lesson' (Full lesson) or 'socratic' (Work it out).
+const ASK_KINDS = {
+  ask: { box: 'questionInput', btn: 'askBtn', busy: 'Looking…', label: (q) => q },
+  lesson: { box: 'lessonTopic', btn: 'lessonBtn', busy: 'Preparing…', label: (q) => `Lesson: ${q}` },
+  socratic: { box: 'socraticQuestion', btn: 'socraticBtn', busy: 'Preparing…',
+              label: (q) => `Work it out: ${q}` },
+};
+
+async function ask(kind = 'ask') {
+  const k = ASK_KINDS[kind];
+  const lesson = kind === 'lesson';
+  const separate = kind !== 'ask';
+  const box = $(k.box);
   const question = box.value.trim();
   if (!question) { box.focus(); return; }
 
-  const btn = lesson ? $('lessonBtn') : $('askBtn');
+  const btn = $(k.btn);
   const label = btn.textContent;
   btn.disabled = true;
-  btn.textContent = lesson ? 'Preparing…' : 'Looking…';
-  // A lesson starts its own chat. Follow-ups typed in the ask box after it
-  // ("explain step 2 more simply") then build on the lesson.
-  if (lesson) newChat();
+  btn.textContent = k.busy;
+  // A lesson or a working-out starts its own chat. Follow-ups typed in the
+  // ask box after it ("explain step 2 more simply") then build on it.
+  if (separate) newChat();
 
   const scope = $('scopeSelect').value;
   try {
@@ -1370,18 +1474,19 @@ async function ask(lesson = false) {
         include_trace: $('traceToggle').checked,
         conversation_id: chatId,
         lesson,
+        socratic: kind === 'socratic',
       }),
     });
     if (shown) pushToThread(shown);
     chatId = data.conversation_id;
-    const asked = lesson ? `Lesson: ${question}` : question;
+    const asked = k.label(question);
     shown = { question: asked, answer: data.answer };
     $('youAsked').textContent = asked;
     renderAnswer(data);
     box.value = '';
     $('questionInput').placeholder = 'Ask a follow-up, e.g. "explain that more simply"';
     $('newChatBtn').hidden = false;
-    if (lesson) $('answerPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (separate) $('answerPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     $('answerEmpty').hidden = true;
     $('answerWrap').hidden = false;
@@ -1391,7 +1496,7 @@ async function ask(lesson = false) {
     $('answerBody').textContent = err.message;
     // The question stays in the box to retry, and the chat is unchanged:
     // the server keeps an unanswered question out of the history.
-    $('youAsked').textContent = lesson ? `Lesson: ${question}` : question;
+    $('youAsked').textContent = k.label(question);
     $('meant').hidden = true;
     $('progressNote').hidden = true;
     $('mixup').hidden = true;
@@ -1406,15 +1511,19 @@ async function ask(lesson = false) {
   }
 }
 
-$('askBtn').addEventListener('click', () => ask(false));
-$('lessonBtn').addEventListener('click', () => ask(true));
+$('askBtn').addEventListener('click', () => ask('ask'));
+$('lessonBtn').addEventListener('click', () => ask('lesson'));
 $('lessonTopic').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') ask(true);
+  if (e.key === 'Enter') ask('lesson');
+});
+$('socraticBtn').addEventListener('click', () => ask('socratic'));
+$('socraticQuestion').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') ask('socratic');
 });
 $('newChatBtn').addEventListener('click', newChat);
 $('actionBtn').addEventListener('click', runAction);
 $('questionInput').addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask(false);
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask('ask');
 });
 
 /* ------------------------------------------------------------- quiz */
