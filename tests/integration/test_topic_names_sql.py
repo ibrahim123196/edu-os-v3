@@ -8,10 +8,15 @@ conftest).
 
 from __future__ import annotations
 
-import pytest
+import uuid
 
+import pytest
+from sqlalchemy import delete
+
+from ai.retrieval.spelling import rebuild_vocabulary
 from ai.tutor.modes import detect
 from apps.api.db import init_db, session_scope
+from apps.api.models import Document, DocumentChunk, IngestStatus
 from apps.api.services.tutor_service import find_topic
 
 pytestmark = pytest.mark.integration
@@ -67,3 +72,39 @@ def test_capacitors_leaves_dielectrics_out():
     with session_scope() as db:
         match = find_topic(db, "capacitance")
     assert "dielectrics-polarisation" not in match.slugs
+
+
+# --- typos --------------------------------------------------------------------
+
+TEXTBOOK = ("Capacitors store charge. Gauss law relates flux to charge. "
+            "Dielectrics reduce the field. A galvanometer detects current.")
+
+
+@pytest.fixture
+def vocabulary():
+    """The spelling fixer learns its words from the textbook's passages."""
+    doc_id = uuid.uuid4()
+    with session_scope() as db:
+        db.add(Document(id=doc_id, title="typo words", filename="t.txt",
+                        content_type="text/plain", storage_path="x", byte_size=1,
+                        status=IngestStatus.ready))
+        db.add(DocumentChunk(document_id=doc_id, chunk_index=0, page_start=1, page_end=1,
+                             word_count=14, content=TEXTBOOK))
+    with session_scope() as db:
+        rebuild_vocabulary(db)
+    yield
+    with session_scope() as db:
+        db.execute(delete(Document).where(Document.id == doc_id))
+        db.flush()
+        rebuild_vocabulary(db)
+
+
+@pytest.mark.parametrize("message,name", [
+    ("give me quiz on capactiors", "Capacitors"),          # the one that failed
+    ("quiz me on dielecrtics", "Dielectrics and polarisation"),
+    ("quiz me on galvanomter", "Moving coil galvanometer"),
+])
+def test_a_misspelt_topic_is_still_found(vocabulary, message, name):
+    with session_scope() as db:
+        match = find_topic(db, detect(message).topic)
+    assert match is not None and match.name == name

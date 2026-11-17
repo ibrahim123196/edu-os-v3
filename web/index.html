@@ -101,7 +101,7 @@
   label.field { display: block; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
   label.field span { display: block; margin-bottom: 4px; }
 
-  input[type=text], input[type=file], textarea, select {
+  input[type=text], input[type=search], input[type=number], input[type=file], textarea, select {
     width: 100%;
     padding: 8px 10px;
     border: 1px solid var(--line);
@@ -425,6 +425,49 @@
   .history .what { flex: 1; }
   .history .result { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .history .unfinished { color: var(--muted); }
+  .history .kind { font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); margin-right: 6px; }
+  .history button.link { margin-left: 8px; }
+  /* On a phone the result takes its own line: "1 of 3 answered · 3 s ·
+     left · Continue" once pushed the whole page wider than the screen. */
+  @media (max-width: 560px) {
+    .history li { flex-wrap: wrap; row-gap: 2px; }
+    .history .result { white-space: normal; flex-basis: 100%; }
+  }
+
+  /* --- quiz bar, the full-screen test, the Test me pop-up ---------------- */
+  .quiz-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .quiz-bar .progress { flex: 1; margin: 0; }
+  .quiz-bar .timer { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .quiz-bar .timer[hidden] { display: none; }
+  /* A test takes the whole screen: nothing else on the page competes. */
+  #quizStage.full {
+    position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+    background: var(--paper); padding: 24px 16px;
+  }
+  #quizStage.full > section { max-width: 720px; margin: 0 auto 16px; }
+  #testDialog {
+    border: 1px solid var(--line); border-radius: 6px; padding: 20px;
+    width: min(360px, calc(100vw - 32px)); background: var(--surface); color: var(--ink);
+  }
+  #testDialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+  #testDialog h3 { margin: 0 0 6px; }
+  #testDialog .buttons { display: flex; gap: 8px; margin-top: 14px; }
+  #testDialog input[type=number] { width: 110px; display: block; margin-top: 4px; }
+
+  /* --- moving around a test -------------------------------------------- */
+  .qnav { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
+  .qnav[hidden] { display: none; }
+  .qnav .qnums { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+  .qnav button.qnum {
+    min-width: 32px; padding: 4px 6px; font-size: 12.5px; font-weight: 500;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  }
+  .qnav button.qnum:hover:not(:disabled) { background: var(--paper); }
+  .qnav button.qnum.right { background: var(--verified-wash); border-color: var(--verified); }
+  .qnav button.qnum.wrong { background: var(--warn-wash); border-color: var(--warn); }
+  .qnav button.qnum.current { box-shadow: 0 0 0 2px var(--ink); }
+  .qnav button.step { padding: 4px 10px; font-size: 12.5px; }
 
   /* --- progress ---------------------------------------------------- */
   .summary-line { font-size: 14px; margin: 0 0 4px; }
@@ -470,6 +513,22 @@
   }
   .builtin strong { color: var(--ink); font-weight: 600; }
   .scope select { margin-top: 4px; }
+
+  /* --- topic picker: one box to type in and choose from ---------------- */
+  .combo { position: relative; margin-top: 4px; }
+  .combo-list {
+    position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 20;
+    max-height: 280px; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  }
+  .combo-list[hidden] { display: none; }
+  .combo-head { padding: 8px 10px 4px; font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); }
+  .combo-item { padding: 7px 10px; cursor: pointer; color: var(--ink); font-size: 14px; }
+  .combo-item .n { color: var(--muted); }
+  .combo-item.active { background: var(--paper); }
+  .combo-empty { padding: 8px 10px; color: var(--muted); font-size: 13.5px; }
 </style>
 </head>
 <body>
@@ -591,9 +650,14 @@
 
         <div class="scope">
           Topic
-          <select id="quizConcept">
-            <option value="">anything</option>
-          </select>
+          <!-- One box: click for the whole list, type to narrow it. -->
+          <div class="combo">
+            <input type="text" id="quizSearch" placeholder="Choose a topic, or type to search"
+                   autocomplete="off" role="combobox" aria-expanded="false"
+                   aria-controls="topicList" aria-autocomplete="list">
+            <div class="combo-list" id="topicList" role="listbox" hidden></div>
+          </div>
+          <input type="hidden" id="quizConcept" value="">
         </div>
         <div class="row" style="align-items:center;">
           <label class="field" style="flex:0 0 120px; margin:0;">
@@ -605,13 +669,25 @@
         <div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
           <button id="startQuiz">Start</button>
           <button id="testMe" class="quiet">Test me</button>
-          <span class="hint" style="margin:0;">Test me: 10 questions across everything, weakest topics first.</span>
+          <span class="hint" style="margin:0;">Test me: every topic, weakest first, timed.</span>
         </div>
         <div id="quizNotice" style="margin-top:12px;"></div>
       </section>
 
+      <div id="quizStage">
       <section class="panel" id="questionPanel" hidden style="margin-top:16px;">
-        <div class="progress" id="progress"></div>
+        <div class="quiz-bar">
+          <div class="progress" id="progress"></div>
+          <span class="timer" id="quizTimer" hidden></span>
+          <button class="quiet" id="quizStop">End quiz</button>
+        </div>
+        <!-- Tests only: jump between questions. Answered ones open to be
+             looked at, not answered again. -->
+        <div class="qnav" id="qnav" hidden>
+          <button class="quiet step" id="qPrev" aria-label="Previous question">‹ Prev</button>
+          <div class="qnums" id="qnums"></div>
+          <button class="quiet step" id="qNext" aria-label="Next question">Next ›</button>
+        </div>
         <div class="question-stem" id="stem"></div>
         <div class="choices" id="choices"></div>
         <button id="submitAnswer" style="margin-top:14px;" disabled>Submit</button>
@@ -638,7 +714,25 @@
         <div class="score" id="score"></div>
         <p class="hint" id="scoreNote"></p>
         <button id="againQuiz">Practise again</button>
+        <button id="closeStage" hidden>Close</button>
       </section>
+      </div>
+
+      <dialog id="testDialog">
+        <form method="dialog">
+          <h3>Test me</h3>
+          <p class="hint">Questions from every topic, weakest first. Timed. You can
+            leave part-way and continue later from Recent quizzes.</p>
+          <label class="field">
+            <span>How many questions? (1–50)</span>
+            <input type="number" id="testCount" min="1" max="50" value="10" required>
+          </label>
+          <div class="buttons">
+            <button value="start">Start test</button>
+            <button value="cancel" class="quiet" formnovalidate>Cancel</button>
+          </div>
+        </form>
+      </dialog>
 
       <section class="panel history" id="historyPanel" hidden style="margin-top:16px;">
         <h3>Recent quizzes</h3>
@@ -993,7 +1087,11 @@ async function runAction() {
   if (action.kind !== 'quiz') return;
   const slugs = action.concept_slugs || [];
   // One topic shows in the dropdown; several have no single entry there.
-  $('quizConcept').value = slugs.length === 1 ? slugs[0] : '';
+  selectTopic(slugs.length === 1 ? slugs[0] : '');
+  if (action.test) {
+    await startQuiz([], action.count, 'test');   // "test me" in the chat: a real test
+    return;
+  }
   $('quizCount').value = String(action.count);
   await startQuiz(slugs);
 }
@@ -1105,41 +1203,165 @@ async function switchMode(mode) {
   $('tabQuiz').classList.toggle('on', mode === 'quiz');
   $('tabProgress').classList.toggle('on', mode === 'progress');
   if (mode === 'quiz') {
-    if ($('quizConcept').options.length <= 1) await loadQuizConcepts();
+    if (!quizTopics) await loadQuizConcepts();
     loadQuizHistory();
   }
   if (mode === 'progress') loadProgress();
 }
 
+// The topics a quiz can be built from, loaded once: groups (with their
+// other names, so "capacitance" finds Capacitors) and single concepts.
 // group slug -> the concept slugs it stands for. A group is one entry in
 // the list but several topics to the quiz.
+let quizTopics = null;
 const quizGroups = {};
 
-function addOptions(select, label, items, valueOf) {
-  if (!items.length) return;
-  const group = document.createElement('optgroup');
-  group.label = label;
-  for (const item of items) {
-    const opt = document.createElement('option');
-    opt.value = valueOf(item);
-    opt.textContent = `${item.name} (${item.questions})`;
-    group.appendChild(opt);
+function topicKey(text) {
+  return text.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// The list under the box, rebuilt as the student types. Each entry is
+// {value, name, questions}; value is a concept slug or "group:<slug>".
+let topicEntries = [];
+let topicActive = -1;
+
+function topicMatches(search) {
+  const q = topicKey(search);
+  const fits = (item) => !q || [item.name, ...(item.aliases || [])]
+    .some((name) => topicKey(name).includes(q));
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  return {
+    q,
+    chapters: quizTopics.groups.filter((g) => g.chapter && fits(g)),
+    groups: quizTopics.groups.filter((g) => !g.chapter && fits(g)).sort(byName),
+    singles: quizTopics.concepts.filter(fits).sort(byName),
+  };
+}
+
+function renderTopics(search = '') {
+  const list = $('topicList');
+  list.innerHTML = '';
+  topicEntries = [];
+  if (!quizTopics) return;
+  const { q, chapters, groups, singles } = topicMatches(search);
+  const asGroup = (g) => ({ value: `group:${g.slug}`, name: g.name, questions: g.questions });
+  const asSingle = (c) => ({ value: c.slug, name: c.name, questions: c.questions });
+  // Groups first: they are what a student usually means ("Capacitors",
+  // not "Capacitance").
+  const sections = [
+    ['Chapters', chapters.map(asGroup)],
+    ['Topics', groups.map(asGroup)],
+    ['Single topics', singles.map(asSingle)],
+  ];
+  for (const [label, items] of sections) {
+    if (!items.length) continue;
+    const head = document.createElement('div');
+    head.className = 'combo-head';
+    head.textContent = label;
+    list.appendChild(head);
+    for (const item of items) {
+      const row = document.createElement('div');
+      row.className = 'combo-item';
+      row.setAttribute('role', 'option');
+      row.dataset.index = topicEntries.length;
+      row.innerHTML = `${escapeHtml(item.name)} <span class="n">(${item.questions})</span>`;
+      list.appendChild(row);
+      topicEntries.push(item);
+    }
   }
-  select.appendChild(group);
+  if (!topicEntries.length) {
+    list.innerHTML = '<div class="combo-empty">No topic matches</div>';
+  }
+  // Typing picks the best match, so Start works straight after typing.
+  // Not simply the first in the list: chapters are listed first, and
+  // "capa" once picked the whole chapter instead of Capacitors.
+  // The choice changes only to a match. Nothing typed, or nothing found,
+  // leaves it as it was: Escape after "xyz" once wiped a chosen topic.
+  if (q && topicEntries.length) $('quizConcept').value = bestMatch(q, chapters, groups, singles);
+  highlightTopic(topicEntries.findIndex((e) => e.value === $('quizConcept').value));
+}
+
+function highlightTopic(index) {
+  topicActive = index;
+  $('topicList').querySelectorAll('.combo-item').forEach((row) => {
+    const on = Number(row.dataset.index) === index;
+    row.classList.toggle('active', on);
+    if (on) row.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+const TOPIC_HINT = 'Choose a topic, or type to search';
+
+function openTopics() {
+  if (!$('topicList').hidden) return;
+  // The whole list, with the current choice highlighted. The box empties
+  // and shows the choice as its hint, so typing starts a fresh search --
+  // typing after a choice once gave "Capacitorsxyz".
+  const box = $('quizSearch');
+  const chosen = allTopicEntries().find((e) => e.value === $('quizConcept').value);
+  box.placeholder = chosen ? chosen.name : TOPIC_HINT;
+  box.value = '';
+  renderTopics();
+  $('topicList').hidden = false;
+  $('quizSearch').setAttribute('aria-expanded', 'true');
+}
+
+function closeTopics() {
+  $('topicList').hidden = true;
+  $('quizSearch').setAttribute('aria-expanded', 'false');
+  // The box shows what Start will quiz, so a half-typed word never hides
+  // a different choice.
+  const chosen = allTopicEntries().find((e) => e.value === $('quizConcept').value);
+  $('quizSearch').value = chosen ? chosen.name : '';
+  $('quizSearch').placeholder = TOPIC_HINT;
+}
+
+function chooseTopic(entry) {
+  $('quizConcept').value = entry ? entry.value : '';
+  $('quizNotice').innerHTML = '';
+  closeTopics();
+}
+
+function allTopicEntries() {
+  if (!quizTopics) return [];
+  return [
+    ...quizTopics.groups.map((g) => ({ value: `group:${g.slug}`, name: g.name })),
+    ...quizTopics.concepts.map((c) => ({ value: c.slug, name: c.name })),
+  ];
+}
+
+// A topic whose name (or other name) starts with the search beats one that
+// only contains it; a group beats a single topic; a chapter comes last, as
+// it is the broadest thing a few letters could mean.
+function bestMatch(q, chapters, groups, singles) {
+  const starts = (item) => [item.name, ...(item.aliases || [])]
+    .some((name) => topicKey(name).split(' ').some((w, i, ws) => ws.slice(i).join(' ').startsWith(q)));
+  const ranked = [
+    ...groups.filter(starts).map((g) => `group:${g.slug}`),
+    ...singles.filter(starts).map((c) => c.slug),
+    ...groups.map((g) => `group:${g.slug}`),
+    ...singles.map((c) => c.slug),
+    ...chapters.map((g) => `group:${g.slug}`),
+  ];
+  return ranked[0];
+}
+
+// Choose a topic for the student (from the chat, or the Progress page).
+// Only a topic that is listed -- one with questions -- can be chosen.
+function selectTopic(value) {
+  const entry = allTopicEntries().find((e) => e.value === value);
+  chooseTopic(entry || null);
+  return !!entry;
 }
 
 async function loadQuizConcepts() {
   try {
     const [groups, concepts] = await Promise.all([api('/quiz/groups'), api('/quiz/concepts')]);
-    const select = $('quizConcept');
-    for (const g of groups) quizGroups[g.slug] = g.concept_slugs;
     // Only topics that actually have questions. Offering a topic with
-    // none produces an empty quiz and looks broken. Groups first: they
-    // are what a student usually means ("Capacitors", not "Capacitance").
-    const byName = (a, b) => a.name.localeCompare(b.name);
-    addOptions(select, 'Chapters', groups.filter(g => g.chapter), g => `group:${g.slug}`);
-    addOptions(select, 'Topics', groups.filter(g => !g.chapter).sort(byName), g => `group:${g.slug}`);
-    addOptions(select, 'Single topics', [...concepts].sort(byName), c => c.slug);
+    // none produces an empty quiz and looks broken.
+    quizTopics = { groups, concepts };
+    for (const g of groups) quizGroups[g.slug] = g.concept_slugs;
+    renderTopics();
     if (!concepts.length) {
       $('quizNotice').innerHTML =
         '<div class="notice bad">No questions yet. Generate some with ' +
@@ -1151,12 +1373,53 @@ async function loadQuizConcepts() {
   }
 }
 
+const topicBox = $('quizSearch');
+topicBox.addEventListener('focus', openTopics);
+topicBox.addEventListener('click', openTopics);
+topicBox.addEventListener('input', (e) => {
+  $('topicList').hidden = false;
+  renderTopics(e.target.value);
+});
+topicBox.addEventListener('keydown', (e) => {
+  const list = $('topicList');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (list.hidden) openTopics();
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    const n = topicEntries.length;
+    if (n) highlightTopic((topicActive + step + n) % n);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (!list.hidden && topicActive >= 0) chooseTopic(topicEntries[topicActive]);
+  } else if (e.key === 'Escape') {
+    closeTopics();
+  }
+});
+// mousedown, not click: a click arrives after the box has lost focus and
+// closed the list, so the choice would never land.
+$('topicList').addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  const row = e.target.closest('.combo-item');
+  if (row) chooseTopic(topicEntries[Number(row.dataset.index)]);
+});
+topicBox.addEventListener('blur', () => closeTopics());
+
 $('startQuiz').addEventListener('click', () => startQuiz());
 // Always the whole syllabus, whatever the list says: weakest topics are
-// weighted up by the quiz itself when no topic is given.
+// weighted up by the quiz itself when no topic is given. "Anything" left
+// the list when this arrived: two ways to ask for everything was one too many.
 $('testMe').addEventListener('click', () => {
+  $('testCount').value = '10';
+  $('testDialog').showModal();
+  // Focus only. Selecting the 10 so typing replaced it looked like a
+  // copied-text glitch.
+  $('testCount').focus();
+});
+$('testDialog').addEventListener('close', () => {
+  if ($('testDialog').returnValue !== 'start') return;
+  const n = Math.max(1, Math.min(50, parseInt($('testCount').value, 10) || 10));
   $('resultPanel').hidden = true;
-  startQuiz([], 10);
+  startQuiz([], n, 'test');
 });
 $('againQuiz').addEventListener('click', () => {
   $('resultPanel').hidden = true;
@@ -1164,16 +1427,25 @@ $('againQuiz').addEventListener('click', () => {
   // chat covers several, which the dropdown cannot show.
   startQuiz(quiz.slugs, quiz.size);
 });
+$('closeStage').addEventListener('click', () => { closeStage(); loadQuizHistory(); });
 
 // slugs: topics chosen for the student by the chat ("quiz me on Gauss's
 // law" covers its applications too); otherwise the dropdown's one topic.
-async function startQuiz(slugs, countOverride) {
+// kind: "practice" (a quiz on topics) or "test" (Test me: every topic,
+// timed, full screen, can be left and continued).
+async function startQuiz(slugs, countOverride, kind = 'practice') {
   const slug = $('quizConcept').value;
   const count = countOverride
     || Math.max(1, Math.min(20, parseInt($('quizCount').value, 10) || 5));
   const chosen = Array.isArray(slugs) ? slugs
     : slug.startsWith('group:') ? (quizGroups[slug.slice(6)] || [])
     : (slug ? [slug] : []);
+  // Start with no topic used to mean "anything"; that is Test me's job now.
+  if (!Array.isArray(slugs) && !chosen.length) {
+    $('quizNotice').innerHTML =
+      '<div class="notice bad">Pick a topic first, or use Test me for every topic.</div>';
+    return;
+  }
   const btn = $('startQuiz');
   btn.disabled = true;
   btn.textContent = 'Loading…';
@@ -1186,6 +1458,7 @@ async function startQuiz(slugs, countOverride) {
       body: JSON.stringify({
         concept_slugs: chosen,
         count,
+        kind,
         // Never repeat a question inside one sitting.
         exclude: quiz.answered,
       }),
@@ -1198,14 +1471,20 @@ async function startQuiz(slugs, countOverride) {
     }
     quiz = {
       sessionId: data.session_id,
+      kind,
       questions: data.questions,
       index: 0,
+      offset: 0,                 // questions answered before this sitting
+      total: data.count,
+      // Tests: one entry per question, filled in as it is answered.
+      results: kind === 'test' ? data.questions.map(() => null) : null,
       score: null,
       answered: quiz.answered,
       slugs: chosen,
       size: count,
     };
     $('resultPanel').hidden = true;
+    openStage(0);
     showQuestion();
   } catch (err) {
     $('quizNotice').innerHTML =
@@ -1219,10 +1498,11 @@ async function startQuiz(slugs, countOverride) {
 function showQuestion() {
   const q = quiz.questions[quiz.index];
   $('questionPanel').hidden = false;
+  $('quizNotice').innerHTML = '';
   $('feedback').hidden = true;
   $('diagnosis').hidden = true;
   $('progress').textContent =
-    `Question ${quiz.index + 1} of ${quiz.questions.length}`;
+    `Question ${quiz.offset + quiz.index + 1} of ${quiz.total}`;
   $('stem').textContent = q.stem;
   quiz.selected = null;
   $('submitAnswer').hidden = false;
@@ -1250,7 +1530,72 @@ function showQuestion() {
     });
     choices.appendChild(btn);
   });
+
+  // Already answered in this test: shown as it was, locked.
+  const done = quiz.results && quiz.results[quiz.index];
+  if (done) showAnswered(q, done.selected, done.result);
+  renderTestNav();
 }
+
+// Mark the options and show the explanation for an answered question.
+function showAnswered(q, optionId, result) {
+  const buttons = [...$('choices').querySelectorAll('button')];
+  buttons.forEach((b) => { b.disabled = true; b.classList.remove('selected'); });
+  // Always mark the correct answer, not just the one chosen: a student
+  // who got it wrong needs to see which was right.
+  q.options.forEach((option, i) => {
+    if (option.id === result.correct_option_id) buttons[i].classList.add('right');
+    else if (option.id === optionId) buttons[i].classList.add('wrong');
+  });
+  $('explanation').textContent = result.explanation;
+  // Only a mistake from the reviewed list, worded for the student.
+  $('diagnosis').hidden = !(!result.correct && result.mistake);
+  $('diagnosis').textContent =
+    !result.correct && result.mistake ? `Common mistake: ${result.mistake}` : '';
+  $('nextQuestion').textContent = nextLabel();
+  $('submitAnswer').hidden = true;
+  resetReport();
+  $('feedback').hidden = false;
+}
+
+function testDone() {
+  return quiz.results.every(Boolean);
+}
+
+function nextLabel() {
+  if (quiz.kind === 'test') return testDone() ? 'See score' : 'Next question';
+  return quiz.index + 1 < quiz.questions.length ? 'Next question' : 'See score';
+}
+
+// The number row: ✓/✗ colours for answered questions, a ring on the
+// current one. Tests only; a quiz goes straight through.
+function renderTestNav() {
+  const test = quiz.kind === 'test';
+  $('qnav').hidden = !test;
+  if (!test) return;
+  $('qnums').innerHTML = quiz.questions.map((_, i) => {
+    const r = quiz.results[i];
+    const cls = ['qnum', r ? (r.result.correct ? 'right' : 'wrong') : '',
+      i === quiz.index ? 'current' : ''].join(' ');
+    const label = `Question ${i + 1}${r ? (r.result.correct ? ', right' : ', wrong') : ', not answered'}`;
+    return `<button class="${cls}" data-q="${i}" aria-label="${label}">${i + 1}</button>`;
+  }).join('');
+  $('qPrev').disabled = quiz.index === 0;
+  $('qNext').disabled = quiz.index === quiz.questions.length - 1;
+}
+
+function goToQuestion(i) {
+  if (i < 0 || i >= quiz.questions.length || $('questionPanel').hidden) return;
+  quiz.index = i;
+  showQuestion();
+}
+
+$('qPrev').addEventListener('click', () => goToQuestion(quiz.index - 1));
+$('qNext').addEventListener('click', () => goToQuestion(quiz.index + 1));
+$('qnums').addEventListener('click', (e) => {
+  const i = e.target.closest('[data-q]')?.dataset.q;
+  if (i != null) goToQuestion(Number(i));
+});
 
 $('submitAnswer').addEventListener('click', () => {
   if (quiz.selected) answerQuestion(quiz.selected);
@@ -1275,28 +1620,16 @@ async function answerQuestion(optionId) {
       }),
     });
 
-    // The selection outline would sit on top of the right/wrong colours.
-    buttons.forEach((b) => b.classList.remove('selected'));
-    // Always mark the correct answer, not just the one chosen: a student
-    // who got it wrong needs to see which was right.
-    q.options.forEach((option, i) => {
-      if (option.id === result.correct_option_id) buttons[i].classList.add('right');
-      else if (option.id === optionId) buttons[i].classList.add('wrong');
-    });
-
     quiz.score = result.session;
+    if (quiz.results) quiz.results[quiz.index] = { selected: optionId, result };
     quiz.answered.push(q.id);
+    // The server's clock is the real one; the page only ticks between.
+    if (result.session.elapsed_seconds != null) {
+      setClock(result.session.elapsed_seconds, !result.session.finished);
+    }
 
-    $('explanation').textContent = result.explanation;
-    // Only a mistake from the reviewed list, worded for the student.
-    $('diagnosis').hidden = !(!result.correct && result.mistake);
-    $('diagnosis').textContent =
-      !result.correct && result.mistake ? `Common mistake: ${result.mistake}` : '';
-    $('nextQuestion').textContent =
-      quiz.index + 1 < quiz.questions.length ? 'Next question' : 'See score';
-    $('submitAnswer').hidden = true;
-    resetReport();
-    $('feedback').hidden = false;
+    showAnswered(q, optionId, result);
+    renderTestNav();
   } catch (err) {
     buttons.forEach((b) => (b.disabled = false));
     $('submitAnswer').disabled = false;
@@ -1306,22 +1639,169 @@ async function answerQuestion(optionId) {
 }
 
 $('nextQuestion').addEventListener('click', () => {
+  if (quiz.kind === 'test') {
+    if (testDone()) { showResult(quiz.score); return; }
+    // The next question still to answer, after this one, wrapping round:
+    // a question skipped earlier is not forgotten.
+    const n = quiz.questions.length;
+    for (let step = 1; step <= n; step += 1) {
+      const i = (quiz.index + step) % n;
+      if (!quiz.results[i]) { goToQuestion(i); return; }
+    }
+    return;
+  }
   quiz.index += 1;
   if (quiz.index < quiz.questions.length) {
     showQuestion();
   } else {
-    $('questionPanel').hidden = true;
-    $('resultPanel').hidden = false;
-    // The server's count of what it recorded, so the score shown here is
-    // the one the history will show later.
-    const { correct, total } = quiz.score;
+    showResult(quiz.score);
+  }
+});
+
+/* -------------------------------------------- the quiz stage and timer */
+let clockTimer = null;
+
+function formatClock(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function formatDuration(seconds) {
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.round(seconds / 60);
+  return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+}
+
+// base: seconds the server has banked; running: whether it is still timing.
+function setClock(base, running) {
+  quiz.clockBase = base;
+  quiz.clockSince = running ? Date.now() : null;
+  drawClock();
+}
+
+function clockSeconds() {
+  const extra = quiz.clockSince ? Math.floor((Date.now() - quiz.clockSince) / 1000) : 0;
+  return (quiz.clockBase || 0) + extra;
+}
+
+function drawClock() {
+  $('quizTimer').textContent = formatClock(clockSeconds());
+}
+
+// A test opens full screen with its timer and Leave; a quiz stays in the
+// page with End quiz and no timer.
+function openStage(elapsed) {
+  const test = quiz.kind === 'test';
+  $('quizStage').classList.toggle('full', test);
+  document.body.style.overflow = test ? 'hidden' : '';
+  $('quizStop').textContent = test ? 'Leave test' : 'End quiz';
+  $('quizStop').hidden = false;
+  $('quizTimer').hidden = !test;
+  $('againQuiz').hidden = test;
+  $('closeStage').hidden = !test;
+  clearInterval(clockTimer);
+  if (test) {
+    setClock(elapsed || 0, true);
+    clockTimer = setInterval(drawClock, 1000);
+  }
+}
+
+function closeStage() {
+  clearInterval(clockTimer);
+  $('quizStage').classList.remove('full');
+  document.body.style.overflow = '';
+  $('questionPanel').hidden = true;
+  $('resultPanel').hidden = true;
+  quiz.sessionId = null;
+}
+
+function showResult(score, endedEarly = false) {
+  clearInterval(clockTimer);
+  $('questionPanel').hidden = true;
+  $('resultPanel').hidden = false;
+  // The server's count of what it recorded, so the score shown here is
+  // the one the history will show later.
+  const { correct, answered, total } = score;
+  if (endedEarly) {
+    $('score').textContent = `${correct} out of ${answered}`;
+    $('scoreNote').textContent = answered
+      ? `Ended early: ${answered} of ${total} answered. The ones you skipped do not count.`
+      : 'Ended before any answer. Nothing was counted.';
+  } else {
     $('score').textContent = `${correct} out of ${total}`;
     $('scoreNote').textContent =
       correct === total
         ? 'All correct.'
         : 'Read the explanations for the ones you missed — they cite the page.';
-    loadQuizHistory();
   }
+  if (score.elapsed_seconds != null) {
+    $('scoreNote').textContent += ` Time: ${formatDuration(score.elapsed_seconds)}.`;
+  }
+  // Answering is over: Leave/End would only confuse.
+  $('quizStop').hidden = true;
+  loadQuizHistory();
+}
+
+$('quizStop').addEventListener('click', async () => {
+  const id = quiz.sessionId;
+  if (!id) return;
+  try {
+    if (quiz.kind === 'test') {
+      await api(`/quiz/sessions/${id}/leave`, { method: 'POST' });
+      closeStage();
+      $('quizNotice').innerHTML =
+        '<div class="notice">Test saved. Continue it any time from Recent quizzes.</div>';
+      loadQuizHistory();
+    } else {
+      const score = await api(`/quiz/sessions/${id}/end`, { method: 'POST' });
+      showResult(score, true);
+    }
+  } catch (err) {
+    $('quizNotice').innerHTML =
+      `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  }
+});
+
+async function continueTest(id) {
+  try {
+    const data = await api(`/quiz/sessions/${id}/resume`, { method: 'POST' });
+    // Every question comes back; answered ones with their result, to be
+    // looked at but not answered again. Start at the first unanswered.
+    const results = data.questions.map((q) =>
+      q.result ? { selected: q.selected_option_id, result: q.result } : null);
+    quiz = {
+      sessionId: data.session_id,
+      kind: 'test',
+      questions: data.questions,
+      index: Math.max(0, results.findIndex((r) => !r)),
+      offset: 0,
+      total: data.total,
+      results,
+      score: data,
+      answered: quiz.answered,
+    };
+    $('quizNotice').innerHTML = '';
+    $('resultPanel').hidden = true;
+    openStage(data.elapsed_seconds);
+    showQuestion();
+  } catch (err) {
+    $('quizNotice').innerHTML =
+      `<div class="notice bad">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+// Closing the tab mid-test leaves the test, so its clock stops. The
+// server caps any stretch anyway, in case this never arrives.
+window.addEventListener('pagehide', () => {
+  if (quiz.kind === 'test' && quiz.sessionId && !$('questionPanel').hidden) {
+    navigator.sendBeacon(`/quiz/sessions/${quiz.sessionId}/leave`);
+  }
+});
+
+$('historyList').addEventListener('click', (e) => {
+  const id = e.target.closest('[data-continue]')?.dataset.continue;
+  if (id) continueTest(id);
 });
 
 async function loadQuizHistory() {
@@ -1338,11 +1818,24 @@ async function loadQuizHistory() {
         : s.concepts.join(', ');
       // A quiz left halfway is shown as such, not scored as if the
       // unanswered questions were wrong.
-      const result = s.finished
-        ? `${s.correct} / ${s.total}`
-        : `<span class="unfinished">${s.answered} of ${s.total} answered</span>`;
+      const time = s.seconds != null ? ` · ${formatDuration(s.seconds)}` : '';
+      let result;
+      if (s.finished) {
+        result = `${s.correct} / ${s.total}${time}`;
+      } else if (s.can_continue) {
+        result = `<span class="unfinished">${s.answered} of ${s.total} answered${time} · left</span>` +
+          `<button class="link" data-continue="${escapeHtml(s.id)}">Continue</button>`;
+      } else if (s.stopped === 'ended') {
+        result = `<span class="unfinished">${s.correct} / ${s.answered} · ended early</span>`;
+      } else {
+        result = `<span class="unfinished">${s.answered} of ${s.total} answered</span>`;
+      }
+      // A test covers every topic, so its topic list says nothing useful.
+      const what = s.kind === 'test'
+        ? '<span class="kind">Test</span>every topic'
+        : escapeHtml(topics);
       return `<li><span class="when">${escapeHtml(when)}</span>` +
-        `<span class="what">${escapeHtml(topics)}</span>` +
+        `<span class="what">${what}</span>` +
         `<span class="result">${result}</span></li>`;
     }).join('');
   } catch (err) {
@@ -1457,14 +1950,11 @@ $('progressMode').addEventListener('click', async (e) => {
   const slug = e.target.closest('[data-practise]')?.dataset.practise;
   if (!slug) return;
   await switchMode('quiz');
-  const select = $('quizConcept');
-  if ([...select.options].some((o) => o.value === slug)) {
-    select.value = slug;
+  if (selectTopic(slug)) {
     $('quizNotice').innerHTML = '';
   } else {
     // Concepts without questions are not in the list; say so rather than
     // quietly starting a quiz on something else.
-    select.value = '';
     $('quizNotice').innerHTML =
       '<div class="notice bad">There are no questions for that concept yet.</div>';
   }

@@ -182,6 +182,17 @@ def init_db() -> None:
                 "ON attempts (session_id, question_id)"
             )
         )
+        # Test me: timed tests that can be left and continued, and quizzes
+        # ended early. Columns on a table that already existed.
+        for column, spec in (
+            ("kind", "varchar(20) NOT NULL DEFAULT 'practice'"),
+            ("stopped", "varchar(20)"),
+            ("active_seconds", "integer NOT NULL DEFAULT 0"),
+            ("timing_since", "timestamptz"),
+        ):
+            conn.execute(
+                text(f"ALTER TABLE quiz_sessions ADD COLUMN IF NOT EXISTS {column} {spec}")
+            )
         # Named misconceptions. The misconceptions table is new, so
         # create_all made it; the link on question_options is a column added
         # to a table that already existed.

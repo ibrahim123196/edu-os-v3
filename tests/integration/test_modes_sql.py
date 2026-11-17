@@ -110,7 +110,7 @@ def test_practice_on_a_named_topic_offers_that_quiz(world):
     assert body["mode"] == "practice"
     assert body["understood_as"] == f"Practice questions on {ZORB}"
     assert body["action"] == {"kind": "quiz", "concept_slugs": [f"zorb-{TAG}"],
-                              "concept": ZORB, "count": 3}
+                              "concept": ZORB, "count": 3, "test": False}
     assert "only 3 on this topic" in body["answer"]
     assert model.answers == []                       # no textbook answer, no cost
 
@@ -136,6 +136,7 @@ def test_test_me_is_a_mixed_quiz(world):
     body = ask("test me")
     assert body["mode"] == "test"
     assert body["action"]["concept_slugs"] == [] and body["action"]["count"] >= 3
+    assert body["action"]["test"] is True          # starts a timed test, not a quiz
     assert body["understood_as"] == "Test across all topics"
 
 
@@ -301,7 +302,8 @@ def test_a_group_record_names_each_part(grouped):
 def test_the_practise_list_offers_the_group(grouped):
     with TestClient(app) as client:
         groups = client.get("/quiz/groups").json()
-    assert groups == [{"slug": f"zg-{TAG}", "name": ZORB, "chapter": False,
+    assert groups == [{"slug": f"zg-{TAG}", "name": ZORB, "aliases": [f"zorbery {TAG}"],
+                       "chapter": False,
                        "concept_slugs": [f"zorb-{TAG}", f"zorb-apps-{TAG}"], "questions": 7}]
 
 

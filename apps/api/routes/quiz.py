@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -22,7 +24,10 @@ router = APIRouter(prefix="/quiz", tags=["quiz"])
 
 class QuizRequest(BaseModel):
     concept_slugs: list[str] = Field(default_factory=list)
-    count: int = Field(default=5, ge=1, le=20)
+    # Up to 50 for a test; the page keeps a quiz to 20.
+    count: int = Field(default=5, ge=1, le=50)
+    # "test" is Test me: every topic, timed, can be left and continued.
+    kind: Literal["practice", "test"] = "practice"
     difficulty: int | None = Field(default=None, ge=1, le=5)
     exclude: list[uuid.UUID] = Field(default_factory=list)
 
@@ -39,6 +44,9 @@ class AnswerRequest(BaseModel):
 @router.post("")
 def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
     """Hand back questions. Correct answers are not included."""
+    if payload.kind == "test" and payload.concept_slugs:
+        raise HTTPException(status_code=400,
+                            detail="A test covers every topic; practise a topic instead.")
     concept_ids: list[uuid.UUID] = []
     if payload.concept_slugs:
         concepts = db.scalars(
@@ -61,28 +69,67 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
         exclude=payload.exclude or None,
         student_id=student_id,
     )
-    session = session_service.start_session(db, student_id, questions)
+    session = session_service.start_session(db, student_id, questions, kind=payload.kind)
     # get_db does not commit. Without this the session id goes to the
     # browser and the row it names is thrown away when the request ends.
     db.commit()
 
     return {
         "session_id": str(session.id) if session else None,
+        "kind": payload.kind,
         "count": len(questions),
-        "questions": [
-            {
-                "id": str(q.id),
-                "stem": q.stem,
-                "difficulty": q.difficulty,
-                "concept": q.concept_id and str(q.concept_id),
-                # Shuffled, and is_correct is deliberately absent.
-                "options": [
-                    {"id": str(o.id), "text": o.text} for o in shuffled(q)
-                ],
-            }
-            for q in questions
-        ],
+        "questions": [_question_out(q) for q in questions],
     }
+
+
+def _question_out(q: Question) -> dict:
+    return {
+        "id": str(q.id),
+        "stem": q.stem,
+        "difficulty": q.difficulty,
+        "concept": q.concept_id and str(q.concept_id),
+        # Shuffled, and is_correct is deliberately absent.
+        "options": [{"id": str(o.id), "text": o.text} for o in shuffled(q)],
+    }
+
+
+def _session_call(db: Session, fn, session_id: uuid.UUID) -> dict:
+    try:
+        out = fn(db, active_student_id(), session_id)
+    except session_service.SessionError as err:
+        raise HTTPException(status_code=err.status_code, detail=err.message) from err
+    db.commit()
+    return out
+
+
+@router.post("/sessions/{session_id}/leave")
+def leave_test(session_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Leave a test part-way; it stays in the history to continue later."""
+    return _session_call(db, session_service.leave, session_id)
+
+
+@router.post("/sessions/{session_id}/end")
+def end_quiz(session_id: uuid.UUID, db: Session = Depends(get_db)):
+    """End a quiz early. Answers given count; the rest are left out."""
+    return _session_call(db, session_service.end, session_id)
+
+
+@router.post("/sessions/{session_id}/resume")
+def resume_test(session_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Continue a left test: the clock restarts and every question returns;
+    answered ones carry their result, to look at but not answer again."""
+    from apps.api.services.quiz_service import explain
+
+    out = _session_call(db, session_service.resume, session_id)
+    questions = []
+    for q, answer in out["questions"]:
+        item = _question_out(q)
+        if answer is not None:
+            item["selected_option_id"] = answer[0] and str(answer[0])
+            item["result"] = explain(q, answer[0])
+        questions.append(item)
+    out["questions"] = questions
+    return out
 
 
 @router.post("/answer")
@@ -171,7 +218,8 @@ def groups_with_questions(db: Session = Depends(get_db)):
     for g in sorted(GROUPS, key=lambda g: not g.chapter):
         members = [by_slug[m] for m in g.members if m in by_slug and available.get(by_slug[m].id)]
         if members:
-            out.append({"slug": g.slug, "name": g.name, "chapter": g.chapter,
+            out.append({"slug": g.slug, "name": g.name, "aliases": list(g.aliases),
+                        "chapter": g.chapter,
                         "concept_slugs": [c.slug for c in members],
                         "questions": sum(available[c.id] for c in members)})
     return out

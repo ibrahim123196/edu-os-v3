@@ -302,6 +302,20 @@ class QuizSession(Base):
     # unfinished rather than being scored as if the rest were wrong.
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # "practice" (a quiz on chosen topics) or "test" (Test me: every topic,
+    # timed, can be left and continued).
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="practice",
+                                      server_default="practice")
+    # How it stopped short of the last question, if it did: "left" (a test,
+    # to be continued) or "ended" (a quiz the student finished early).
+    stopped: Mapped[str | None] = mapped_column(String(20))
+    # Tests only. Time spent answering, kept by the server so a closed tab
+    # or a sleeping laptop can neither lose it nor add to it: seconds banked
+    # so far, plus the stretch running since timing_since, if one is.
+    active_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0,
+                                                server_default="0")
+    timing_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     questions: Mapped[list["QuizSessionQuestion"]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",

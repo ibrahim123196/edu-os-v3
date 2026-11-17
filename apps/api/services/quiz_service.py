@@ -319,10 +319,6 @@ def grade(
         correct_option and selected_option_id and correct_option.id == selected_option_id
     )
 
-    chosen = next(
-        (o for o in question.options if o.id == selected_option_id), None
-    )
-
     # No default student. A fallback here is how test clicks once landed on
     # the real student: a caller that forgets to say whose answer this is
     # should fail loudly, not guess.
@@ -343,6 +339,19 @@ def grade(
 
     record_attempt(db, student_id, question)
 
+    return explain(question, selected_option_id)
+
+
+def explain(question: Question, selected_option_id: uuid.UUID | None) -> dict:
+    """What the student is shown after answering: right or wrong, the right
+    option, the explanation. Records nothing, so it can also show again an
+    answer given earlier -- going back to a question in a test, or after
+    continuing one."""
+    correct_option = next((o for o in question.options if o.is_correct), None)
+    is_correct = bool(
+        correct_option and selected_option_id and correct_option.id == selected_option_id
+    )
+    chosen = next((o for o in question.options if o.id == selected_option_id), None)
     return {
         "correct": is_correct,
         "correct_option_id": str(correct_option.id) if correct_option else None,

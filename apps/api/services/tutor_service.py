@@ -79,6 +79,12 @@ def find_topic(db: Session, topic: str) -> TopicMatch | None:
 
     if not topic.strip():
         return None
+    # Typos first, with the same corrector questions get: "capactiors" was
+    # once looked up as typed, matched nothing, and the student was told
+    # their course had no such topic.
+    from ai.retrieval.spelling import correct_query
+
+    topic, _ = correct_query(db, topic)
     concepts = db.scalars(select(Concept)).all()
     by_slug = {c.slug: c for c in concepts}
     wanted = f" {_norm(topic)} "
@@ -175,7 +181,7 @@ def quiz_reply(db: Session, mode: Mode, topic: str) -> ModeReply:
                   f"all topics, weighted towards the ones you are weakest at. "
                   f"It is scored and saved in your quiz history."),
             understood_as=f"{kind.capitalize()} across all topics",
-            action=quiz_action([], None, n),
+            action=quiz_action([], None, n, test=mode == Mode.test),
             trace=trace,
         )
 
@@ -220,10 +226,12 @@ def _listing(names: list[str]) -> str:
     return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
 
-def quiz_action(members: list[Concept], label: str | None, count: int) -> dict:
-    """What the page's Start button sends to the quiz."""
+def quiz_action(members: list[Concept], label: str | None, count: int,
+                test: bool = False) -> dict:
+    """What the page's Start button sends to the quiz. test: a timed Test
+    me sitting, every topic, rather than a quiz."""
     return {"kind": "quiz", "concept_slugs": [c.slug for c in members],
-            "concept": label, "count": count}
+            "concept": label, "count": count, "test": test}
 
 
 # --- review: an answer plus the student's own record -------------------------
