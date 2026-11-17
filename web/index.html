@@ -627,6 +627,7 @@
         <div class="you-asked" id="youAsked"></div>
         <div class="meant" id="meant" hidden></div>
         <div class="progress-note" id="progressNote" hidden></div>
+        <div class="meant" id="pitchNote" hidden></div>
         <div class="diagnosis" id="mixup" hidden style="margin:0 0 10px;"></div>
         <div class="corrected" id="corrected" hidden></div>
         <div class="answer-body" id="answerBody"></div>
@@ -969,6 +970,11 @@ function renderAnswer(data) {
   note.hidden = !data.progress_note;
   note.textContent = data.progress_note || '';
 
+  // Said whenever the answer was pitched to the student's record, never
+  // hidden: "Pitched simpler: your quiz record on Capacitance is 35%...".
+  $('pitchNote').hidden = !data.pitch_note;
+  $('pitchNote').textContent = data.pitch_note || '';
+
   // A known mistake the question stated; the answer below corrects it.
   $('mixup').hidden = !data.misconception;
   $('mixup').textContent = data.misconception
@@ -1176,6 +1182,7 @@ async function ask() {
     $('meant').hidden = true;
     $('progressNote').hidden = true;
     $('mixup').hidden = true;
+    $('pitchNote').hidden = true;
     $('actionRow').hidden = true;
     $('corrected').hidden = true;
     $('sourcesWrap').hidden = true;
@@ -1458,24 +1465,29 @@ async function startQuiz(slugs, countOverride, kind = 'practice') {
   btn.textContent = 'Loading…';
   $('quizNotice').innerHTML = '';
 
-  try {
-    const data = await api('/quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        concept_slugs: chosen,
-        count,
-        kind,
-        // Never repeat a question inside one sitting.
-        exclude: quiz.answered,
-      }),
-    });
+  const ask = (exclude) => api('/quiz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ concept_slugs: chosen, count, kind, exclude }),
+  });
 
+  try {
+    // New questions first: nothing answered in this visit is repeated
+    // while there is something else to ask.
+    let data = await ask(quiz.answered);
+    let repeating = false;
+    // Every question on the topic already answered: start again with the
+    // same ones. "No questions left" after Practise again was a dead end.
+    if (!data.count && quiz.answered.length) {
+      data = await ask([]);
+      repeating = data.count > 0;
+    }
     if (!data.count) {
       $('quizNotice').innerHTML =
-        '<div class="notice bad">No questions left for that topic.</div>';
+        '<div class="notice bad">No questions for that topic yet.</div>';
       return;
     }
+
     quiz = {
       sessionId: data.session_id,
       kind,
@@ -1493,6 +1505,12 @@ async function startQuiz(slugs, countOverride, kind = 'practice') {
     $('resultPanel').hidden = true;
     openStage(0);
     showQuestion();
+    // After showQuestion, which clears notices.
+    if (repeating) {
+      $('quizNotice').innerHTML =
+        '<div class="notice">You have answered every question on this topic. ' +
+        'Here they are again.</div>';
+    }
   } catch (err) {
     $('quizNotice').innerHTML =
       `<div class="notice bad">${escapeHtml(err.message)}</div>`;

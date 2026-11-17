@@ -40,7 +40,7 @@ from ai.retrieval.hybrid import (
 from ai.retrieval.intent import detect as detect_intent
 from ai.retrieval.query import prepare_query
 from ai.retrieval.rerank import get_reranker
-from ai.tutor import mixups
+from ai.tutor import mixups, pitch
 from ai.tutor.conversation import Turn, standalone_question
 from apps.api.config import settings
 from apps.api.curriculum import SourceKind
@@ -62,6 +62,55 @@ class AskResult:
     searched_as: str | None = None
     # A known mistake the student's message stated, corrected in the answer.
     misconception: mixups.MixUp | None = None
+    # How the answer was pitched to the student's record, and why.
+    pitch: pitch.Pitch = pitch.AS_FOR_ANYONE
+
+
+def _shown_mix_up(spotted, grounded: bool, pitched: pitch.Pitch):
+    """The mix-up to show for the message, if any.
+
+    Not without sources behind the correction: then it is the model's
+    opinion. Not when it is a mistake the pitch note already names as one
+    the student repeats in quizzes: "What is capacitance?" was once shown
+    as stating that mistake, because the model had just been told about it.
+    Either way it stays in the trace.
+    """
+    if spotted is None or not grounded:
+        return None
+    if spotted.slug and spotted.slug in pitched.repeated:
+        return None
+    return spotted
+
+
+def _pitch(db: Session, student_id, chunk_ids: list) -> pitch.Pitch:
+    """The pitch for the topic the answer is about: the concepts tagged on
+    the best passage that has any. Several passages can span several
+    topics; the best one is what the answer leads with."""
+    from sqlalchemy import select
+
+    from apps.api.curriculum import Concept, chunk_concepts
+    from apps.api.services.mastery_service import estimates_for
+    from apps.api.services.misconception_service import mistake_summary
+
+    rows = db.execute(
+        select(chunk_concepts.c.chunk_id, chunk_concepts.c.concept_id)
+        .where(chunk_concepts.c.chunk_id.in_(chunk_ids))
+    ).all() if chunk_ids else []
+    by_chunk: dict = {}
+    for chunk_id, concept_id in rows:
+        by_chunk.setdefault(chunk_id, []).append(concept_id)
+    concept_ids = next((by_chunk[c] for c in chunk_ids if c in by_chunk), [])
+    if not concept_ids:
+        return pitch.AS_FOR_ANYONE
+
+    concepts = {c.id: c for c in db.scalars(select(Concept).where(Concept.id.in_(concept_ids)))}
+    found = estimates_for(db, student_id, concept_ids)
+    slugs = {c.slug for c in concepts.values()}
+    repeated = [r for r in mistake_summary(db, student_id)["repeated"]
+                if r["concept_slug"] in slugs]
+    chosen = pitch.choose({concepts[cid].name: est for cid, est in found.items()},
+                          [r["mistake"] for r in repeated])
+    return replace(chosen, repeated=tuple(r["slug"] for r in repeated))
 
 
 def resolve_follow_up(question: str, history: list[Turn]) -> str | None:
@@ -84,6 +133,7 @@ def ask(
     history: list[Turn] | None = None,
     search_as: str | None = None,
     watch_for_mixups: bool = True,
+    student_id=None,
 ) -> AskResult:
     started = time.perf_counter()
     trace: dict = {"stages": {}}
@@ -254,6 +304,16 @@ def ask(
     # states one. Not for a request the student did not write (a revision
     # summary): there is no student sentence to find a mistake in.
     offered = mixups.offered_for(db, [c.chunk_id for c in top]) if watch_for_mixups else []
+    # Pitched to the student's record on the topic, when there is enough
+    # of one; otherwise exactly as for anyone.
+    pitched = _pitch(db, student_id, [c.chunk_id for c in top]) if student_id else pitch.AS_FOR_ANYONE
+    trace["stages"]["pitch"] = {"level": pitched.level, "note": pitched.note}
+    extra = "\n\n".join(
+        part for part in (
+            pitched.instruction,
+            mixups.instruction(offered) if offered else None,
+        ) if part
+    ) or None
 
     t0 = time.perf_counter()
     raw = llm.complete(
@@ -263,7 +323,7 @@ def ask(
         messages=build_messages(
             question if (history or search_as) else prepared.original, top,
             history=history, standalone=standalone,
-            extra=mixups.instruction(offered) if offered else None,
+            extra=extra,
         ),
     )
     trace["stages"]["generation"] = {
@@ -295,7 +355,8 @@ def ask(
         searched_as=standalone,
         # Only alongside an answer that stands on the sources: a correction
         # with no citation behind it is the model's opinion.
-        misconception=spotted if answer.grounded else None,
+        misconception=_shown_mix_up(spotted, answer.grounded, pitched),
+        pitch=pitched,
     )
 
 
