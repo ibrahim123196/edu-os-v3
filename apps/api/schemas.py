@@ -51,6 +51,12 @@ class AskRequest(BaseModel):
     include_trace: bool = Field(
         default=False, description="Return the per-stage retrieval trace."
     )
+    lesson: bool = Field(
+        default=False,
+        description="From the Lesson section: teach `question` (a topic) as a "
+                    "step-by-step lesson. Without it, every message is answered "
+                    "in the ordinary way, however it is worded.",
+    )
 
 
 class AskResponse(BaseModel):
@@ -75,6 +81,8 @@ class AskResponse(BaseModel):
     action: dict | None = None
     # Review: the student's record on the topic, from the database.
     progress_note: str | None = None
+    # "Teach me ...": steps, mini-question and check, when it is a lesson.
+    lesson: dict | None = None
     # Why the answer was pitched simpler or deeper, when it was.
     pitch_note: str | None = None
     # A known mistake the student's message stated, which the answer

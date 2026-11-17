@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from apps.api.config import settings
 from apps.api.db import init_db
-from apps.api.routes import chat, documents, health, progress, quiz
+from apps.api.routes import chat, documents, figures, health, progress, quiz
 
 logging.basicConfig(
     level=settings.log_level,
@@ -56,6 +56,7 @@ app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(quiz.router)
 app.include_router(progress.router)
+app.include_router(figures.router)
 
 if WEB_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")

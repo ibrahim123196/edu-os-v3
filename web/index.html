@@ -199,6 +199,33 @@
     max-width: 68ch;
   }
   .answer-body p { margin: 0 0 0.9em; }
+  .answer-body hr { border: 0; border-top: 1px solid var(--line); margin: 1.1em 0; }
+
+  /* --- lesson: one step at a time ---------------------------------------- */
+  /* Controls inside a lesson are the interface, not the reading text: the
+     answer's book font made "Get feedback" and the step numbers look odd. */
+  .answer-body button, .answer-body textarea { font-family: var(--sans); font-size: 14px; }
+  .lesson-dots { display: flex; gap: 6px; margin: 2px 0 14px; flex-wrap: wrap; }
+  .lesson-dots button {
+    width: 26px; height: 26px; padding: 0; border-radius: 50%; font-size: 12px;
+    color: var(--muted); background: var(--surface); border: 1px solid var(--line);
+  }
+  .lesson-dots button.done { color: var(--ink); border-color: var(--ink); }
+  .lesson-dots button.current { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .lesson-step-title { font-family: var(--sans, inherit); font-size: 15px; font-weight: 600;
+    margin: 0 0 8px; }
+  .lesson-panel { border-left: 4px solid var(--focus); }
+  .lesson-figure { margin: 4px 0 14px; padding: 10px; background: #fff;
+    border: 1px solid var(--line, #ddd); border-radius: 8px; text-align: center; }
+  .lesson-figure img { max-width: 100%; max-height: 420px; height: auto; }
+  .lesson-figure figcaption { font-family: var(--sans, inherit); font-size: 12px;
+    color: var(--muted, #666); margin-top: 6px; }
+  .lesson-nav { display: flex; gap: 8px; margin-top: 16px; }
+  .lesson-q .stem { margin-bottom: 10px; }
+  .lesson-q .choice { display: block; width: 100%; text-align: left; margin-bottom: 6px; }
+  .lesson-check textarea { width: 100%; min-height: 80px; margin: 8px 0; }
+  .lesson-feedback { margin-top: 10px; padding: 10px 12px; background: var(--paper);
+    border-radius: 4px; }
   .answer-body h3 {
     font-family: var(--sans);
     font-size: 15px;
@@ -587,6 +614,21 @@
     </div>
 
     <div id="askMode">
+    <!-- A full lesson is asked for here, not guessed from words typed in
+         the ask box: the box below always gives a short answer. -->
+    <section class="panel lesson-panel">
+      <h2>Full lesson</h2>
+      <p class="hint">A topic taught step by step: the idea, a simple explanation,
+        the textbook figure, a worked example, a common mistake, a question,
+        and a check in your own words.</p>
+      <div class="row" style="align-items:center; gap:8px;">
+        <input type="text" id="lessonTopic" list="lessonTopics" autocomplete="off"
+               placeholder="Topic, e.g. capacitance" style="flex:1;">
+        <datalist id="lessonTopics"></datalist>
+        <button id="lessonBtn" style="flex:0 0 auto;">Start lesson</button>
+      </div>
+    </section>
+
     <section class="panel">
       <h2>Ask your tutor</h2>
       <p class="hint">Answers come only from your uploaded material, not from general knowledge.</p>
@@ -954,7 +996,11 @@ function renderAnswer(data) {
     corrected.hidden = true;
   }
 
-  $('answerBody').innerHTML = renderAnswer_(data.answer);
+  if (data.lesson) {
+    startLesson(data);
+  } else {
+    $('answerBody').innerHTML = renderAnswer_(data.answer);
+  }
 
   // A follow-up is searched as the full question it stands for. Showing
   // it lets the student spot when "that" was taken to mean the wrong thing.
@@ -1006,7 +1052,21 @@ function renderAnswer(data) {
     wrap.hidden = true;
   }
 
-  $('answerBody').querySelectorAll('[data-cite]').forEach((btn) => {
+  wireCites($('answerBody'));
+
+  const traceWrap = $('traceWrap');
+  if (data.trace) {
+    traceWrap.hidden = false;
+    $('traceBody').textContent = JSON.stringify(data.trace, null, 2);
+  } else {
+    traceWrap.hidden = true;
+  }
+}
+
+// Citation buttons scroll to their source. A lesson draws its steps one
+// at a time, so each newly drawn step is wired again.
+function wireCites(container) {
+  container.querySelectorAll('[data-cite]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = document.getElementById(`src-${btn.dataset.cite}`);
       if (!target) return;
@@ -1017,14 +1077,155 @@ function renderAnswer(data) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   });
+}
 
-  const traceWrap = $('traceWrap');
-  if (data.trace) {
-    traceWrap.hidden = false;
-    $('traceBody').textContent = JSON.stringify(data.trace, null, 2);
+/* ---------------------------------------------------------------- lesson */
+// "Teach me ...": the steps one at a time. The mini-question is a real
+// question from the bank, answered like any quiz question (scored and
+// saved); the check asks for the idea in the student's own words and gets
+// feedback judged against the lesson's own sources.
+let lessonState = null;
+
+function startLesson(data) {
+  const l = data.lesson;
+  const steps = l.steps.map((s) => ({
+    kind: 'text', title: s.title, text: s.text,
+    figure: s.key === 'visual' ? l.figure : null,
+  }));
+  if (l.quiz) steps.push({ kind: 'quiz', title: 'Try a question', quiz: l.quiz, result: null });
+  if (l.check) steps.push({ kind: 'check', title: 'Check your understanding', check: l.check, feedback: null });
+  lessonState = { steps, index: 0, seen: new Set([0]), messageId: data.message_id };
+  drawLessonStep();
+}
+
+function drawLessonStep() {
+  const st = lessonState;
+  const step = st.steps[st.index];
+  const dots = st.steps.map((s, i) =>
+    `<button class="${[st.seen.has(i) ? 'done' : '', i === st.index ? 'current' : ''].join(' ')}"
+       data-step="${i}" aria-label="Step ${i + 1}: ${escapeHtml(s.title)}">${i + 1}</button>`).join('');
+  let body = '';
+  if (step.kind === 'text') {
+    // The textbook's own figure above the words, when one was cut cleanly;
+    // if the picture fails to load, it is removed and the words remain.
+    const f = step.figure;
+    const fig = f ? `<figure class="lesson-figure"><img src="${escapeHtml(f.url)}"
+        alt="Figure ${escapeHtml(f.label)} from the textbook" onerror="this.parentNode.remove()">` +
+      `<figcaption>Figure ${escapeHtml(f.label)}${f.page ? `, page ${f.page}` : ''}</figcaption></figure>` : '';
+    body = fig + renderAnswer_(step.text);
+  } else if (step.kind === 'quiz') {
+    const q = step.quiz.question;
+    body = `<div class="lesson-q"><div class="stem">${renderAnswer_(q.stem)}</div>` +
+      q.options.map((o) => `<button class="choice" data-option="${escapeHtml(o.id)}">${escapeHtml(o.text)}</button>`).join('') +
+      `<div class="lesson-feedback" id="lessonQuizResult" hidden></div></div>`;
   } else {
-    traceWrap.hidden = true;
+    body = `<div class="lesson-check"><p>${escapeHtml(step.check)}</p>` +
+      `<textarea id="lessonReply" placeholder="Explain it in your own words"></textarea>` +
+      `<button id="lessonSubmit">Get feedback</button>` +
+      `<div class="lesson-feedback" id="lessonFeedback" hidden></div></div>`;
   }
+  const last = st.index === st.steps.length - 1;
+  $('answerBody').innerHTML =
+    `<div class="lesson-dots">${dots}</div>` +
+    `<div class="lesson-step-title">Step ${st.index + 1} of ${st.steps.length} · ${escapeHtml(step.title)}</div>` +
+    body +
+    `<div class="lesson-nav">` +
+    `<button class="quiet" id="lessonBack" ${st.index === 0 ? 'disabled' : ''}>‹ Back</button>` +
+    `${last ? '' : '<button id="lessonNext">Next ›</button>'}</div>`;
+  wireCites($('answerBody'));
+
+  $('answerBody').querySelectorAll('[data-step]').forEach((b) =>
+    b.addEventListener('click', () => goLessonStep(Number(b.dataset.step))));
+  $('lessonBack').addEventListener('click', () => goLessonStep(st.index - 1));
+  if (!last) $('lessonNext').addEventListener('click', () => goLessonStep(st.index + 1));
+  if (step.kind === 'quiz') drawLessonQuiz(step);
+  if (step.kind === 'check') drawLessonCheck(step);
+}
+
+function goLessonStep(i) {
+  const st = lessonState;
+  if (i < 0 || i >= st.steps.length) return;
+  st.index = i;
+  st.seen.add(i);
+  drawLessonStep();
+}
+
+function drawLessonQuiz(step) {
+  const buttons = [...$('answerBody').querySelectorAll('[data-option]')];
+  const show = (r, chosen) => {
+    buttons.forEach((b) => {
+      b.disabled = true;
+      if (b.dataset.option === r.correct_option_id) b.classList.add('right');
+      else if (b.dataset.option === chosen) b.classList.add('wrong');
+    });
+    const box = $('lessonQuizResult');
+    box.hidden = false;
+    box.innerHTML = `<strong>${r.correct ? 'Right.' : 'Not quite.'}</strong> ` + escapeHtml(r.explanation) +
+      (!r.correct && r.mistake ? `<div class="hint" style="margin-top:6px;">Common mistake: ${escapeHtml(r.mistake)}</div>` : '');
+  };
+  // Answered already in this lesson: shown as it was, locked.
+  if (step.result) { show(step.result, step.chosen); return; }
+  buttons.forEach((b) => b.addEventListener('click', async () => {
+    buttons.forEach((x) => { x.disabled = true; });
+    try {
+      const res = await api('/quiz/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: step.quiz.session_id,
+          question_id: step.quiz.question.id, selected_option_id: b.dataset.option }),
+      });
+      step.result = res;
+      step.chosen = b.dataset.option;
+      show(res, b.dataset.option);
+    } catch (err) {
+      buttons.forEach((x) => { x.disabled = false; });
+      $('lessonQuizResult').hidden = false;
+      $('lessonQuizResult').textContent = err.message;
+    }
+  }));
+}
+
+// Feedback cites the lesson's sources by page, written out: its own
+// numbering would not match the list under the lesson.
+function feedbackHtml(fb) {
+  const text = fb.feedback.replace(/\s*\[S(\d+)\]/g, (m, n) => {
+    const c = fb.citations[Number(n) - 1];
+    return c ? ` (${c.page_label})` : '';
+  });
+  return renderAnswer_(text);
+}
+
+function drawLessonCheck(step) {
+  const box = $('lessonFeedback');
+  if (step.feedback) {
+    $('lessonReply').value = step.reply;
+    box.hidden = false;
+    box.innerHTML = feedbackHtml(step.feedback);
+  }
+  $('lessonSubmit').addEventListener('click', async () => {
+    const reply = $('lessonReply').value.trim();
+    if (!reply) return;
+    const btn = $('lessonSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    try {
+      const fb = await api(`/chat/lessons/${lessonState.messageId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply }),
+      });
+      step.feedback = fb;
+      step.reply = reply;
+      box.hidden = false;
+      box.innerHTML = feedbackHtml(fb);
+    } catch (err) {
+      box.hidden = false;
+      box.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Get feedback';
+    }
+  });
 }
 
 /* A deliberately small Markdown renderer.
@@ -1048,7 +1249,11 @@ function renderAnswer_(text) {
     const isFormula = /^[A-Za-z\u03b1-\u03c9][\s\S]{0,60}=/.test(line)
       && line.length < 70 && !/[.!?]$/.test(line);
 
-    if (/^#{1,6}\s/.test(line)) {
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+      // A divider the model draws between sections, not text to show.
+      closeList();
+      out.push('<hr>');
+    } else if (/^#{1,6}\s/.test(line)) {
       closeList();
       out.push('<h3>' + inline_(line.replace(/^#{1,6}\s*/, '')) + '</h3>');
     } else if (/^[-*]\s/.test(line)) {
@@ -1141,13 +1346,18 @@ function newChat() {
   $('questionInput').focus();
 }
 
-async function ask() {
-  const question = $('questionInput').value.trim();
-  if (!question) return;
+async function ask(lesson = false) {
+  const box = lesson ? $('lessonTopic') : $('questionInput');
+  const question = box.value.trim();
+  if (!question) { box.focus(); return; }
 
-  const btn = $('askBtn');
+  const btn = lesson ? $('lessonBtn') : $('askBtn');
+  const label = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Looking…';
+  btn.textContent = lesson ? 'Preparing…' : 'Looking…';
+  // A lesson starts its own chat. Follow-ups typed in the ask box after it
+  // ("explain step 2 more simply") then build on the lesson.
+  if (lesson) newChat();
 
   const scope = $('scopeSelect').value;
   try {
@@ -1159,16 +1369,19 @@ async function ask() {
         document_ids: scope ? [scope] : [],
         include_trace: $('traceToggle').checked,
         conversation_id: chatId,
+        lesson,
       }),
     });
     if (shown) pushToThread(shown);
     chatId = data.conversation_id;
-    shown = { question, answer: data.answer };
-    $('youAsked').textContent = question;
+    const asked = lesson ? `Lesson: ${question}` : question;
+    shown = { question: asked, answer: data.answer };
+    $('youAsked').textContent = asked;
     renderAnswer(data);
-    $('questionInput').value = '';
+    box.value = '';
     $('questionInput').placeholder = 'Ask a follow-up, e.g. "explain that more simply"';
     $('newChatBtn').hidden = false;
+    if (lesson) $('answerPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     $('answerEmpty').hidden = true;
     $('answerWrap').hidden = false;
@@ -1178,7 +1391,7 @@ async function ask() {
     $('answerBody').textContent = err.message;
     // The question stays in the box to retry, and the chat is unchanged:
     // the server keeps an unanswered question out of the history.
-    $('youAsked').textContent = question;
+    $('youAsked').textContent = lesson ? `Lesson: ${question}` : question;
     $('meant').hidden = true;
     $('progressNote').hidden = true;
     $('mixup').hidden = true;
@@ -1189,15 +1402,19 @@ async function ask() {
     $('traceWrap').hidden = true;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Ask';
+    btn.textContent = label;
   }
 }
 
-$('askBtn').addEventListener('click', ask);
+$('askBtn').addEventListener('click', () => ask(false));
+$('lessonBtn').addEventListener('click', () => ask(true));
+$('lessonTopic').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') ask(true);
+});
 $('newChatBtn').addEventListener('click', newChat);
 $('actionBtn').addEventListener('click', runAction);
 $('questionInput').addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask(false);
 });
 
 /* ------------------------------------------------------------- quiz */
@@ -1375,6 +1592,10 @@ async function loadQuizConcepts() {
     // none produces an empty quiz and looks broken.
     quizTopics = { groups, concepts };
     for (const g of groups) quizGroups[g.slug] = g.concept_slugs;
+    // The lesson box suggests the same topics; anything else may be typed,
+    // for a lesson from the student's own material.
+    $('lessonTopics').innerHTML = [...new Set(allTopicEntries().map((e) => e.name))]
+      .map((n) => `<option value="${escapeHtml(n)}">`).join('');
     renderTopics();
     if (!concepts.length) {
       $('quizNotice').innerHTML =

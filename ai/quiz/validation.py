@@ -73,6 +73,27 @@ def _normalise(text: str) -> str:
     return re.sub(r"\s+", " ", "".join(kept)).strip()
 
 
+# A question shown on its own -- in a quiz, or in a lesson -- has no figure,
+# worked example or solution beside it. "In the solution shown, the field at
+# A points right..." was written from a passage holding an example, and to
+# the student reads as a reference to something missing.
+_UNSEEN_THING = r"(?:solution|worked example|example|figure|fig\.?|diagram|graph|table|circuit|arrangement|set-?up)"
+_REFERS_TO_UNSEEN = re.compile(
+    rf"\b{_UNSEEN_THING}\s+(?:shown|given|drawn|above|below)\b"
+    rf"|\b(?:shown|given|drawn)\s+(?:above|below|in\s+the\s+{_UNSEEN_THING})\b"
+    rf"|\bin\s+the\s+(?:above\s+|following\s+)?{_UNSEEN_THING}\b"
+    rf"|\bthe\s+(?:above|following)\s+{_UNSEEN_THING}\b"
+    r"|\b(?:fig(?:ure)?\.?|example)\s*\d+(?:\.\d+)?\b",
+    re.I,
+)
+
+
+def refers_to_unseen(stem: str) -> bool:
+    """Whether a question's stem points at a figure, example or solution
+    that is not shown with it."""
+    return bool(_REFERS_TO_UNSEEN.search(stem or ""))
+
+
 def validate_multiple_choice(
     stem: str,
     options: list[str],
@@ -148,6 +169,9 @@ def validate_multiple_choice(
     )
     if _references_source.search(stem):
         problems.append("stem refers to the passage instead of asking physics")
+
+    if refers_to_unseen(stem):
+        problems.append("stem refers to a figure, example or solution the student cannot see")
 
     # The explanation is read after answering, when the passage is not on
     # screen. "According to the passage..." points at something the student

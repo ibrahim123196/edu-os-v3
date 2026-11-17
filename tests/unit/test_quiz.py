@@ -339,3 +339,29 @@ def test_the_length_rule_compares_against_the_longest_distractor():
         "the two resistance ratios to be equal.",
     )
     assert result.ok, result.reason
+
+
+@pytest.mark.parametrize("stem", [
+    "In the solution shown, the electric field at A due to q1 points right. Why?",
+    "In Fig. 1.12, which way does the field point?",
+    "Using Example 2.3, what is the capacitance?",
+    "For the circuit shown, what is the current through R?",
+    "In the figure, the lines crowd near the charge. Why?",
+    "The graph above shows V against r. What does its slope give?",
+    "In the worked example, why is the stored energy halved?",
+])
+def test_a_stem_pointing_at_something_not_shown_is_rejected(stem):
+    """Asked on its own, the figure or solution it points at is missing."""
+    result = validate_multiple_choice(stem, ["Right", "Left", "Up", "Down"], 0, GOOD_EXPLANATION)
+    assert "stem refers to a figure, example or solution the student cannot see" in result.problems
+
+
+@pytest.mark.parametrize("stem", [
+    "Give an example of a good conductor of electricity.",
+    "Why do two electric field lines never cross each other?",
+    "The figure of merit of a galvanometer is defined as what?",
+    "A parallel plate capacitor has plates of area A. What is C?",
+])
+def test_ordinary_words_like_example_and_figure_are_not_caught(stem):
+    result = validate_multiple_choice(stem, ["Right", "Left", "Up", "Down"], 0, GOOD_EXPLANATION)
+    assert not any("cannot see" in p for p in result.problems)

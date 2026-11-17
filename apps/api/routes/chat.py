@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,7 +18,7 @@ from apps.api.db import get_db
 from apps.api.models import Conversation, Message
 from apps.api.schemas import AskRequest, AskResponse
 from ai.tutor.conversation import recent_history
-from ai.tutor.modes import Mode, detect, points_back
+from ai.tutor.modes import Mode, ModeGuess, detect, points_back
 from apps.api.student import active_student_id
 from apps.api.services import tutor_service
 from apps.api.services.rag_service import ask as run_pipeline
@@ -41,6 +43,12 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
 
     started = time.perf_counter()
     guess = detect(question)
+    if payload.lesson:
+        # The Lesson section: the box holds a topic ("capacitance"), or a
+        # request for one ("teach me capacitance"), whose request words are
+        # dropped. Never a quiz or a revision summary, whatever the words.
+        lesson_on = guess.topic if guess.cue and guess.topic else question
+        guess = ModeGuess(Mode.learn, lesson_on, "lesson section")
     topic = guess.topic
     mode_trace: dict = {"mode": guess.mode.value, "cue": guess.cue, "topic": topic}
     # "Quiz me on this": the topic is in the conversation, not the message.
@@ -91,6 +99,11 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             if questions:
                 action = tutor_service.quiz_action(
                     members, name, min(tutor_service.PRACTICE_COUNT, questions))
+    elif payload.lesson:
+        understood_as = f"Lesson on {topic}"
+        # A lesson teaches the topic whole: earlier turns would pull it
+        # towards whatever was discussed last.
+        ask_history = None
     elif guess.mode == Mode.learn:
         understood_as = f"Learning about {topic}" if topic else None
 
@@ -105,8 +118,14 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             ),
             history=ask_history,
             search_as=search_as,
-            watch_for_mixups=guess.mode != Mode.review,
+            # A request the student did not phrase as a claim -- a revision
+            # summary, "teach me" -- has no mistake in it to look for.
+            watch_for_mixups=guess.mode not in (Mode.review, Mode.learn),
             student_id=active_student_id(),
+            # Only from the Lesson section. "Teach me ..." typed in the ask
+            # box gets an ordinary answer: the long lesson is asked for, not
+            # guessed from the wording.
+            lesson_topic=topic if payload.lesson else None,
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -116,9 +135,10 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             status_code=500, detail=f"Something broke while answering: {exc}"
         ) from exc
 
-    latency = round((time.perf_counter() - started) * 1000, 1)
     answer = result.answer
     result.trace["mode"] = mode_trace
+    lesson = _lesson_payload(db, result) if result.lesson else None
+    latency = round((time.perf_counter() - started) * 1000, 1)
 
     message = Message(
         conversation_id=conversation.id,
@@ -154,8 +174,95 @@ def ask(payload: AskRequest, db: Session = Depends(get_db)):
             {"slug": result.misconception.slug, "label": result.misconception.label}
             if result.misconception else None
         ),
+        lesson=lesson,
         trace=result.trace if payload.include_trace else None,
     )
+
+
+def _lesson_payload(db, result) -> dict:
+    """The lesson's steps, its mini-question and its check, for the page.
+
+    The mini-question is a reviewed question from the bank on the lesson's
+    topic, handed out as a one-question quiz, so it is scored and saved
+    like any other. The passages are kept in the trace (saved with the
+    message), so feedback on the check is judged against the same ones.
+    """
+    from apps.api.routes.quiz import _question_out
+    from apps.api.services import figure_service, session_service
+    from apps.api.services.quiz_service import select_questions
+    from apps.api.services.rag_service import lead_concepts
+
+    lesson = result.lesson
+    concept_ids = lead_concepts(db, result.chunk_ids)
+    picked = select_questions(db, concept_ids, count=1, student_id=active_student_id()) \
+        if concept_ids else []
+    quiz = None
+    if picked:
+        session = session_service.start_session(db, active_student_id(), picked)
+        quiz = {"session_id": str(session.id), "question": _question_out(picked[0])}
+    result.trace["lesson_context"] = {
+        "chunk_ids": [str(c) for c in result.chunk_ids],
+        "check": lesson.check,
+        "quiz_session": quiz and quiz["session_id"],
+    }
+    visual = next((x for k, _, x in lesson.steps if k == "visual"), "")
+    # The passages the visual step itself cites, by its [S#] markers.
+    by_marker = {c.marker: c.chunk_id for c in result.answer.citations}
+    cited = [uuid.UUID(str(by_marker[m])) for m in
+             dict.fromkeys(re.findall(r"\[(S\d+)\]", visual)) if m in by_marker]
+    figure = figure_service.for_lesson(db, visual, result.chunk_ids, cited) if visual else None
+    result.trace["stages"].setdefault("lesson", {})["figure"] = figure and figure["label"]
+    return {
+        "steps": [{"key": k, "title": t, "text": x} for k, t, x in lesson.steps],
+        "figure": figure,
+        "quiz": quiz,
+        "check": lesson.check,
+        "misconception": (
+            {"slug": lesson.misconception.slug, "label": lesson.misconception.label}
+            if lesson.misconception else None
+        ),
+    }
+
+
+class FeedbackRequest(BaseModel):
+    reply: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/lessons/{message_id}/feedback")
+def lesson_feedback(message_id: uuid.UUID, payload: FeedbackRequest, db: Session = Depends(get_db)):
+    """Feedback on the student's own explanation, judged against the same
+    passages the lesson was written from. Saved in the conversation, so a
+    follow-up question can build on it."""
+    from ai.generation.answer import build_answer
+    from ai.prompts.grounded_answer import SYSTEM_PROMPT, format_context
+    from ai.tutor.lesson import FEEDBACK
+    from apps.api.services import rag_service
+    from apps.api.services.lesson_sources import load_chunks
+
+    message = db.get(Message, message_id)
+    context = (message.retrieval_trace or {}).get("lesson_context") if message else None
+    if not context or not context.get("check"):
+        raise HTTPException(status_code=404, detail="No lesson to give feedback on.")
+
+    chunks = load_chunks(db, [uuid.UUID(c) for c in context["chunk_ids"]])
+    reply = payload.reply.strip()
+    try:
+        raw = rag_service.get_llm().complete(system=SYSTEM_PROMPT, messages=[{
+            "role": "user",
+            "content": f"Sources:\n\n{format_context(chunks)}\n\n---\n\n"
+                       + FEEDBACK.format(check=context["check"], reply=reply),
+        }])
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    feedback = build_answer(raw, chunks)
+
+    db.add(Message(conversation_id=message.conversation_id, role="user", content=reply))
+    db.add(Message(conversation_id=message.conversation_id, role="assistant",
+                   content=feedback.answer, citations=[c.__dict__ for c in feedback.citations],
+                   grounded=feedback.grounded))
+    db.commit()
+    return {"feedback": feedback.answer, "grounded": feedback.grounded,
+            "citations": [c.__dict__ for c in feedback.citations]}
 
 
 def _mode_response(db, conversation, mode, reply, started, mode_trace, include_trace):

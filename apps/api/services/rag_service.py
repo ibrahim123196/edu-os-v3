@@ -40,6 +40,7 @@ from ai.retrieval.hybrid import (
 from ai.retrieval.intent import detect as detect_intent
 from ai.retrieval.query import prepare_query
 from ai.retrieval.rerank import get_reranker
+from ai.tutor import lesson as lessons
 from ai.tutor import mixups, pitch
 from ai.tutor.conversation import Turn, standalone_question
 from apps.api.config import settings
@@ -64,6 +65,11 @@ class AskResult:
     misconception: mixups.MixUp | None = None
     # How the answer was pitched to the student's record, and why.
     pitch: pitch.Pitch = pitch.AS_FOR_ANYONE
+    # "Teach me ...": the answer as lesson steps, when one was asked for and
+    # the model kept to the format. The passages it stands on, so feedback
+    # on the student's own explanation can be checked against the same.
+    lesson: lessons.Lesson | None = None
+    chunk_ids: list = field(default_factory=list)
 
 
 def _shown_mix_up(spotted, grounded: bool, pitched: pitch.Pitch):
@@ -82,15 +88,13 @@ def _shown_mix_up(spotted, grounded: bool, pitched: pitch.Pitch):
     return spotted
 
 
-def _pitch(db: Session, student_id, chunk_ids: list) -> pitch.Pitch:
-    """The pitch for the topic the answer is about: the concepts tagged on
-    the best passage that has any. Several passages can span several
-    topics; the best one is what the answer leads with."""
+def lead_concepts(db: Session, chunk_ids: list) -> list:
+    """The concepts an answer is about: those tagged on the best passage
+    that has any. Several passages can span several topics; the best one is
+    what the answer leads with."""
     from sqlalchemy import select
 
-    from apps.api.curriculum import Concept, chunk_concepts
-    from apps.api.services.mastery_service import estimates_for
-    from apps.api.services.misconception_service import mistake_summary
+    from apps.api.curriculum import chunk_concepts
 
     rows = db.execute(
         select(chunk_concepts.c.chunk_id, chunk_concepts.c.concept_id)
@@ -99,7 +103,18 @@ def _pitch(db: Session, student_id, chunk_ids: list) -> pitch.Pitch:
     by_chunk: dict = {}
     for chunk_id, concept_id in rows:
         by_chunk.setdefault(chunk_id, []).append(concept_id)
-    concept_ids = next((by_chunk[c] for c in chunk_ids if c in by_chunk), [])
+    return next((by_chunk[c] for c in chunk_ids if c in by_chunk), [])
+
+
+def _pitch(db: Session, student_id, chunk_ids: list) -> pitch.Pitch:
+    """The pitch for the topic the answer is about."""
+    from sqlalchemy import select
+
+    from apps.api.curriculum import Concept
+    from apps.api.services.mastery_service import estimates_for
+    from apps.api.services.misconception_service import mistake_summary
+
+    concept_ids = lead_concepts(db, chunk_ids)
     if not concept_ids:
         return pitch.AS_FOR_ANYONE
 
@@ -134,6 +149,7 @@ def ask(
     search_as: str | None = None,
     watch_for_mixups: bool = True,
     student_id=None,
+    lesson_topic: str | None = None,
 ) -> AskResult:
     started = time.perf_counter()
     trace: dict = {"stages": {}}
@@ -315,6 +331,10 @@ def ask(
         ) if part
     ) or None
 
+    if lesson_topic:
+        return _lesson(llm, lesson_topic, top, pitched, trace, started, prepared, standalone,
+                       offered=mixups.offered_for(db, [c.chunk_id for c in top]))
+
     t0 = time.perf_counter()
     raw = llm.complete(
         system=SYSTEM_PROMPT,
@@ -357,6 +377,61 @@ def ask(
         # with no citation behind it is the model's opinion.
         misconception=_shown_mix_up(spotted, answer.grounded, pitched),
         pitch=pitched,
+    )
+
+
+# Figures listed to the lesson's visual step: more is a list to wade through.
+MAX_LESSON_FIGURES = 6
+
+
+def _lesson(llm, topic, top, pitched, trace, started, prepared, standalone, offered) -> AskResult:
+    """Write the lesson steps from the passages already found and ranked.
+
+    Checked for citations as one text, then split: a lesson whose sections
+    could not be found falls back to being an ordinary answer, rather than
+    showing the student a page of tags.
+    """
+    from ai.prompts.grounded_answer import format_context
+
+    content = f"Sources:\n\n{format_context(top)}\n\n---\n\n"
+    if pitched.instruction:
+        content += pitched.instruction + "\n\n"
+    from ai.ingestion.figures import labels_in
+    mentioned = list(dict.fromkeys(f for c in top for f in labels_in(c.content)))
+    content += lessons.instruction(topic, offered, mentioned[:MAX_LESSON_FIGURES])
+
+    t0 = time.perf_counter()
+    raw = llm.complete(system=SYSTEM_PROMPT, messages=[{"role": "user", "content": content}],
+                       max_tokens=2000)
+    trace["stages"]["generation"] = {
+        "ms": round((time.perf_counter() - t0) * 1000, 1),
+        "model": llm.model,
+        "sources_in_context": len(top),
+        "lesson": True,
+    }
+    answer = build_answer(raw, top)
+    lesson = lessons.split(answer.answer, offered) if answer.grounded else None
+    if lesson is not None and not lesson.steps:
+        lesson = None
+    if lesson is not None:
+        answer = replace(answer, answer=lessons.as_text(lesson))
+    trace["stages"]["lesson"] = {
+        "steps": [key for key, _, _ in lesson.steps] if lesson else [],
+        "misconception": lesson.misconception.slug if lesson and lesson.misconception else None,
+        "check": lesson.check if lesson else None,
+    }
+    trace["stages"]["citations"] = {
+        "cited": answer.used_source_count, "offered": len(top), "grounded": answer.grounded,
+    }
+    return AskResult(
+        answer=answer,
+        trace=_finish(trace, started),
+        corrections=prepared.corrections,
+        corrected_question=prepared.corrected,
+        searched_as=standalone,
+        pitch=pitched,
+        lesson=lesson,
+        chunk_ids=[c.chunk_id for c in top],
     )
 
 
