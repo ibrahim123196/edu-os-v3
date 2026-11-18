@@ -30,6 +30,9 @@ class QuizRequest(BaseModel):
     kind: Literal["practice", "test"] = "practice"
     difficulty: int | None = Field(default=None, ge=1, le=5)
     exclude: list[uuid.UUID] = Field(default_factory=list)
+    # The same questions as an earlier quiz of this student, in the same
+    # order: a reattempt ("Try again" in the plan) asks exactly those again.
+    repeat_of: uuid.UUID | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -61,14 +64,17 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
         concept_ids = [c.id for c in concepts]
 
     student_id = active_student_id()
-    questions = select_questions(
-        db,
-        concept_ids=concept_ids or None,
-        count=payload.count,
-        difficulty=payload.difficulty,
-        exclude=payload.exclude or None,
-        student_id=student_id,
-    )
+    if payload.repeat_of is not None:
+        questions = _same_questions(db, student_id, payload.repeat_of)
+    else:
+        questions = select_questions(
+            db,
+            concept_ids=concept_ids or None,
+            count=payload.count,
+            difficulty=payload.difficulty,
+            exclude=payload.exclude or None,
+            student_id=student_id,
+        )
     session = session_service.start_session(db, student_id, questions, kind=payload.kind)
     # get_db does not commit. Without this the session id goes to the
     # browser and the row it names is thrown away when the request ends.
@@ -80,6 +86,24 @@ def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
         "count": len(questions),
         "questions": [_question_out(q) for q in questions],
     }
+
+
+def _same_questions(db: Session, student_id: uuid.UUID, quiz_id: uuid.UUID) -> list[Question]:
+    """An earlier quiz's questions, in its order, leaving out any retired
+    since: a reattempt never brings back a question found faulty."""
+    from apps.api.quiz import QuestionStatus, QuizSession, QuizSessionQuestion
+
+    earlier = db.get(QuizSession, quiz_id)
+    if earlier is None or earlier.student_id != student_id:
+        raise HTTPException(status_code=404, detail="No such quiz to repeat.")
+    rows = db.scalars(select(QuizSessionQuestion).where(QuizSessionQuestion.session_id == quiz_id)
+                      .order_by(QuizSessionQuestion.position)).all()
+    out = []
+    for row in rows:
+        q = db.get(Question, row.question_id)
+        if q is not None and q.status == QuestionStatus.approved and not q.faulty:
+            out.append(q)
+    return out
 
 
 def _question_out(q: Question) -> dict:

@@ -86,6 +86,22 @@ def record_attempt(db: Session, student_id: uuid.UUID, question: Question) -> No
     recompute(db, student_id, question.concept_id)
 
 
+def estimates_with_dates(
+    db: Session, student_id: uuid.UUID, concept_ids: list[uuid.UUID] | None = None
+) -> tuple[dict[uuid.UUID, MasteryEstimate], dict]:
+    """Stored estimates and each concept's last answer time, in one read."""
+    query = select(ConceptMastery).where(ConceptMastery.student_id == student_id)
+    if concept_ids:
+        query = query.where(ConceptMastery.concept_id.in_(concept_ids))
+    estimates, last = {}, {}
+    for row in db.scalars(query).all():
+        estimates[row.concept_id] = MasteryEstimate(
+            mastery=row.mastery, confidence=row.confidence,
+            attempts=row.attempts, correct=row.correct)
+        last[row.concept_id] = row.last_attempt_at
+    return estimates, last
+
+
 def estimates_for(
     db: Session, student_id: uuid.UUID, concept_ids: list[uuid.UUID] | None = None
 ) -> dict[uuid.UUID, MasteryEstimate]:
@@ -112,29 +128,25 @@ def estimates_for(
 
 def progress_report(db: Session, student_id: uuid.UUID) -> dict:
     """Everything known about this student, with causes where they exist."""
-    # Loaded together. Fetched one concept at a time, the prerequisites and
-    # chapters cost two round trips per concept -- dozens of trips to a
-    # database across the internet for a single page.
-    concepts = db.scalars(
-        select(Concept).options(
-            selectinload(Concept.prerequisites),
-            selectinload(Concept.topics).selectinload(Topic.chapter),
-        )
-    ).all()
+    # The syllabus from the cache: read on every open, it was four round
+    # trips across the internet before the student's own data.
+    from apps.api.services.curriculum_cache import graph
+
+    concepts = graph(db).concepts
     by_id = {c.id: c for c in concepts}
     stored = estimates_for(db, student_id)
 
     rows = []
-    for concept in sorted(concepts, key=lambda c: c.name):
+    for concept in concepts:
         est = stored.get(concept.id, estimate([]))
 
         prerequisites = {
-            by_id[p.id].name: stored.get(p.id, estimate([]))
-            for p in concept.prerequisites
-            if p.id in by_id
+            by_id[p].name: stored.get(p, estimate([]))
+            for p in concept.prerequisite_ids
+            if p in by_id
         }
         finding = diagnose(concept.name, est, prerequisites)
-        home = _home_chapter(concept)
+        home = concept.home
 
         rows.append(
             {

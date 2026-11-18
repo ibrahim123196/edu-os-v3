@@ -121,6 +121,7 @@ def init_db() -> None:
     from apps.api import (  # noqa: F401  (register mappers)
         curriculum,
         models,
+        planner,
         quiz,
         student,
     )
@@ -212,6 +213,14 @@ def init_db() -> None:
         conn.execute(
             text("ALTER TABLE questions ADD COLUMN IF NOT EXISTS checked_by varchar(80)")
         )
+        # Every quiz a plan session opened, for its best score. Rows from
+        # before it get their one linked quiz.
+        conn.execute(text(
+            "ALTER TABLE plan_sessions ADD COLUMN IF NOT EXISTS quiz_ids jsonb "
+            "NOT NULL DEFAULT '[]'::jsonb"))
+        conn.execute(text(
+            "UPDATE plan_sessions SET quiz_ids = jsonb_build_array(link_id::text) "
+            "WHERE link_kind = 'quiz' AND link_id IS NOT NULL AND quiz_ids = '[]'::jsonb"))
         # Questions confirmed faulty; their answers stop counting.
         conn.execute(
             text(

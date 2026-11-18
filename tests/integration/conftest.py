@@ -61,3 +61,14 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "integration" in item.keywords:
             item.add_marker(skip)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_syllabus():
+    """Each test builds its own concepts and chapters; the cached syllabus
+    from an earlier test must not hide them."""
+    from apps.api.services import curriculum_cache
+
+    curriculum_cache.clear()
+    yield
+    curriculum_cache.clear()

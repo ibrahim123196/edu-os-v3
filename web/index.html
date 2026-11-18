@@ -215,6 +215,39 @@
   .lesson-step-title { font-family: var(--sans, inherit); font-size: 15px; font-weight: 600;
     margin: 0 0 8px; }
   .lesson-panel { border-left: 4px solid var(--focus); }
+  .plan-form label { display: block; margin-bottom: 10px; font-family: var(--sans, inherit); font-size: 14px; }
+  .plan-form input[type=text], .plan-form input[type=date] { display: block; width: 100%; margin-top: 4px; }
+  .plan-form fieldset { border: 1px solid var(--line, #ddd); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px; }
+  .plan-form legend { font-family: var(--sans, inherit); font-size: 13px; padding: 0 4px; }
+  .plan-chapter { display: flex; gap: 8px; align-items: center; font-family: var(--sans, inherit);
+    font-size: 14px; margin: 4px 0; }
+  .plan-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .plan-week label { margin: 0; font-size: 12px; text-align: center; }
+  .plan-week input { width: 100%; text-align: center; margin-top: 2px; }
+  @media (max-width: 560px) { .plan-week { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .plan-session { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0;
+    border-top: 1px solid var(--line, #ddd); font-family: var(--sans, inherit); }
+  .plan-session:first-child { border-top: none; }
+  .plan-check { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 1px; border-radius: 50%;
+    border: 2px solid var(--line, #ccc); display: inline-flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 700; color: #fff; }
+  .plan-session.done .plan-check { background: #2f9e6b; border-color: #2f9e6b; }
+  .plan-buttons { display: flex; gap: 6px; flex: 0 0 auto; }
+  .plan-score { margin-left: 8px; font-size: 12px; font-weight: 600; color: #2f9e6b; }
+  @media (max-width: 560px) { .plan-session { flex-wrap: wrap; } .plan-buttons { width: 100%; justify-content: flex-end; } }
+  .plan-session .what { flex: 1; min-width: 0; }
+  .plan-session .label { font-weight: 600; font-size: 14px; }
+  .plan-session .why { font-size: 13px; opacity: 0.75; margin-top: 2px; }
+  .plan-session .mins { font-size: 12px; opacity: 0.7; white-space: nowrap; }
+  .plan-session.done .label { opacity: 0.75; }
+  .plan-session.missed .label { opacity: 0.6; }
+  .plan-tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px;
+    margin-left: 6px; border: 1px solid currentColor; opacity: 0.8; font-weight: 400; }
+  .plan-day { margin-bottom: 10px; font-family: var(--sans, inherit); }
+  .plan-day summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 4px 0; }
+  .plan-day ul { margin: 4px 0 8px; padding-left: 20px; font-size: 13px; }
+  .plan-day .rest { opacity: 0.6; font-weight: 400; }
   .socratic-panel { border-left: 4px solid #2f9e6b; }
   .socratic-progress { font-family: var(--sans, inherit); font-size: 13px; font-weight: 600;
     margin-bottom: 10px; }
@@ -623,6 +656,7 @@
     <div class="tabs">
       <button id="tabAsk" class="on">Tutor</button>
       <button id="tabQuiz">Practise</button>
+      <button id="tabPlan">Plan</button>
       <button id="tabProgress">Progress</button>
     </div>
 
@@ -809,6 +843,47 @@
         <h3>Recent quizzes</h3>
         <ol id="historyList"></ol>
       </section>
+    </div>
+
+    <div id="planMode" hidden>
+      <section class="panel" id="planSetup" hidden>
+        <h2 id="planSetupTitle">Set up your study plan</h2>
+        <p class="hint">Tell the planner about your exam and your week. It builds each
+          day's sessions from your progress, and re-plans as your results come in.</p>
+        <div class="plan-form">
+          <label>Exam <input type="text" id="planExam" placeholder="e.g. CBSE Class 12 boards" maxlength="200"></label>
+          <label>Exam date <input type="date" id="planDate"></label>
+          <fieldset><legend>Chapters in the exam</legend><div id="planChapters"></div></fieldset>
+          <fieldset><legend>Minutes you can study</legend><div class="plan-week" id="planWeek"></div></fieldset>
+          <div class="row" style="gap:8px;"><button id="planSave">Make my plan</button>
+            <button id="planCancel" class="quiet" hidden>Cancel</button></div>
+          <p class="notice bad" id="planError" hidden></p>
+        </div>
+      </section>
+
+      <div id="planView" hidden>
+        <section class="panel">
+          <div class="plan-head">
+            <div><h2 id="planTitle"></h2><p class="summary-line" id="planSummary"></p></div>
+            <button class="quiet" id="planEdit">Change settings</button>
+          </div>
+          <div id="planWarnings"></div>
+        </section>
+        <section class="panel">
+          <h2>Today</h2>
+          <p class="hint" id="planTodayHint"></p>
+          <div id="planToday"></div>
+        </section>
+        <section class="panel">
+          <h2>Coming up</h2>
+          <p class="hint">A forecast: it changes as your quiz results come in.</p>
+          <div id="planUpcoming"></div>
+        </section>
+        <section class="panel" id="planHistoryPanel" hidden>
+          <h2>Last 7 days</h2>
+          <div id="planHistory"></div>
+        </section>
+      </div>
     </div>
 
     <div id="progressMode" hidden>
@@ -1487,6 +1562,7 @@ async function ask(kind = 'ask') {
     $('questionInput').placeholder = 'Ask a follow-up, e.g. "explain that more simply"';
     $('newChatBtn').hidden = false;
     if (separate) $('answerPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return data;
   } catch (err) {
     $('answerEmpty').hidden = true;
     $('answerWrap').hidden = false;
@@ -1534,11 +1610,13 @@ let quiz = { sessionId: null, questions: [], index: 0, score: null, answered: []
 $('tabAsk').addEventListener('click', () => switchMode('ask'));
 $('tabQuiz').addEventListener('click', () => switchMode('quiz'));
 $('tabProgress').addEventListener('click', () => switchMode('progress'));
+$('tabPlan').addEventListener('click', () => switchMode('plan'));
 
 async function switchMode(mode) {
-  for (const m of ['ask', 'quiz', 'progress']) {
+  for (const m of ['ask', 'quiz', 'plan', 'progress']) {
     $(`${m}Mode`).hidden = m !== mode;
   }
+  $('tabPlan').classList.toggle('on', mode === 'plan');
   $('tabAsk').classList.toggle('on', mode === 'ask');
   $('tabQuiz').classList.toggle('on', mode === 'quiz');
   $('tabProgress').classList.toggle('on', mode === 'progress');
@@ -1547,6 +1625,7 @@ async function switchMode(mode) {
     loadQuizHistory();
   }
   if (mode === 'progress') loadProgress();
+  if (mode === 'plan') loadPlan();
 }
 
 // The topics a quiz can be built from, loaded once: groups (with their
@@ -1777,7 +1856,7 @@ $('closeStage').addEventListener('click', () => { closeStage(); loadQuizHistory(
 // law" covers its applications too); otherwise the dropdown's one topic.
 // kind: "practice" (a quiz on topics) or "test" (Test me: every topic,
 // timed, full screen, can be left and continued).
-async function startQuiz(slugs, countOverride, kind = 'practice') {
+async function startQuiz(slugs, countOverride, kind = 'practice', repeatOf = null) {
   const slug = $('quizConcept').value;
   const count = countOverride
     || Math.max(1, Math.min(20, parseInt($('quizCount').value, 10) || 5));
@@ -1798,17 +1877,19 @@ async function startQuiz(slugs, countOverride, kind = 'practice') {
   const ask = (exclude) => api('/quiz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ concept_slugs: chosen, count, kind, exclude }),
+    body: JSON.stringify(repeatOf
+      ? { concept_slugs: [], count, kind, repeat_of: repeatOf }
+      : { concept_slugs: chosen, count, kind, exclude }),
   });
 
   try {
     // New questions first: nothing answered in this visit is repeated
-    // while there is something else to ask.
-    let data = await ask(quiz.answered);
+    // while there is something else to ask. A reattempt asks the same ones.
+    let data = await ask(repeatOf ? [] : quiz.answered);
     let repeating = false;
     // Every question on the topic already answered: start again with the
     // same ones. "No questions left" after Practise again was a dead end.
-    if (!data.count && quiz.answered.length) {
+    if (!repeatOf && !data.count && quiz.answered.length) {
       data = await ask([]);
       repeating = data.count > 0;
     }
@@ -2203,6 +2284,209 @@ loadHealth();
 loadDocuments();
 
 /* --------------------------------------------------------- progress */
+/* ------------------------------------------------------------ plan */
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DEFAULT_MINUTES = [60, 60, 60, 60, 60, 120, 60];
+let planData = null;
+
+async function loadPlan() {
+  try {
+    planData = await api('/plan');
+  } catch (err) {
+    $('planView').hidden = true;
+    $('planSetup').hidden = false;
+    $('planError').hidden = false;
+    $('planError').textContent = err.message;
+    return;
+  }
+  if (!planData.settings) {
+    showPlanSetup(false);
+  } else {
+    drawPlan();
+  }
+}
+
+function showPlanSetup(editing) {
+  const p = planData || {};
+  const st = p.settings;
+  $('planView').hidden = true;
+  $('planSetup').hidden = false;
+  $('planError').hidden = true;
+  $('planSetupTitle').textContent = editing ? 'Change your plan' : 'Set up your study plan';
+  $('planCancel').hidden = !editing;
+  $('planSave').textContent = editing ? 'Save and re-plan' : 'Make my plan';
+  $('planExam').value = st ? st.exam_name : '';
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  $('planDate').min = tomorrow;
+  $('planDate').value = st ? st.exam_date : '';
+  const chosen = new Set(st ? st.chapter_ids : (p.chapters || []).map((c) => c.id));
+  const bySubject = new Map();
+  for (const c of p.chapters || []) {
+    if (!bySubject.has(c.subject)) bySubject.set(c.subject, []);
+    bySubject.get(c.subject).push(c);
+  }
+  $('planChapters').innerHTML = [...bySubject.entries()].map(([subject, chs]) =>
+    `<div class="hint" style="margin:4px 0 2px">${escapeHtml(subject)}</div>` +
+    chs.map((c) => `<label class="plan-chapter"><input type="checkbox" value="${escapeHtml(c.id)}"
+      ${chosen.has(c.id) ? 'checked' : ''}> ${c.number}. ${escapeHtml(c.name)}
+      <span class="hint">(${c.concepts} topics)</span></label>`).join('')).join('')
+    || '<p class="hint">No chapters loaded yet.</p>';
+  const minutes = st ? st.minutes : DEFAULT_MINUTES;
+  $('planWeek').innerHTML = WEEKDAYS.map((d, i) =>
+    `<label>${d}<input type="number" min="0" max="600" step="5" value="${minutes[i]}"
+      data-day="${i}" aria-label="Minutes on ${d}"></label>`).join('');
+}
+
+async function savePlan() {
+  const minutes = [...document.querySelectorAll('#planWeek input')].map((i) =>
+    Math.max(0, Math.min(600, parseInt(i.value, 10) || 0)));
+  const chapter_ids = [...document.querySelectorAll('#planChapters input:checked')].map((i) => i.value);
+  const exam_date = $('planDate').value;
+  const err = $('planError');
+  err.hidden = true;
+  if (!exam_date) { err.hidden = false; err.textContent = 'Choose the exam date.'; return; }
+  if (!chapter_ids.length) { err.hidden = false; err.textContent = 'Choose at least one chapter.'; return; }
+  if (!minutes.some((m) => m > 0)) { err.hidden = false; err.textContent = 'Add some study time on at least one day.'; return; }
+  const btn = $('planSave');
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Planning…';
+  try {
+    planData = await api('/plan/settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exam_name: $('planExam').value.trim(), exam_date, chapter_ids, minutes }),
+    });
+    drawPlan();
+  } catch (e) {
+    err.hidden = false;
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+const KIND_NAMES = { quiz: 'Quiz', test: 'Test', practice: 'Quiz' };
+
+function niceDate(iso, opts = { weekday: 'short', day: 'numeric', month: 'short' }) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, opts);
+}
+
+function drawPlan() {
+  const p = planData;
+  $('planSetup').hidden = true;
+  $('planView').hidden = false;
+  $('planTitle').textContent = `${p.settings.exam_name} — ${niceDate(p.settings.exam_date,
+    { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  const t = p.topics;
+  const parts = [`${p.days_left} day${p.days_left === 1 ? '' : 's'} to go`, `${t.total} topics`];
+  for (const [key, name] of [['new', 'to learn'], ['learned', 'just learned'], ['weak', 'weak'],
+                             ['shaky', 'in progress'], ['strong', 'strong']]) {
+    if (t[key]) parts.push(`${t[key]} ${name}`);
+  }
+  $('planSummary').textContent = parts.join(' · ');
+  $('planWarnings').innerHTML = (p.warnings || []).map((w) =>
+    `<div class="notice bad">${escapeHtml(w)}</div>`).join('');
+
+  const today = p.today_sessions;
+  const left = today.filter((s) => s.status === 'todo').reduce((n, s) => n + s.minutes, 0);
+  $('planTodayHint').textContent = !today.length
+    ? (p.today_minutes ? 'Nothing due today.' : 'A rest day — no study time set for today.')
+    : left ? `About ${left} minutes left today.` : 'All done for today. Well done!';
+  $('planToday').innerHTML = today.map(sessionRow).join('');
+  for (const s of today) {
+    const go = document.querySelector(`#planToday [data-go="${s.id}"]`);
+    if (go) go.addEventListener('click', () => startSession(s));
+    const ex = document.querySelector(`#planToday [data-explain="${s.id}"]`);
+    if (ex) ex.addEventListener('click', () => explainTopic(s.explain));
+  }
+
+  $('planUpcoming').innerHTML = p.upcoming.map((d, i) => {
+    const total = d.sessions.reduce((n, s) => n + s.minutes, 0);
+    const head = `${niceDate(d.date)}${d.stretch ? ' <span class="plan-tag">final stretch</span>' : ''}`;
+    if (!d.sessions.length) {
+      return `<div class="plan-day"><div class="rest">${head} — ${d.minutes ? 'nothing due' : 'rest day'}</div></div>`;
+    }
+    return `<details class="plan-day"${i < 2 ? ' open' : ''}><summary>${head}
+      <span class="hint">· ${d.sessions.length} session${d.sessions.length === 1 ? '' : 's'}, ${total} min</span></summary>
+      <ul>${d.sessions.map((s) => `<li>${s.kind === 'test' ? '' : 'Quiz: '}${escapeHtml(s.label)}</li>`).join('')}</ul></details>`;
+  }).join('') || '<p class="hint">Nothing more before the exam.</p>';
+
+  $('planHistoryPanel').hidden = !p.history.length;
+  $('planHistory').innerHTML = p.history.slice().reverse().map((d) => {
+    const done = d.sessions.filter((s) => s.status === 'done').length;
+    return `<details class="plan-day"><summary>${niceDate(d.date)}
+      <span class="hint">· ${done} of ${d.sessions.length} done</span></summary><ul>${
+      d.sessions.map((s) => `<li>${escapeHtml(s.label)} — ${s.status === 'done'
+        ? `done${s.score ? `, ${s.score.right}/${s.score.out_of}` : ''}` : 'missed'}</li>`).join('')
+      }</ul></details>`;
+  }).join('');
+}
+
+function sessionRow(s) {
+  const done = s.status === 'done';
+  const what = s.kind === 'test' ? 'Test' : 'Quiz';
+  // The best of all attempts; a worse reattempt never lowers it.
+  const sc = s.score;
+  const score = sc ? `<span class="plan-score" title="${sc.attempts > 1 ? `Best of ${sc.attempts} attempts` : ''}">${
+    sc.attempts > 1 ? 'Best' : 'Score'} ${sc.right}/${sc.out_of}</span>` : '';
+  const go = done ? 'Reattempt' : s.started ? 'Continue' : 'Start';
+  return `<div class="plan-session ${s.status}">
+    <span class="plan-check" aria-label="${done ? 'Done' : 'Not done yet'}">${done ? '&#10003;' : ''}</span>
+    <div class="what">
+      <div class="label">${escapeHtml(s.label)}<span class="plan-tag">${what}${s.count ? ` · ${s.count} questions` : ''}</span>${score}</div>
+      <div class="why">${escapeHtml(s.reason)}</div>
+    </div>
+    <span class="mins">${s.minutes} min</span>
+    <div class="plan-buttons">
+      ${s.explain ? `<button class="quiet" data-explain="${s.id}" title="The topic explained in 7 steps, if you want it first">Explain it</button>` : ''}
+      ${s.open.type === 'none' ? '' : `<button data-go="${s.id}">${go}</button>`}
+    </div>
+  </div>`;
+}
+
+async function linkSession(id, body) {
+  try {
+    await api(`/plan/sessions/${id}/link`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+  } catch (err) { /* the quiz still runs; it just won't tick the plan */ }
+}
+
+// The 7-step explanation of a topic: optional, whenever a student wants
+// to understand it better before (or after) its quiz.
+async function explainTopic(name) {
+  await switchMode('ask');
+  $('lessonTopic').value = name;
+  ask('lesson');
+}
+
+// Starts the session's quiz (again, for "Reattempt") and tells the plan
+// which quiz it is: finishing it ticks the session and shows its score.
+async function startSession(s) {
+  const o = s.open;
+  const before = quiz.sessionId;
+  await switchMode('quiz');
+  // "Reattempt" on a finished session: the very same questions again.
+  const again = s.status === 'done' && s.quiz_id ? s.quiz_id : null;
+  if (o.type === 'quiz') {
+    selectTopic(o.concept_slugs.length === 1 ? o.concept_slugs[0] : '');
+    $('quizCount').value = String(o.count);
+    await startQuiz(o.concept_slugs, o.count, 'practice', again);
+  } else if (o.type === 'test') {
+    await startQuiz([], o.count, 'test', again);
+  }
+  // Only a quiz this click started: if it could not start, the one still
+  // on screen from before is not this session's.
+  if (quiz.sessionId && quiz.sessionId !== before) {
+    await linkSession(s.id, { quiz_session_id: quiz.sessionId });
+  }
+}
+
+$('planSave').addEventListener('click', savePlan);
+$('planEdit').addEventListener('click', () => showPlanSetup(true));
+$('planCancel').addEventListener('click', drawPlan);
+
 async function loadProgress() {
   $('progressSummary').textContent = 'Loading…';
   try {

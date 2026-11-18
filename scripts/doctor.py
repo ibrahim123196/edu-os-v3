@@ -530,7 +530,7 @@ def check_schema(db) -> bool:
     print("\nSchema")
     from sqlalchemy import inspect
 
-    from apps.api import curriculum, models, quiz, student  # noqa: F401
+    from apps.api import curriculum, models, planner, quiz, student  # noqa: F401
     from apps.api.db import Base
 
     insp = inspect(db.get_bind())
