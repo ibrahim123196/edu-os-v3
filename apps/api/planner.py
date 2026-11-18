@@ -1,7 +1,7 @@
 """A student's study plan: what they set, and the sessions given to them.
 
-Only what cannot be worked out again is stored. The settings -- exam, date,
-chapters, minutes per weekday -- and each day's sessions once that day
+Only what cannot be worked out again is stored. The settings -- the exams,
+each with its date and chapters, and the minutes per weekday -- and each day's sessions once that day
 arrives, so a student's day does not reshuffle while they work through it,
 and what was done or missed stays on record. Days still to come are not
 stored: they are a forecast, rebuilt from the latest results every time.
@@ -20,7 +20,9 @@ from apps.api.db import Base
 
 
 class StudyPlan(Base):
-    """One per student: the exam they are working towards."""
+    """One per student: their weekly hours, and the exams they are working
+    towards (PlanExam). Several exams share one plan, so one day's time is
+    split between them instead of two plans each claiming all of it."""
 
     __tablename__ = "study_plans"
 
@@ -29,9 +31,11 @@ class StudyPlan(Base):
         UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"),
         nullable=False, unique=True,
     )
-    exam_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    exam_date: Mapped[date] = mapped_column(Date, nullable=False)
-    chapter_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # The single exam of plans made before 19 Nov; copied into plan_exams
+    # on startup and no longer read.
+    exam_name: Mapped[str | None] = mapped_column(String(200))
+    exam_date: Mapped[date | None] = mapped_column(Date)
+    chapter_ids: Mapped[list | None] = mapped_column(JSONB, default=list)
     # Minutes for each day of the week, Monday first.
     minutes: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     # The day whose sessions were last given out. Cleared when the settings
@@ -45,6 +49,29 @@ class StudyPlan(Base):
     sessions: Mapped[list["PlanSession"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan",
         order_by=lambda: (PlanSession.day, PlanSession.position))
+    exams: Mapped[list["PlanExam"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan",
+        order_by=lambda: (PlanExam.exam_date, PlanExam.position))
+
+
+class PlanExam(Base):
+    """One exam in a plan: a Physics mid-term, a Chemistry unit test."""
+
+    __tablename__ = "plan_exams"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("study_plans.id", ondelete="CASCADE"),
+        nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    exam_date: Mapped[date] = mapped_column(Date, nullable=False)
+    chapter_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # The day it was first added, kept when the settings are saved again:
+    # the final stretch is a quarter of the time from then (at most a week).
+    set_on: Mapped[date | None] = mapped_column(Date)
+
+    plan: Mapped[StudyPlan] = relationship(back_populates="exams")
 
 
 class PlanSession(Base):

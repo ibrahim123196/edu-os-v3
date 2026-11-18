@@ -244,6 +244,15 @@
   .plan-session.missed .label { opacity: 0.6; }
   .plan-tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px;
     margin-left: 6px; border: 1px solid currentColor; opacity: 0.8; font-weight: 400; }
+  .plan-exam { border: 1px solid var(--line, #ddd); border-radius: 10px; padding: 10px 12px 2px; margin-bottom: 12px; }
+  .plan-exam-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+    font-family: var(--sans, inherit); font-size: 14px; font-weight: 600; }
+  .plan-exam-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .plan-exam-row { grid-template-columns: 1fr; } }
+  .plan-exam details { margin-bottom: 10px; font-family: var(--sans, inherit); font-size: 14px; }
+  .plan-exam summary { cursor: pointer; padding: 2px 0 6px; }
+  .plan-exams-list { margin: 6px 0 0; padding: 0; list-style: none; font-family: var(--sans, inherit); font-size: 14px; }
+  .plan-exams-list li { padding: 2px 0; }
   .plan-day { margin-bottom: 10px; font-family: var(--sans, inherit); }
   .plan-day summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 4px 0; }
   .plan-day ul { margin: 4px 0 8px; padding-left: 20px; font-size: 13px; }
@@ -848,13 +857,13 @@
     <div id="planMode" hidden>
       <section class="panel" id="planSetup" hidden>
         <h2 id="planSetupTitle">Set up your study plan</h2>
-        <p class="hint">Tell the planner about your exam and your week. It builds each
-          day's sessions from your progress, and re-plans as your results come in.</p>
+        <p class="hint">Tell the planner about your exams and your week. It builds each
+          day's sessions from your progress, nearest exam first, and re-plans as your
+          results come in.</p>
         <div class="plan-form">
-          <label>Exam <input type="text" id="planExam" placeholder="e.g. CBSE Class 12 boards" maxlength="200"></label>
-          <label>Exam date <input type="date" id="planDate"></label>
-          <fieldset><legend>Chapters in the exam</legend><div id="planChapters"></div></fieldset>
-          <fieldset><legend>Minutes you can study</legend><div class="plan-week" id="planWeek"></div></fieldset>
+          <div id="planExams"></div>
+          <button type="button" class="quiet" id="planAddExam" style="margin:0 0 14px;">+ Add another exam</button>
+          <fieldset><legend>Minutes you can study (shared by all your exams)</legend><div class="plan-week" id="planWeek"></div></fieldset>
           <div class="row" style="gap:8px;"><button id="planSave">Make my plan</button>
             <button id="planCancel" class="quiet" hidden>Cancel</button></div>
           <p class="notice bad" id="planError" hidden></p>
@@ -1285,6 +1294,8 @@ function drawLessonStep() {
     const q = step.quiz.question;
     body = `<div class="lesson-q"><div class="stem">${renderAnswer_(q.stem)}</div>` +
       q.options.map((o) => `<button class="choice" data-option="${escapeHtml(o.id)}">${escapeHtml(o.text)}</button>`).join('') +
+      // Pick, then Submit, as in Practise: a stray click is not an answer.
+      `<button id="lessonQuizSubmit" style="margin-top:10px;" disabled>Submit</button>` +
       `<div class="lesson-feedback" id="lessonQuizResult" hidden></div></div>`;
   } else {
     body = `<div class="lesson-check"><p>${escapeHtml(step.check)}</p>` +
@@ -1331,26 +1342,43 @@ function drawLessonQuiz(step) {
     box.innerHTML = `<strong>${r.correct ? 'Right.' : 'Not quite.'}</strong> ` + escapeHtml(r.explanation) +
       (!r.correct && r.mistake ? `<div class="hint" style="margin-top:6px;">Common mistake: ${escapeHtml(r.mistake)}</div>` : '');
   };
+  const submit = $('lessonQuizSubmit');
   // Answered already in this lesson: shown as it was, locked.
-  if (step.result) { show(step.result, step.chosen); return; }
-  buttons.forEach((b) => b.addEventListener('click', async () => {
+  if (step.result) {
+    submit.hidden = true;
+    show(step.result, step.chosen);
+    return;
+  }
+  let picked = null;
+  buttons.forEach((b) => b.addEventListener('click', () => {
+    picked = b.dataset.option;
+    buttons.forEach((x) => x.classList.toggle('selected', x === b));
+    submit.disabled = false;
+  }));
+  submit.addEventListener('click', async () => {
+    if (!picked) return;
     buttons.forEach((x) => { x.disabled = true; });
+    submit.disabled = true;
+    submit.textContent = 'Checking…';
     try {
       const res = await api('/quiz/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: step.quiz.session_id,
-          question_id: step.quiz.question.id, selected_option_id: b.dataset.option }),
+          question_id: step.quiz.question.id, selected_option_id: picked }),
       });
       step.result = res;
-      step.chosen = b.dataset.option;
-      show(res, b.dataset.option);
+      step.chosen = picked;
+      submit.hidden = true;
+      show(res, picked);
     } catch (err) {
       buttons.forEach((x) => { x.disabled = false; });
+      submit.disabled = false;
+      submit.textContent = 'Submit';
       $('lessonQuizResult').hidden = false;
       $('lessonQuizResult').textContent = err.message;
     }
-  }));
+  });
 }
 
 // Feedback cites the lesson's sources by page, written out: its own
@@ -2315,38 +2343,90 @@ function showPlanSetup(editing) {
   $('planSetupTitle').textContent = editing ? 'Change your plan' : 'Set up your study plan';
   $('planCancel').hidden = !editing;
   $('planSave').textContent = editing ? 'Save and re-plan' : 'Make my plan';
-  $('planExam').value = st ? st.exam_name : '';
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  $('planDate').min = tomorrow;
-  $('planDate').value = st ? st.exam_date : '';
-  const chosen = new Set(st ? st.chapter_ids : (p.chapters || []).map((c) => c.id));
-  const bySubject = new Map();
-  for (const c of p.chapters || []) {
-    if (!bySubject.has(c.subject)) bySubject.set(c.subject, []);
-    bySubject.get(c.subject).push(c);
-  }
-  $('planChapters').innerHTML = [...bySubject.entries()].map(([subject, chs]) =>
-    `<div class="hint" style="margin:4px 0 2px">${escapeHtml(subject)}</div>` +
-    chs.map((c) => `<label class="plan-chapter"><input type="checkbox" value="${escapeHtml(c.id)}"
-      ${chosen.has(c.id) ? 'checked' : ''}> ${c.number}. ${escapeHtml(c.name)}
-      <span class="hint">(${c.concepts} topics)</span></label>`).join('')).join('')
-    || '<p class="hint">No chapters loaded yet.</p>';
+  $('planExams').innerHTML = '';
+  // A first plan starts with one exam over every chapter; exams already
+  // past are left out, so saving again drops them.
+  const exams = st ? st.exams.filter((e) => !e.past) : [];
+  if (exams.length) exams.forEach(addExamCard);
+  else addExamCard({ name: '', date: '', chapter_ids: (p.chapters || []).map((c) => c.id) });
   const minutes = st ? st.minutes : DEFAULT_MINUTES;
   $('planWeek').innerHTML = WEEKDAYS.map((d, i) =>
     `<label>${d}<input type="number" min="0" max="600" step="5" value="${minutes[i]}"
       data-day="${i}" aria-label="Minutes on ${d}"></label>`).join('');
 }
 
+const MAX_EXAMS = 6;
+
+// One exam in the setup form: name, date, and the chapters it covers.
+function addExamCard(exam) {
+  const p = planData || {};
+  const box = document.createElement('div');
+  box.className = 'plan-exam';
+  const chosen = new Set(exam.chapter_ids || []);
+  const bySubject = new Map();
+  for (const c of p.chapters || []) {
+    if (!bySubject.has(c.subject)) bySubject.set(c.subject, []);
+    bySubject.get(c.subject).push(c);
+  }
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const chapters = [...bySubject.entries()].map(([subject, chs]) =>
+    `<div class="hint" style="margin:4px 0 2px">${escapeHtml(subject)}</div>` +
+    chs.map((c) => `<label class="plan-chapter"><input type="checkbox" value="${escapeHtml(c.id)}"
+      ${chosen.has(c.id) ? 'checked' : ''}> ${c.number}. ${escapeHtml(c.name)}
+      <span class="hint">(${c.concepts} topics)</span></label>`).join('')).join('')
+    || '<p class="hint">No chapters loaded yet.</p>';
+  box.innerHTML = `
+    <div class="plan-exam-head"><span class="plan-exam-title"></span>
+      <button type="button" class="quiet plan-exam-remove">Remove</button></div>
+    <div class="plan-exam-row">
+      <label>Exam <input type="text" class="plan-exam-name" maxlength="200"
+        placeholder="e.g. Physics mid-term" value="${escapeHtml(exam.name || '')}"></label>
+      <label>Date <input type="date" class="plan-exam-date" min="${tomorrow}" value="${escapeHtml(exam.date || '')}"></label>
+    </div>
+    <details${chosen.size ? '' : ' open'}><summary class="plan-exam-count"></summary>
+      <div class="plan-exam-chapters">${chapters}</div></details>`;
+  box.querySelector('.plan-exam-remove').addEventListener('click', () => {
+    box.remove();
+    refreshExamCards();
+  });
+  box.querySelectorAll('input[type=checkbox]').forEach((i) =>
+    i.addEventListener('change', refreshExamCards));
+  $('planExams').appendChild(box);
+  refreshExamCards();
+}
+
+function refreshExamCards() {
+  const cards = [...document.querySelectorAll('#planExams .plan-exam')];
+  cards.forEach((card, i) => {
+    card.querySelector('.plan-exam-title').textContent = cards.length > 1 ? `Exam ${i + 1}` : 'Your exam';
+    card.querySelector('.plan-exam-remove').hidden = cards.length < 2;
+    const n = card.querySelectorAll('.plan-exam-chapters input:checked').length;
+    card.querySelector('.plan-exam-count').textContent =
+      n ? `${n} chapter${n === 1 ? '' : 's'} in this exam — change` : 'Choose the chapters in this exam';
+  });
+  $('planAddExam').hidden = cards.length >= MAX_EXAMS;
+}
+
 async function savePlan() {
   const minutes = [...document.querySelectorAll('#planWeek input')].map((i) =>
     Math.max(0, Math.min(600, parseInt(i.value, 10) || 0)));
-  const chapter_ids = [...document.querySelectorAll('#planChapters input:checked')].map((i) => i.value);
-  const exam_date = $('planDate').value;
   const err = $('planError');
+  const fail = (msg) => { err.hidden = false; err.textContent = msg; };
   err.hidden = true;
-  if (!exam_date) { err.hidden = false; err.textContent = 'Choose the exam date.'; return; }
-  if (!chapter_ids.length) { err.hidden = false; err.textContent = 'Choose at least one chapter.'; return; }
-  if (!minutes.some((m) => m > 0)) { err.hidden = false; err.textContent = 'Add some study time on at least one day.'; return; }
+  const cards = [...document.querySelectorAll('#planExams .plan-exam')];
+  const exams = cards.map((card, i) => ({
+    name: card.querySelector('.plan-exam-name').value.trim() || (cards.length > 1 ? `Exam ${i + 1}` : 'My exam'),
+    date: card.querySelector('.plan-exam-date').value,
+    chapter_ids: [...card.querySelectorAll('.plan-exam-chapters input:checked')].map((x) => x.value),
+  }));
+  if (!exams.length) return fail('Add at least one exam.');
+  for (const e of exams) {
+    if (!e.date) return fail(`${e.name}: choose the exam date.`);
+    if (!e.chapter_ids.length) return fail(`${e.name}: choose at least one chapter.`);
+  }
+  const names = exams.map((e) => e.name.toLowerCase());
+  if (new Set(names).size !== names.length) return fail('Give each exam a different name.');
+  if (!minutes.some((m) => m > 0)) return fail('Add some study time on at least one day.');
   const btn = $('planSave');
   const label = btn.textContent;
   btn.disabled = true;
@@ -2354,12 +2434,11 @@ async function savePlan() {
   try {
     planData = await api('/plan/settings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ exam_name: $('planExam').value.trim(), exam_date, chapter_ids, minutes }),
+      body: JSON.stringify({ exams, minutes }),
     });
     drawPlan();
   } catch (e) {
-    err.hidden = false;
-    err.textContent = e.message;
+    fail(e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = label;
@@ -2376,16 +2455,28 @@ function drawPlan() {
   const p = planData;
   $('planSetup').hidden = true;
   $('planView').hidden = false;
-  $('planTitle').textContent = `${p.settings.exam_name} — ${niceDate(p.settings.exam_date,
-    { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  const ahead = p.settings.exams.filter((e) => !e.past);
+  const longDate = (iso) => niceDate(iso, { day: 'numeric', month: 'long', year: 'numeric' });
+  const daysTo = (n) => `${n} day${n === 1 ? '' : 's'} to go`;
+  let list = '';
+  if (ahead.length === 1) {
+    $('planTitle').textContent = `${ahead[0].name} — ${longDate(ahead[0].date)}`;
+  } else {
+    $('planTitle').textContent = ahead.length ? `${ahead.length} exams` : 'Your exams are over';
+    list = `<ul class="plan-exams-list">${ahead.map((e) => `<li><strong>${escapeHtml(e.name)}</strong>
+      — ${longDate(e.date)} <span class="hint">· ${daysTo(e.days_left)} · ${e.topics} topics</span></li>`).join('')}</ul>`;
+  }
   const t = p.topics;
-  const parts = [`${p.days_left} day${p.days_left === 1 ? '' : 's'} to go`, `${t.total} topics`];
+  const parts = ahead.length === 1 ? [daysTo(p.days_left)] : [];
+  parts.push(`${t.total} topics`);
   for (const [key, name] of [['new', 'to learn'], ['learned', 'just learned'], ['weak', 'weak'],
                              ['shaky', 'in progress'], ['strong', 'strong']]) {
     if (t[key]) parts.push(`${t[key]} ${name}`);
   }
   $('planSummary').textContent = parts.join(' · ');
-  $('planWarnings').innerHTML = (p.warnings || []).map((w) =>
+  $('planWarnings').innerHTML = list + (ahead.length ? '' : `<div class="notice">Every exam in
+    this plan has passed. Use “Change settings” to add your next one.</div>`) +
+    (p.warnings || []).filter((w) => ahead.length || !w.startsWith('Add an exam')).map((w) =>
     `<div class="notice bad">${escapeHtml(w)}</div>`).join('');
 
   const today = p.today_sessions;
@@ -2410,7 +2501,7 @@ function drawPlan() {
     return `<details class="plan-day"${i < 2 ? ' open' : ''}><summary>${head}
       <span class="hint">· ${d.sessions.length} session${d.sessions.length === 1 ? '' : 's'}, ${total} min</span></summary>
       <ul>${d.sessions.map((s) => `<li>${s.kind === 'test' ? '' : 'Quiz: '}${escapeHtml(s.label)}</li>`).join('')}</ul></details>`;
-  }).join('') || '<p class="hint">Nothing more before the exam.</p>';
+  }).join('') || `<p class="hint">Nothing more before the exam${ahead.length > 1 ? 's' : ''}.</p>`;
 
   $('planHistoryPanel').hidden = !p.history.length;
   $('planHistory').innerHTML = p.history.slice().reverse().map((d) => {
@@ -2474,7 +2565,8 @@ async function startSession(s) {
     $('quizCount').value = String(o.count);
     await startQuiz(o.concept_slugs, o.count, 'practice', again);
   } else if (o.type === 'test') {
-    await startQuiz([], o.count, 'test', again);
+    // A plan's test covers its exam's topics only.
+    await startQuiz(o.concept_slugs || [], o.count, 'test', again);
   }
   // Only a quiz this click started: if it could not start, the one still
   // on screen from before is not this session's.
@@ -2484,6 +2576,7 @@ async function startSession(s) {
 }
 
 $('planSave').addEventListener('click', savePlan);
+$('planAddExam').addEventListener('click', () => addExamCard({ name: '', date: '', chapter_ids: [] }));
 $('planEdit').addEventListener('click', () => showPlanSetup(true));
 $('planCancel').addEventListener('click', drawPlan);
 

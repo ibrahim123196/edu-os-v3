@@ -148,3 +148,11 @@ def test_the_rewrite_is_told_not_to_narrow_the_topic():
     prompt = llm.calls[0][0]["content"]
     assert "not a detail from the tutor's" in prompt
     assert "Do not make the question narrower" in prompt
+
+
+def test_answers_talk_about_the_subject_not_the_sources():
+    """"Formula not fully shown in your extract" told a student nothing."""
+    from ai.prompts.grounded_answer import SYSTEM_PROMPT
+
+    assert 'Never write "the sources"' in SYSTEM_PROMPT
+    assert "your textbook or notes do not cover" in SYSTEM_PROMPT

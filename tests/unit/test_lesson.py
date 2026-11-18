@@ -85,3 +85,17 @@ def test_the_figures_in_the_sources_are_listed_for_the_visual_step():
 
 def test_without_reviewed_mistakes_there_is_no_misconception_section():
     assert "[MISCONCEPTION" not in instruction("capacitance", [])
+
+
+def test_the_worked_example_is_worked_not_described():
+    """18 Nov: step 4 said "the sources provide the setup for Example 1.3 ...
+    you would calculate" -- no working, and a reference the student cannot
+    use."""
+    asked = instruction("Coulomb's law", OFFERED)
+    assert "Work one example all the way through" in asked
+    assert "solve it here from the formula and the values in the sources" in asked
+    assert "never send the student to look it up" in asked
+
+
+def test_the_lesson_talks_to_the_student_not_about_the_sources():
+    assert 'never write "the sources"' in instruction("Coulomb's law", OFFERED)

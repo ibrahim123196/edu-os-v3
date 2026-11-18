@@ -218,9 +218,10 @@ def test_a_quiz_cannot_be_left_or_continued_and_a_test_cannot_be_ended(client, q
 
 # --- starting ------------------------------------------------------------------
 
-def test_a_test_covers_every_topic(client, questions):
+def test_a_test_can_cover_chosen_topics(client, questions):
+    """A plan's test covers one exam's chapters."""
     r = client.post("/quiz", json={"kind": "test", "concept_slugs": [f"testme-{TAG}"]})
-    assert r.status_code == 400
+    assert r.status_code == 200 and r.json()["kind"] == "test"
 
 
 def test_starting_a_test_through_the_api(client, questions):

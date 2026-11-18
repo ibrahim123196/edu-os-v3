@@ -26,7 +26,8 @@ class QuizRequest(BaseModel):
     concept_slugs: list[str] = Field(default_factory=list)
     # Up to 50 for a test; the page keeps a quiz to 20.
     count: int = Field(default=5, ge=1, le=50)
-    # "test" is Test me: every topic, timed, can be left and continued.
+    # "test" is Test me: timed, can be left and continued. Every topic,
+    # or the given ones (a plan's test covers one exam's chapters).
     kind: Literal["practice", "test"] = "practice"
     difficulty: int | None = Field(default=None, ge=1, le=5)
     exclude: list[uuid.UUID] = Field(default_factory=list)
@@ -47,9 +48,6 @@ class AnswerRequest(BaseModel):
 @router.post("")
 def start_quiz(payload: QuizRequest, db: Session = Depends(get_db)):
     """Hand back questions. Correct answers are not included."""
-    if payload.kind == "test" and payload.concept_slugs:
-        raise HTTPException(status_code=400,
-                            detail="A test covers every topic; practise a topic instead.")
     concept_ids: list[uuid.UUID] = []
     if payload.concept_slugs:
         concepts = db.scalars(

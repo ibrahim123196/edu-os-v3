@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from ai.mastery.estimate import diagnose, estimate
 from ai.planner import rules
-from apps.api.planner import PlanSession, StudyPlan
+from apps.api.planner import PlanExam, PlanSession, StudyPlan
 from apps.api.quiz import Attempt, QuizSession, QuizSessionQuestion
 from apps.api.services.curriculum_cache import graph
 from apps.api.services.mastery_service import estimates_with_dates
@@ -31,6 +31,7 @@ FORECAST_DAYS = 13
 HISTORY_DAYS = 7
 MAX_MINUTES_PER_DAY = 600
 QUIZ_KINDS = ("quiz", "test", "practice")      # "practice": sessions stored before 18 Nov
+MAX_EXAMS = 6
 
 
 class PlanError(Exception):
@@ -59,30 +60,47 @@ def _plan(db: Session, student_id: uuid.UUID) -> StudyPlan | None:
     return db.scalars(select(StudyPlan).where(StudyPlan.student_id == student_id)).first()
 
 
-def save_settings(db: Session, student_id: uuid.UUID, exam_name: str, exam_date: date,
-                  chapter_ids: list[uuid.UUID], minutes: list[int]) -> StudyPlan:
-    if exam_date <= today():
-        raise PlanError("The exam date has to be after today.")
+def save_settings(db: Session, student_id: uuid.UUID, exams: list[dict],
+                  minutes: list[int]) -> StudyPlan:
+    """exams: [{"name", "date", "chapter_ids"}], one per exam, any order.
+    The whole list is replaced, so removing an exam is leaving it out."""
     if len(minutes) != 7 or any(m < 0 or m > MAX_MINUTES_PER_DAY for m in minutes):
         raise PlanError(f"Give minutes for each of the 7 days, from 0 to {MAX_MINUTES_PER_DAY}.")
     if not any(minutes):
         raise PlanError("Add some study time on at least one day of the week.")
+    if not exams:
+        raise PlanError("Add at least one exam.")
+    if len(exams) > MAX_EXAMS:
+        raise PlanError(f"Plan up to {MAX_EXAMS} exams at a time.")
     known = {c["id"] for c in options(db)}
-    chosen = [str(c) for c in dict.fromkeys(chapter_ids)]
-    if not chosen:
-        raise PlanError("Choose at least one chapter.")
-    if any(c not in known for c in chosen):
-        raise PlanError("Some chosen chapters have nothing to plan yet.", 404)
+    cleaned = []
+    for i, e in enumerate(exams, 1):
+        name = (e.get("name") or "").strip()[:200] or f"Exam {i}"
+        if e["date"] <= today():
+            raise PlanError(f"{name}: the date has to be after today.")
+        chosen = [str(c) for c in dict.fromkeys(e.get("chapter_ids") or [])]
+        if not chosen:
+            raise PlanError(f"{name}: choose at least one chapter.")
+        if any(c not in known for c in chosen):
+            raise PlanError(f"{name}: some chosen chapters have nothing to plan yet.", 404)
+        cleaned.append((name, e["date"], chosen))
+    names = [n.lower() for n, _, _ in cleaned]
+    if len(set(names)) != len(names):
+        raise PlanError("Give each exam a different name.")
 
     plan = _plan(db, student_id)
     if plan is None:
-        plan = StudyPlan(student_id=student_id, exam_name="", exam_date=exam_date)
+        plan = StudyPlan(student_id=student_id)
         db.add(plan)
-    plan.exam_name = exam_name.strip()[:200] or "My exam"
-    plan.exam_date = exam_date
-    plan.chapter_ids = chosen
     plan.minutes = [int(m) for m in minutes]
     plan.planned_day = None
+    # An exam saved again under the same name keeps the day it was added.
+    added = {e.name.lower(): e.set_on for e in plan.exams}
+    plan.exams.clear()
+    db.flush()
+    for i, (name, when, chosen) in enumerate(sorted(cleaned, key=lambda x: x[1])):
+        plan.exams.append(PlanExam(name=name, exam_date=when, chapter_ids=chosen, position=i,
+                                   set_on=added.get(name.lower()) or today()))
     db.flush()
     # Today is planned again under the new settings; what was started stays.
     db.execute(delete(PlanSession).where(
@@ -92,12 +110,26 @@ def save_settings(db: Session, student_id: uuid.UUID, exam_name: str, exam_date:
     return plan
 
 
+def _exams(db: Session, plan: StudyPlan) -> list[rules.Exam]:
+    """The plan's exams with the concepts each covers: those first taught in
+    its chapters."""
+    g = graph(db)
+    out = []
+    for e in plan.exams:
+        chosen = {uuid.UUID(c) for c in e.chapter_ids}
+        ids = frozenset(c.id for c in g.concepts if c.home is not None and c.home.id in chosen)
+        out.append(rules.Exam(e.id, e.name, e.exam_date, ids, e.set_on))
+    return out
+
+
 # --- the facts the rules plan from -------------------------------------------
 
-def concept_states(db: Session, student_id: uuid.UUID, plan: StudyPlan) -> list[rules.ConceptState]:
+def concept_states(db: Session, student_id: uuid.UUID, plan: StudyPlan,
+                   exams: list[rules.Exam] | None = None) -> list[rules.ConceptState]:
     g = graph(db)
-    chosen = {uuid.UUID(c) for c in plan.chapter_ids}
-    in_scope = [c for c in g.concepts if c.home is not None and c.home.id in chosen]
+    exams = _exams(db, plan) if exams is None else exams
+    wanted = set().union(*(e.concept_ids for e in exams)) if exams else set()
+    in_scope = [c for c in g.concepts if c.id in wanted]
     ids = [c.id for c in in_scope]
     stored, last_attempt = estimates_with_dates(db, student_id, ids) if ids else ({}, {})
     questions = concepts_with_questions(db)
@@ -228,8 +260,9 @@ def view(db: Session, student_id: uuid.UUID) -> dict:
     if plan is None:
         return {"settings": None, "chapters": options(db)}
     now = today()
-    states = concept_states(db, student_id, plan)
-    built = rules.build(states, now, plan.exam_date, plan.minutes)
+    exams = _exams(db, plan)
+    states = concept_states(db, student_id, plan, exams)
+    built = rules.build(states, now, exams, plan.minutes)
 
     # Today and the past week, in one read.
     window = db.scalars(select(PlanSession).where(
@@ -266,14 +299,15 @@ def view(db: Session, student_id: uuid.UUID) -> dict:
 
     return {
         "settings": {
-            "exam_name": plan.exam_name,
-            "exam_date": plan.exam_date.isoformat(),
-            "chapter_ids": plan.chapter_ids,
+            "exams": [{"id": str(e.id), "name": e.name, "date": e.exam_date.isoformat(),
+                       "chapter_ids": e.chapter_ids, "days_left": (e.exam_date - now).days,
+                       "topics": len(r.concept_ids), "past": e.exam_date <= now}
+                      for e, r in zip(plan.exams, exams)],
             "minutes": plan.minutes,
         },
         "chapters": options(db),
         "today": now.isoformat(),
-        "days_left": (plan.exam_date - now).days,
+        "days_left": min([(e.date - now).days for e in exams if e.date > now], default=0),
         "topics": {"total": len(states), **by_state},
         "warnings": built.warnings,
         "unstarted": built.unstarted_by_exam,
@@ -310,7 +344,9 @@ def _open(kind: str, concepts: list, count: int | None) -> dict:
     if kind in ("quiz", "practice") and concepts:
         return {"type": "quiz", "concept_slugs": [c.slug for c in concepts], "count": count or 5}
     if kind == "test":
-        return {"type": "test", "count": count or rules.TEST_QUESTIONS}
+        # One exam's chapters; a test stored before 19 Nov has every topic.
+        return {"type": "test", "count": count or rules.TEST_QUESTIONS,
+                "concept_slugs": [c.slug for c in concepts]}
     return {"type": "none"}
 
 

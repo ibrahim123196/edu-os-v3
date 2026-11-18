@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+import datetime as dt
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -16,10 +16,16 @@ from apps.api.student import active_student_id
 router = APIRouter(prefix="/plan", tags=["plan"])
 
 
-class PlanSettings(BaseModel):
-    exam_name: str = Field(default="", max_length=200)
-    exam_date: date
+class ExamSettings(BaseModel):
+    name: str = Field(default="", max_length=200)
+    date: dt.date
     chapter_ids: list[uuid.UUID] = Field(min_length=1)
+
+
+class PlanSettings(BaseModel):
+    # One or more exams -- a Physics and a Chemistry one, say -- sharing
+    # the same weekly hours.
+    exams: list[ExamSettings] = Field(min_length=1, max_length=plan_service.MAX_EXAMS)
     # Minutes for each day, Monday first.
     minutes: list[int] = Field(min_length=7, max_length=7)
 
@@ -49,8 +55,8 @@ def get_plan(db: Session = Depends(get_db)):
 
 @router.put("/settings")
 def save_settings(payload: PlanSettings, db: Session = Depends(get_db)):
-    _call(db, plan_service.save_settings, payload.exam_name, payload.exam_date,
-          payload.chapter_ids, payload.minutes)
+    _call(db, plan_service.save_settings, [e.model_dump() for e in payload.exams],
+          payload.minutes)
     return get_plan(db)
 
 

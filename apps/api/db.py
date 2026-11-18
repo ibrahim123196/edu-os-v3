@@ -221,6 +221,18 @@ def init_db() -> None:
         conn.execute(text(
             "UPDATE plan_sessions SET quiz_ids = jsonb_build_array(link_id::text) "
             "WHERE link_kind = 'quiz' AND link_id IS NOT NULL AND quiz_ids = '[]'::jsonb"))
+        # Several exams per plan (19 Nov): each plan's single exam becomes
+        # its first row in plan_exams, and the old columns may be empty.
+        for column in ("exam_name", "exam_date", "chapter_ids"):
+            conn.execute(text(f"ALTER TABLE study_plans ALTER COLUMN {column} DROP NOT NULL"))
+        conn.execute(text("ALTER TABLE plan_exams ADD COLUMN IF NOT EXISTS set_on date"))
+        conn.execute(text(
+            "INSERT INTO plan_exams (id, plan_id, name, exam_date, chapter_ids, position, set_on) "
+            "SELECT gen_random_uuid(), p.id, COALESCE(NULLIF(p.exam_name, ''), 'My exam'), "
+            "p.exam_date, COALESCE(p.chapter_ids, '[]'::jsonb), 0, p.created_at::date "
+            "FROM study_plans p "
+            "WHERE p.exam_date IS NOT NULL "
+            "AND NOT EXISTS (SELECT 1 FROM plan_exams e WHERE e.plan_id = p.id)"))
         # Questions confirmed faulty; their answers stop counting.
         conn.execute(
             text(

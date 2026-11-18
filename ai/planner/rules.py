@@ -19,8 +19,9 @@ Each concept in the exam's chapters that has questions is in one state:
     strong   reliably 80% or more                      -> a quiz every 7 days, to keep it
 
 First quizzes are paced so every concept has had one before the final
-stretch (the last quarter of the time, at most a week), which adds timed
-tests. Each day is filled in priority order until its minutes run out: a
+stretch of the exam it is in (the last quarter of the time, at most a
+week), which adds timed tests on that exam's topics. Several exams share
+the day's minutes, nearest exam first. Each day is filled in priority order until its minutes run out: a
 test on test days, weak concepts, first quizzes at the pace needed, other
 quizzes that are due, then first quizzes ahead of pace.
 
@@ -105,10 +106,24 @@ class Day:
 
 
 @dataclass
+class Exam:
+    """One exam the student is preparing for: its date and the concepts it
+    covers. Several can run at once -- a Physics mid-term in December and
+    Chemistry in January -- sharing the same daily minutes."""
+    id: object
+    name: str
+    date: date
+    concept_ids: frozenset
+    # The day it was added. Its final stretch is measured from then, so the
+    # stretch stays put as the exam comes closer; without it, from today.
+    set_on: date | None = None
+
+
+@dataclass
 class Plan:
     days: list[Day]
     warnings: list[str]
-    unstarted_by_exam: list[str]
+    unstarted_by_exam: dict           # exam name -> topics without a quiz before it
     no_questions: list[str] = field(default_factory=list)
 
 
@@ -116,18 +131,30 @@ def _pct(c: ConceptState) -> str:
     return f"{round(c.mastery * 100)}% over {c.attempts} question{'s' if c.attempts != 1 else ''}"
 
 
-def build(concepts: list[ConceptState], start: date, exam: date,
+def _when(d: date) -> str:
+    return f"{d.day} {d.strftime('%b')}"
+
+
+def build(concepts: list[ConceptState], start: date, exams: list[Exam],
           minutes_by_weekday: list[int], horizon: int | None = None) -> Plan:
-    """Days from start (included) to the day before the exam.
+    """Days from start (included) to the day before the last exam.
+
+    Exams already past are left out. A concept in several exams is due for
+    the nearest one. The day's minutes are shared, nearest exam first: its
+    first quizzes are paced to finish before its final stretch, and the
+    stretch adds timed tests on its own chapters.
 
     minutes_by_weekday: seven numbers, Monday first. horizon: how many days
-    to return; the whole run to the exam is still planned, so the pace and
-    the warnings account for every day."""
-    if exam <= start:
-        return Plan([], ["The exam date has to be after today."], [])
+    to return; the whole run is still planned, so the pace and the warnings
+    account for every day."""
+    exams = sorted([e for e in exams if e.date > start], key=lambda e: e.date)
+    if not exams:
+        return Plan([], ["Add an exam with a date after today."], {})
     if len(minutes_by_weekday) != 7 or not any(m > 0 for m in minutes_by_weekday):
-        return Plan([], ["Add some study time on at least one day of the week."], [])
+        return Plan([], ["Add some study time on at least one day of the week."], {})
 
+    covered = set().union(*(e.concept_ids for e in exams))
+    concepts = [c for c in concepts if c.id in covered]
     no_questions = [c.name for c in sorted(concepts, key=lambda c: c.order) if not c.questions]
     plannable = [c for c in concepts if c.questions]
     warnings: list[str] = []
@@ -136,18 +163,35 @@ def build(concepts: list[ConceptState], start: date, exam: date,
             f"{len(no_questions)} topic{'s have' if len(no_questions) != 1 else ' has'} no quiz "
             "questions yet, so the plan leaves them out.")
     if not plannable:
-        return Plan([], warnings or ["None of the chosen chapters has topics to plan yet."], [],
+        return Plan([], warnings or ["None of the chosen chapters has topics to plan yet."], {},
                     no_questions)
 
-    total = (exam - start).days
-    stretch_days = min(MAX_STRETCH_DAYS, total // 4)
-    stretch_from = exam - timedelta(days=stretch_days)
+    last = exams[-1].date
     days = [Day(start + timedelta(days=i), minutes_by_weekday[(start + timedelta(days=i)).weekday()])
-            for i in range(total)]
-    for d in days:
-        d.stretch = d.date >= stretch_from
+            for i in range((last - start).days)]
 
-    state = {c.id: replace(c) for c in sorted(plannable, key=lambda c: c.order)}
+    # Each exam's final stretch: the last quarter of the time to it, at most a week.
+    stretch_from = {}
+    for e in exams:
+        since = min(e.set_on or start, start)
+        stretch_from[e.id] = e.date - timedelta(days=min(MAX_STRETCH_DAYS, (e.date - since).days // 4))
+
+    def stretch_exams(d: date) -> list[Exam]:
+        return [e for e in exams if stretch_from[e.id] <= d < e.date]
+
+    for d in days:
+        d.stretch = bool(stretch_exams(d.date))
+
+    # The exam each concept is due for: the nearest one covering it.
+    first_exam = {}
+    for e in exams:
+        for cid in e.concept_ids:
+            first_exam.setdefault(cid, e)
+
+    def order(c: ConceptState) -> tuple:
+        return (first_exam[c.id].date, c.order)
+
+    state = {c.id: replace(c) for c in sorted(plannable, key=order)}
     due: dict = {}
     for c in state.values():
         s = c.state
@@ -155,43 +199,58 @@ def build(concepts: list[ConceptState], start: date, exam: date,
             when = (c.last_activity + timedelta(days=GAP[s])) if c.last_activity else start
             due[c.id] = max(when, start)
 
-    learning_days = [d for d in days if not d.stretch and d.minutes >= QUIZ_MINUTES]
-    test_count = min(TEST_QUESTIONS, sum(c.questions for c in state.values()))
-    stretch_seen = 0
+    def exam_of(c: ConceptState, today: date) -> Exam | None:
+        """The nearest exam still ahead that covers it."""
+        return next((e for e in exams if e.date > today and c.id in e.concept_ids), None)
+
+    tests_seen = {e.id: 0 for e in exams}
+    many = len(exams) > 1
 
     for day in days:
         budget = day.minutes
         today_ids: set = set()
+        in_stretch = stretch_exams(day.date)
 
         def add(session: Session) -> bool:
             nonlocal budget
-            if session.minutes > budget or any(i in today_ids for i in session.concept_ids):
+            if session.minutes > budget or (session.kind != "test"
+                                            and any(i in today_ids for i in session.concept_ids)):
                 return False
             day.sessions.append(session)
             budget -= session.minutes
-            today_ids.update(session.concept_ids)
+            if session.kind != "test":
+                today_ids.update(session.concept_ids)
             return True
 
-        # 1. Timed tests in the final stretch, every other study day, not the eve.
-        if day.stretch and day.minutes > 0:
-            stretch_seen += 1
-            eve = day.date == exam - timedelta(days=1)
-            if stretch_seen % 2 == 1 and not eve and test_count:
-                add(Session("test", list(state), f"Test: everything so far ({test_count} questions)",
-                            TEST_MINUTES, "Exam practice under time, in the final stretch.",
-                            test_count))
+        def for_exam(c: ConceptState) -> str:
+            e = exam_of(c, day.date)
+            return f" For {e.name} ({_when(e.date)})." if many and e else ""
+
+        # 1. Timed tests on each exam in its final stretch, every other study
+        #    day, not on its eve, over that exam's own topics.
+        if day.minutes > 0:
+            for e in in_stretch:
+                tests_seen[e.id] += 1
+                eve = day.date == e.date - timedelta(days=1)
+                ids = [cid for cid in state if cid in e.concept_ids]
+                n = min(TEST_QUESTIONS, sum(state[cid].questions for cid in ids))
+                if tests_seen[e.id] % 2 == 1 and not eve and n:
+                    add(Session("test", ids, f"Test: {e.name} ({n} questions)", TEST_MINUTES,
+                                f"Exam practice under time: {e.name} is on {_when(e.date)}.", n))
 
         def quiz(c: ConceptState, reason: str) -> bool:
             n = min(QUIZ_QUESTIONS, c.questions)
-            if add(Session("quiz", [c.id], c.name, QUIZ_MINUTES, reason, n)):
-                _after_quiz(c, day.date, due, day.stretch)
+            if add(Session("quiz", [c.id], c.name, QUIZ_MINUTES, reason + for_exam(c), n)):
+                e = exam_of(c, day.date)
+                _after_quiz(c, day.date, due, bool(e and e in in_stretch))
                 return True
             return False
 
-        is_due = [c for c in state.values() if c.id in due and due[c.id] <= day.date]
+        live = [c for c in state.values() if exam_of(c, day.date) is not None]
+        is_due = [c for c in live if c.id in due and due[c.id] <= day.date]
 
-        # 2. Weak concepts, each with its weak prerequisite first.
-        foundation_of = {c.prerequisite_id: c.name for c in state.values()
+        # 2. Weak concepts, nearest exam first, each with its weak prerequisite first.
+        foundation_of = {c.prerequisite_id: c.name for c in live
                          if c.prerequisite_id is not None and c.state == "weak"}
 
         def weak_reason(c: ConceptState) -> str:
@@ -200,7 +259,8 @@ def build(concepts: list[ConceptState], start: date, exam: date,
             return f"Weak: {_pct(c)}."
 
         weak_done = 0
-        for c in sorted([c for c in is_due if c.state == "weak"], key=lambda c: c.mastery):
+        for c in sorted([c for c in is_due if c.state == "weak"],
+                        key=lambda c: (exam_of(c, day.date).date, c.mastery)):
             if weak_done >= MAX_WEAK_PER_DAY:
                 break
             pre = state.get(c.prerequisite_id)
@@ -210,23 +270,33 @@ def build(concepts: list[ConceptState], start: date, exam: date,
             if c.id not in today_ids and quiz(c, weak_reason(c)):
                 weak_done += 1
 
-        # 3. First quizzes, at the pace that starts everything before the stretch.
-        new = [c for c in state.values() if c.state == "new"]
-        remaining = [d for d in learning_days if d.date >= day.date]
-        pace = math.ceil(len(new) / len(remaining)) if remaining else len(new)
+        # 3. First quizzes, at the pace each exam needs to have everything
+        #    started before its stretch; the most demanding exam sets it.
+        new = [c for c in live if c.state == "new"]
+        pace = 0
+        for e in exams:
+            if e.date <= day.date:
+                continue
+            needed = [c for c in new if first_exam[c.id].date <= e.date]
+            days_left = [d for d in days if day.date <= d.date < stretch_from[e.id]
+                         and d.minutes >= QUIZ_MINUTES]
+            if needed:
+                pace = max(pace, math.ceil(len(needed) / len(days_left)) if days_left else len(needed))
         started = 0
         for c in new:
             if started >= pace:
                 break
-            reason = ("Not started yet, and the exam is close." if day.stretch
+            e = exam_of(c, day.date)
+            reason = ("Not started yet, and the exam is close." if e in in_stretch
                       else "Next in the syllabus.")
             if quiz(c, reason):
                 started += 1
 
-        # 4. Other quizzes that are due, a few a day, weakest first.
+        # 4. Other quizzes that are due, a few a day, nearest exam and weakest first.
         shaky_done = 0
         for c in sorted([c for c in is_due if c.state in ("shaky", "strong")
-                         and c.id not in today_ids], key=lambda c: c.mastery):
+                         and c.id not in today_ids],
+                        key=lambda c: (exam_of(c, day.date).date, c.mastery)):
             if shaky_done >= MAX_SHAKY_PER_DAY:
                 break
             reason = (f"Keep it going: {_pct(c)}." if c.state == "shaky"
@@ -234,22 +304,38 @@ def build(concepts: list[ConceptState], start: date, exam: date,
             if quiz(c, reason):
                 shaky_done += 1
 
-        # 5. Time left: get ahead, up to a day's worth.
-        if not day.stretch:
-            for c in [c for c in state.values() if c.state == "new"]:
-                if started >= max(pace, MAX_NEW_PER_DAY):
-                    break
-                if not quiz(c, "Ahead of schedule: you have time today."):
-                    break
-                started += 1
+        # 5. Time left: get ahead, up to a day's worth, on exams not yet in
+        #    their stretch.
+        for c in [c for c in live if c.state == "new" and exam_of(c, day.date) not in in_stretch]:
+            if started >= max(pace, MAX_NEW_PER_DAY):
+                break
+            if not quiz(c, "Ahead of schedule: you have time today."):
+                break
+            started += 1
 
-    unstarted = [c.name for c in state.values() if c.state == "new"]
-    if unstarted:
-        warnings.append(
-            f"At these hours, {len(unstarted)} topic{'s' if len(unstarted) != 1 else ''} "
-            "won't get a quiz before the exam. More time on some days would cover them.")
+    # What never got a first quiz before the exam it was due for.
+    unstarted: dict = {}
+    first_quiz: dict = {}
+    for d in days:
+        for sess in d.sessions:
+            if sess.kind == "quiz":
+                first_quiz.setdefault(sess.concept_ids[0], d.date)
+    for e in exams:
+        missing = [state[cid].name for cid in state if cid in e.concept_ids
+                   and (cid not in first_quiz or first_quiz[cid] >= e.date)
+                   and plannable_new(cid, concepts)]
+        if missing:
+            unstarted[e.name] = missing
+            warnings.append(
+                f"{e.name}: at these hours, {len(missing)} topic{'s' if len(missing) != 1 else ''} "
+                "won't get a quiz before it. More time on some days would cover them.")
     shown = days[:horizon] if horizon else days
     return Plan(shown, warnings, unstarted, no_questions)
+
+
+def plannable_new(cid, concepts) -> bool:
+    """Was it still to start when planning began (so a missing quiz matters)?"""
+    return any(c.id == cid and c.state == "new" for c in concepts)
 
 
 def _after_quiz(c: ConceptState, when: date, due: dict, stretch: bool) -> None:

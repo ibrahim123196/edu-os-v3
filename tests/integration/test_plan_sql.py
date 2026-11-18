@@ -68,10 +68,12 @@ def world(monkeypatch):
     monkeypatch.setattr(plan_route, "active_student_id", lambda: me["id"])
     monkeypatch.setattr(plan_service, "today", lambda: clock["today"])
     with TestClient(app) as client:
-        def setup(**over):
-            body = {"exam_name": "Boards", "exam_date": (MON + timedelta(days=30)).isoformat(),
-                    "chapter_ids": [str(ids["chapter"])], "minutes": WEEK, **over}
-            return client.put("/plan/settings", json=body)
+        def setup(exams=None, minutes=WEEK, **over):
+            """One exam by default; its fields can be overridden."""
+            if exams is None:
+                exams = [{"name": "Boards", "date": (MON + timedelta(days=30)).isoformat(),
+                          "chapter_ids": [str(ids["chapter"])], **over}]
+            return client.put("/plan/settings", json={"exams": exams, "minutes": minutes})
         yield client, setup, ids, clock, me
 
     with session_scope() as db:
@@ -113,12 +115,55 @@ def test_today_stays_put_while_it_is_worked_through(world):
 
 def test_settings_that_cannot_be_planned_are_refused(world):
     _, setup, _, _, _ = world
-    assert setup(exam_date=MON.isoformat()).status_code == 400
+    assert setup(date=MON.isoformat()).status_code == 400
     assert setup(minutes=[0] * 7).status_code == 400
     assert setup(minutes=[60] * 6).status_code == 422
     assert setup(minutes=[60, 60, 60, 60, 60, 60, 9999]).status_code == 400
     assert setup(chapter_ids=[str(uuid.uuid4())]).status_code == 404
     assert setup(chapter_ids=[]).status_code == 422
+
+
+def test_several_exams_share_one_plan(world):
+    client, setup, ids, _, _ = world
+    ch = [str(ids["chapter"])]
+    r = setup(exams=[
+        {"name": "Finals", "date": (MON + timedelta(days=40)).isoformat(), "chapter_ids": ch},
+        {"name": "Unit test", "date": (MON + timedelta(days=10)).isoformat(), "chapter_ids": ch},
+    ])
+    assert r.status_code == 200, r.text
+    body = r.json()
+    exams = body["settings"]["exams"]
+    assert [e["name"] for e in exams] == ["Unit test", "Finals"]      # nearest first
+    assert [e["days_left"] for e in exams] == [10, 40]
+    assert body["days_left"] == 10
+    assert len(body["upcoming"]) == 13
+    # Saving again replaces the list: leaving one out removes it.
+    r = setup(exams=[{"name": "Finals", "date": (MON + timedelta(days=40)).isoformat(),
+                      "chapter_ids": ch}])
+    assert [e["name"] for e in r.json()["settings"]["exams"]] == ["Finals"]
+
+
+def test_exam_lists_that_cannot_be_planned_are_refused(world):
+    _, setup, ids, _, _ = world
+    one = {"name": "A", "date": (MON + timedelta(days=9)).isoformat(),
+           "chapter_ids": [str(ids["chapter"])]}
+    assert setup(exams=[]).status_code == 422
+    assert setup(exams=[one, {**one, "name": "a"}]).status_code == 400     # same name
+    assert setup(exams=[{**one, "name": f"E{i}"} for i in range(7)]).status_code == 422
+
+
+def test_a_test_in_the_plan_covers_its_exam(world):
+    client, setup, ids, clock, _ = world
+    setup(exams=[{"name": "Boards", "date": (MON + timedelta(days=12)).isoformat(),
+                  "chapter_ids": [str(ids["chapter"])]}], minutes=[300] * 7)
+    ahead = client.get("/plan").json()["upcoming"]
+    tests = [s for d in ahead for s in d["sessions"] if s["kind"] == "test"]
+    assert tests and all(s["label"].startswith("Test: Boards") for s in tests)
+    # On the day, it opens a test over that exam's topics only.
+    clock["today"] = MON + timedelta(days=9)
+    today = [s for s in client.get("/plan").json()["today_sessions"] if s["kind"] == "test"]
+    assert today and today[0]["open"]["type"] == "test"
+    assert sorted(today[0]["open"]["concept_slugs"]) == [f"plan-{TAG}-{i}" for i in range(3)]
 
 
 def _today(client):
