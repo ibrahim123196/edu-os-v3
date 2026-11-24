@@ -36,6 +36,12 @@ then say plainly which part your textbook or notes do not cover.
 - If the sources do not address the question at all, reply with exactly this \
 sentence and nothing else: "{insufficient}"
 - Never invent a source number. Only cite sources that appear in the request.
+- What the sources leave out is not evidence. When they discuss only one case, \
+do not turn that into "only", "always", "never", "specifically" or "all": \
+asked "is emf only present in cells?" when the sources explain emf using cells, \
+the answer is that your textbook explains emf using cells and does not say \
+here whether anything else has one -- not that emf is defined only for cells. \
+Claim a limit only when a source states it.
 - If two sources disagree, say so and cite both.
 - Sources are labelled as the student's own notes or as the course \
 textbook. Where both cover a point, follow the student's notes: that is what \

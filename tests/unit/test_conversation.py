@@ -156,3 +156,13 @@ def test_answers_talk_about_the_subject_not_the_sources():
 
     assert 'Never write "the sources"' in SYSTEM_PROMPT
     assert "your textbook or notes do not cover" in SYSTEM_PROMPT
+
+
+def test_answers_do_not_turn_what_the_book_leaves_out_into_a_limit():
+    """24 Nov: asked "is emf only present in cells?", an answer said emf is
+    "defined specifically for cells" because the passages only discussed
+    cells. Generators have an emf too; the book just did not say so there."""
+    from ai.prompts.grounded_answer import SYSTEM_PROMPT
+
+    assert "What the sources leave out is not evidence" in SYSTEM_PROMPT
+    assert "Claim a limit only when a source states it" in SYSTEM_PROMPT

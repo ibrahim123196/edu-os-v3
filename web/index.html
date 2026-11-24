@@ -1655,7 +1655,8 @@ function renderAnswer_(text) {
 
 function inline_(text) {
   return text
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // Bold may hold an *italic* word: "**when current *is* flowing**".
+    .replace(/\*\*((?:[^*]|\*(?!\*))+?)\*\*/g, '<strong>$1</strong>')
     // *italic*, after bold so ** is gone. Needs a non-space just inside each
     // star, so "a * b" in a formula is left alone.
     .replace(/\*(\S[^*\n]*?\S|\S)\*/g, '<em>$1</em>')
