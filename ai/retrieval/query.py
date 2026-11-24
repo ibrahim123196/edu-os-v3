@@ -124,7 +124,7 @@ def _shares_content_word(original: str, candidate: str) -> bool:
     return bool(original_terms & terms(candidate))
 
 
-def prepare_query(question: str, llm=None, db=None) -> PreparedQuery:
+def prepare_query(question: str, llm=None, db=None, student_id=None) -> PreparedQuery:
     question = question.strip()
 
     # Typos first. Both searches suffer from them -- full-text finds nothing,
@@ -134,7 +134,8 @@ def prepare_query(question: str, llm=None, db=None) -> PreparedQuery:
     working = question
     if db is not None and settings.enable_spelling_correction:
         working, corrections = correct_query(
-            db, question, min_similarity=settings.spelling_min_similarity
+            db, question, min_similarity=settings.spelling_min_similarity,
+            student_id=student_id,
         )
 
     # "formula for X" should search for X. The word "formula" matches prose

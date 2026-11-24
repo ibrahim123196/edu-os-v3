@@ -175,15 +175,30 @@ class DocumentChunk(Base):
 
 
 class CorpusTerm(Base):
-    """Every distinct word across all indexed passages, with its frequency.
+    """Every distinct word in the textbook (platform) passages, with its
+    frequency. Every student's typos are corrected against these.
 
-    Used to correct misspelled questions against the student's own material
-    rather than a general dictionary, which would not know "Kirchhoff" or
-    "NCERT". Rebuilt after each ingestion.
+    Used to correct misspelled questions against the course material rather
+    than a general dictionary, which would not know "Kirchhoff" or "NCERT".
+    Rebuilt after each ingestion. Until 24 Nov it also held the words of
+    every student's uploads, so one student's typo could be "corrected" to
+    a word only found in another student's notes; those are now in
+    StudentTerm.
     """
 
     __tablename__ = "corpus_terms"
 
+    term: Mapped[str] = mapped_column(String(100), primary_key=True)
+    frequency: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class StudentTerm(Base):
+    """The words of one student's own uploads, for their typos only."""
+
+    __tablename__ = "student_terms"
+
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
     term: Mapped[str] = mapped_column(String(100), primary_key=True)
     frequency: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 

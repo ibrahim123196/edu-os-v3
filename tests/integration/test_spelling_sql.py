@@ -81,9 +81,13 @@ def vocabulary():
 
 
 def test_vocabulary_contains_terms_from_the_passages(vocabulary):
+    # These passages are an upload, so since 24 Nov their words are in the
+    # uploader's own list (student_terms), not the textbook's.
     with session_scope() as db:
         terms = {
-            r[0] for r in db.execute(text("SELECT term FROM corpus_terms")).fetchall()
+            r[0] for r in db.execute(text(
+                "SELECT term FROM corpus_terms UNION SELECT term FROM student_terms"
+            )).fetchall()
         }
     assert "coulomb" in terms
     assert "kirchhoff" in terms

@@ -83,8 +83,9 @@ def find_topic(db: Session, topic: str) -> TopicMatch | None:
     # once looked up as typed, matched nothing, and the student was told
     # their course had no such topic.
     from ai.retrieval.spelling import correct_query
+    from apps.api.student import active_student_id
 
-    topic, _ = correct_query(db, topic)
+    topic, _ = correct_query(db, topic, student_id=active_student_id())
     concepts = db.scalars(select(Concept)).all()
     by_slug = {c.slug: c for c in concepts}
     wanted = f" {_norm(topic)} "

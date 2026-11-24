@@ -194,7 +194,7 @@ def ask(
 
     # --- 1. Query preparation --------------------------------------------
     t0 = time.perf_counter()
-    prepared = prepare_query(search_question, llm=llm, db=db)
+    prepared = prepare_query(search_question, llm=llm, db=db, student_id=filters.student_id)
     # What kind of answer is wanted -- a formula, or an explanation?
     intent = detect_intent(prepared.corrected or question)
     trace["stages"]["query_preparation"] = {

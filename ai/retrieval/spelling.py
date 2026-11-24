@@ -104,18 +104,35 @@ def _candidates(query: str) -> list[str]:
     return list(seen)
 
 
-def _known_terms(db: Session, tokens: list[str]) -> set[str]:
+def _vocabulary(student_id) -> tuple[str, dict]:
+    """The words a student's typos may be corrected to, as SQL: the
+    textbook's, plus that student's own uploads -- never another student's.
+    No student (a script) means every word there is."""
+    # One row per word: a word in the textbook and in several students'
+    # notes would otherwise appear several times and crowd the closest few
+    # candidates -- "colomb" once lost "coulomb" to copies of "comb".
+    mine, params = "", {}
+    if student_id is not None:
+        mine, params = " WHERE student_id = :student_id", {"student_id": student_id}
+    return ("(SELECT term, SUM(frequency)::int AS frequency FROM ("
+            "SELECT term, frequency FROM corpus_terms UNION ALL "
+            f"SELECT term, frequency FROM student_terms{mine}) AS u GROUP BY term)"), params
+
+
+def _known_terms(db: Session, tokens: list[str], student_id=None) -> set[str]:
     if not tokens:
         return set()
+    vocab, params = _vocabulary(student_id)
     rows = db.execute(
-        text("SELECT term FROM corpus_terms WHERE term = ANY(:tokens)"),
-        {"tokens": tokens},
+        text(f"SELECT term FROM {vocab} AS v WHERE term = ANY(:tokens)"),
+        {"tokens": tokens, **params},
     ).fetchall()
     return {r[0] for r in rows}
 
 
 def _best_matches(
-    db: Session, tokens: list[str], min_similarity: float, candidates: int = 5
+    db: Session, tokens: list[str], min_similarity: float, candidates: int = 5,
+    student_id=None,
 ) -> dict[str, tuple[str, float]]:
     """Closest corpus term for each unknown token, in a single query.
 
@@ -140,14 +157,15 @@ def _best_matches(
     # Windows blocks psycopg -- rejected it outright, which silently switched
     # spelling correction off. The cost is the trigram index, irrelevant
     # for a vocabulary of a few thousand words.
+    vocab, params = _vocabulary(student_id)
     rows = db.execute(
         text(
-            """
+            f"""
             SELECT t.token, m.term, similarity(m.term, t.token) AS sim
             FROM unnest(CAST(:tokens AS text[])) AS t(token)
             CROSS JOIN LATERAL (
                 SELECT term, frequency
-                FROM corpus_terms
+                FROM {vocab} AS v
                 WHERE similarity(term, t.token)
                       > current_setting('pg_trgm.similarity_threshold')::real
                 ORDER BY similarity(term, t.token) DESC, frequency DESC
@@ -155,7 +173,7 @@ def _best_matches(
             ) AS m
             """
         ),
-        {"tokens": tokens, "candidates": candidates},
+        {"tokens": tokens, "candidates": candidates, **params},
     ).fetchall()
 
     best: dict[str, tuple[str, float]] = {}
@@ -175,9 +193,12 @@ def _best_matches(
 
 
 def correct_query(
-    db: Session, query: str, min_similarity: float = 0.4
+    db: Session, query: str, min_similarity: float = 0.4, student_id=None
 ) -> tuple[str, list[Correction]]:
     """Return the query with likely typos fixed, plus what was changed.
+
+    With a student, only the textbook's words and that student's own uploads
+    are candidates; the server always names one.
 
     Any database problem returns the query untouched. Spelling help is a
     nicety; it must never be the reason a search fails.
@@ -187,12 +208,12 @@ def correct_query(
         if not tokens:
             return query, []
 
-        known = _known_terms(db, tokens)
+        known = _known_terms(db, tokens, student_id)
         unknown = [t for t in tokens if t not in known]
         if not unknown:
             return query, []
 
-        matches = _best_matches(db, unknown, min_similarity)
+        matches = _best_matches(db, unknown, min_similarity, student_id=student_id)
         if not matches:
             return query, []
     except Exception:
@@ -225,28 +246,42 @@ def correct_query(
 
 
 def rebuild_vocabulary(db: Session) -> int:
-    """Rebuild the word list from every indexed passage.
+    """Rebuild the word lists from every indexed passage: the textbook's in
+    corpus_terms, each student's uploads in student_terms under their id.
 
     Run after ingestion. A full rebuild rather than an incremental update
     because it is one cheap scan and leaves no room for the vocabulary to
     drift out of step with the passages after a delete or a re-ingest.
     """
+    words = """
+        SELECT d.student_id, regexp_split_to_table(lower(c.content), '[^a-z]+') AS word
+        FROM document_chunks c JOIN documents d ON d.id = c.document_id
+    """
     db.execute(text("TRUNCATE corpus_terms"))
+    db.execute(text("TRUNCATE student_terms"))
     db.execute(
         text(
-            """
+            f"""
             INSERT INTO corpus_terms (term, frequency)
-            SELECT word, COUNT(*)::int
-            FROM (
-                SELECT regexp_split_to_table(lower(content), '[^a-z]+') AS word
-                FROM document_chunks
-            ) AS words
-            WHERE length(word) >= :min_length
+            SELECT word, COUNT(*)::int FROM ({words}) AS w
+            WHERE student_id IS NULL AND length(word) >= :min_length
             GROUP BY word
             """
         ),
         {"min_length": MIN_LENGTH},
     )
+    db.execute(
+        text(
+            f"""
+            INSERT INTO student_terms (student_id, term, frequency)
+            SELECT student_id, word, COUNT(*)::int FROM ({words}) AS w
+            WHERE student_id IS NOT NULL AND length(word) >= :min_length
+            GROUP BY student_id, word
+            """
+        ),
+        {"min_length": MIN_LENGTH},
+    )
     count = db.execute(text("SELECT COUNT(*) FROM corpus_terms")).scalar() or 0
-    log.info("Vocabulary rebuilt: %d distinct terms", count)
+    mine = db.execute(text("SELECT COUNT(*) FROM student_terms")).scalar() or 0
+    log.info("Vocabulary rebuilt: %d textbook terms, %d in students' uploads", count, mine)
     return count

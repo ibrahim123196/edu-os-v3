@@ -306,6 +306,21 @@ def init_db() -> None:
                 "ON corpus_terms USING gin (term gin_trgm_ops)"
             )
         )
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_student_term_trgm "
+            "ON student_terms USING gin (term gin_trgm_ops)"))
+        # The word lists split by owner (24 Nov). corpus_terms still holds
+        # every upload's words from before; rebuild once, the first time
+        # there are uploads and no per-student words yet.
+        needs_split = conn.execute(text(
+            "SELECT NOT EXISTS (SELECT 1 FROM student_terms) AND EXISTS ("
+            "SELECT 1 FROM document_chunks c JOIN documents d ON d.id = c.document_id "
+            "WHERE d.student_id IS NOT NULL)")).scalar()
+        if needs_split:
+            from ai.retrieval.spelling import rebuild_vocabulary
+
+            rebuild_vocabulary(conn)
+            log.info("Spelling word lists split into textbook and per-student")
     ensure_links()
     log.info("Database ready (embedding_dim=%s)", dim)
 
