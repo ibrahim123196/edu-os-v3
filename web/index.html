@@ -68,6 +68,39 @@
   }
   .status-line strong { color: var(--ink); font-weight: 600; }
 
+  /* Accounts (24 Nov). Who is logged in, top right; the login screen
+     covers the page until someone is. */
+  header.masthead { position: relative; }
+  .account {
+    position: absolute; top: 22px; right: 28px;
+    font-size: 13px; color: var(--muted);
+  }
+  .account strong { color: var(--ink); font-weight: 600; }
+  .account button { margin-left: 8px; }
+  .account .test-tag {
+    margin-left: 6px; padding: 1px 6px; border-radius: 3px;
+    background: var(--warn-wash); color: var(--warn); font-size: 12px;
+  }
+  @media (max-width: 860px) {
+    .account { position: static; margin-top: 8px; }
+  }
+  .login-screen {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .login-screen[hidden] { display: none; }
+  .login-card { width: 100%; max-width: 360px; }
+  .login-card h1 {
+    margin: 0 0 4px; font-family: var(--serif); font-size: 24px; font-weight: 600;
+  }
+  .login-card button[type=submit] { width: 100%; margin-top: 6px; }
+  .login-error { color: var(--warn); font-size: 13.5px; margin: 0 0 10px; }
+  .login-card form[hidden] { display: none; }
+  .login-switch { margin: 14px 0 0; font-size: 13.5px; color: var(--muted); }
+  .login-switch button.link { font-size: 13.5px; }
+
   .layout {
     display: grid;
     grid-template-columns: 320px minmax(0, 1fr);
@@ -101,7 +134,8 @@
   label.field { display: block; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
   label.field span { display: block; margin-bottom: 4px; }
 
-  input[type=text], input[type=search], input[type=number], input[type=file], textarea, select {
+  input[type=text], input[type=search], input[type=number], input[type=file],
+  input[type=email], input[type=password], textarea, select {
     width: 100%;
     padding: 8px 10px;
     border: 1px solid var(--line);
@@ -615,7 +649,54 @@
 </head>
 <body>
 
+<div class="login-screen" id="loginScreen" hidden>
+  <div class="panel login-card">
+    <h1>EduOS</h1>
+    <p class="login-error" id="loginError" hidden></p>
+
+    <form id="loginForm">
+      <p class="hint">Log in to carry on where you left off.</p>
+      <label class="field">
+        <span>Email</span>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </label>
+      <button type="submit" id="loginBtn">Log in</button>
+      <p class="hint" style="margin:12px 0 0">Forgot your password? Ask your teacher to reset it.</p>
+      <p class="login-switch" id="toSignup" hidden>New here?
+        <button type="button" class="link" id="showSignup">Create an account</button></p>
+    </form>
+
+    <form id="signupForm" hidden>
+      <p class="hint">Make your account. Your answers, plan and uploads stay yours.</p>
+      <label class="field">
+        <span>Your name</span>
+        <input type="text" id="signupName" autocomplete="name" maxlength="200" required>
+      </label>
+      <label class="field">
+        <span>Email</span>
+        <input type="email" id="signupEmail" autocomplete="email" required>
+      </label>
+      <label class="field">
+        <span>Password (at least 8 characters)</span>
+        <input type="password" id="signupPassword" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label class="field">
+        <span>Password again</span>
+        <input type="password" id="signupPassword2" autocomplete="new-password" minlength="8" required>
+      </label>
+      <button type="submit" id="signupBtn">Create account</button>
+      <p class="login-switch">Already have an account?
+        <button type="button" class="link" id="showLogin">Log in</button></p>
+    </form>
+  </div>
+</div>
+
 <header class="masthead">
+  <div class="account" id="account" hidden></div>
   <h1>EduOS</h1>
   <p>Ask questions about the material you uploaded. Every answer points back to the page it came from.</p>
   <div class="status-line" id="statusLine">Checking the server…</div>
@@ -930,9 +1011,99 @@ async function api(path, options = {}) {
   const res = await fetch(path, options);
   if (res.status === 204) return null;
   const body = await res.json().catch(() => ({}));
+  // Logged out (or the login ran out): back to the login screen.
+  if (res.status === 401 && body.login) showLogin();
   if (!res.ok) throw new Error(body.detail || `Request failed (${res.status})`);
   return body;
 }
+
+/* --------------------------------------------------------- accounts */
+// Every request needs a login. The page asks who is logged in first;
+// logging in or out reloads it, so every tab starts fresh for that student.
+function showLogin(message) {
+  $('loginScreen').hidden = false;
+  $('loginError').hidden = !message;
+  $('loginError').textContent = message || '';
+  $('loginEmail').focus();
+}
+
+function switchForm(toSignup) {
+  $('loginForm').hidden = toSignup;
+  $('signupForm').hidden = !toSignup;
+  $('loginError').hidden = true;
+  (toSignup ? $('signupName') : $('loginEmail')).focus();
+}
+$('showSignup').addEventListener('click', () => switchForm(true));
+$('showLogin').addEventListener('click', () => switchForm(false));
+
+async function checkLogin() {
+  try {
+    const me = await api('/auth/me');
+    if (!me.logged_in) {
+      $('toSignup').hidden = !me.signup;
+      showLogin();
+      return;
+    }
+    $('account').hidden = false;
+    $('account').innerHTML =
+      `Logged in as <strong>${escapeHtml(me.name)}</strong>` +
+      (me.is_test ? '<span class="test-tag">testing account</span>' : '') +
+      '<button class="quiet" id="logoutBtn" type="button">Log out</button>';
+    $('logoutBtn').addEventListener('click', async () => {
+      await api('/auth/logout', { method: 'POST' }).catch(() => {});
+      location.reload();
+    });
+  } catch (err) {
+    // The server is down: the status line already says so.
+  }
+}
+
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('loginBtn').disabled = true;
+  try {
+    await api('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: $('loginEmail').value, password: $('loginPassword').value }),
+    });
+    location.reload();
+  } catch (err) {
+    showLogin(err.message);
+    $('loginPassword').value = '';
+    $('loginBtn').disabled = false;
+  }
+});
+
+$('signupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fail = (message) => {
+    $('loginError').textContent = message;
+    $('loginError').hidden = false;
+  };
+  if ($('signupPassword').value !== $('signupPassword2').value) {
+    fail('The two passwords are different.');
+    return;
+  }
+  $('signupBtn').disabled = true;
+  try {
+    await api('/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: $('signupName').value,
+        email: $('signupEmail').value,
+        password: $('signupPassword').value,
+      }),
+    });
+    location.reload();
+  } catch (err) {
+    fail(err.message);
+    $('signupBtn').disabled = false;
+  }
+});
+
+checkLogin();
 
 /* ---------------------------------------------------------- health */
 async function loadHealth() {
@@ -2589,7 +2760,7 @@ async function loadProgress() {
     // exactly like a real one.
     $('progressWho').innerHTML = p.student.key === 'test'
       ? '<div class="notice bad">Showing <strong>testing</strong> answers, not real ' +
-        'study. Add <code>ACTIVE_STUDENT=local</code> to .env when you study for real.</div>'
+        'study. Log in with your own account when you study for real.</div>'
       : '';
 
     $('progressSummary').textContent =

@@ -159,9 +159,10 @@ def build(concepts: list[ConceptState], start: date, exams: list[Exam],
     plannable = [c for c in concepts if c.questions]
     warnings: list[str] = []
     if no_questions:
+        one = len(no_questions) == 1
         warnings.append(
-            f"{len(no_questions)} topic{'s have' if len(no_questions) != 1 else ' has'} no quiz "
-            "questions yet, so the plan leaves them out.")
+            f"{len(no_questions)} topic{' has' if one else 's have'} no quiz "
+            f"questions yet, so the plan leaves {'it' if one else 'them'} out.")
     if not plannable:
         return Plan([], warnings or ["None of the chosen chapters has topics to plan yet."], {},
                     no_questions)

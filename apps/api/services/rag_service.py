@@ -159,6 +159,12 @@ def ask(
     started = time.perf_counter()
     trace: dict = {"stages": {}}
     filters = filters or RetrievalFilters()
+    # Only this student's uploads, never another's. A caller that names no
+    # student gets whoever the request belongs to.
+    if filters.student_id is None:
+        from apps.api.student import active_student_id
+
+        filters = replace(filters, student_id=student_id or active_student_id())
 
     llm = None
     try:

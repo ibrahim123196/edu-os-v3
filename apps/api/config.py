@@ -90,6 +90,21 @@ class Settings(BaseSettings):
     # Read once at startup -- restart the server after changing it.
     active_student: Literal["local", "test"] = "test"
 
+    # --- Accounts ---------------------------------------------------------
+    # Every request from the page needs a login (accounts arrived 24 Nov).
+    # Off only for the automated tests, which predate logins and call the
+    # API without one; then ACTIVE_STUDENT decides, as it did before. It
+    # cannot be turned off anywhere but a local install.
+    require_login: bool = True
+    # Whether students can make their own account on the login screen
+    # (24 Nov: yes). Off leaves only scripts.accounts. Before a public
+    # launch, sign-up needs verifiable parental consent for under-18s
+    # (DPDP Rules 2025, Rule 10); see the handoff.
+    open_signup: bool = True
+
+    def login_required(self) -> bool:
+        return self.require_login or self.environment != "local"
+
 
 @lru_cache
 def get_settings() -> Settings:

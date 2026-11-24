@@ -119,6 +119,7 @@ def init_db() -> None:
     infrastructure/migrations/.
     """
     from apps.api import (  # noqa: F401  (register mappers)
+        auth,
         curriculum,
         models,
         planner,
@@ -137,6 +138,34 @@ def init_db() -> None:
 
     dim = settings.embedding_dim
     with engine.begin() as conn:
+        # Accounts (24 Nov). Columns on students, which already existed.
+        for column, spec in (
+            ("email", "varchar(320)"),
+            ("password_hash", "varchar(300)"),
+            ("last_login_at", "timestamptz"),
+        ):
+            conn.execute(text(f"ALTER TABLE students ADD COLUMN IF NOT EXISTS {column} {spec}"))
+        conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_students_email ON students (email)"))
+        # Whose upload, whose chat. Everything from before accounts was
+        # Ibrahim's, so it goes to the stand-in that becomes his account.
+        # Platform documents (the NCERT chapters) belong to nobody.
+        from apps.api.student import LOCAL_STUDENT_ID
+        conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS student_id uuid"))
+        conn.execute(text("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS student_id uuid"))
+        conn.execute(text(
+            "UPDATE documents SET student_id = :sid "
+            "WHERE student_id IS NULL AND source_kind <> 'platform'"),
+            {"sid": str(LOCAL_STUDENT_ID)})
+        conn.execute(text(
+            "UPDATE conversations SET student_id = :sid WHERE student_id IS NULL"),
+            {"sid": str(LOCAL_STUDENT_ID)})
+        conn.execute(text("ALTER TABLE conversations ALTER COLUMN student_id SET NOT NULL"))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_documents_student_id ON documents (student_id)"))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_conversations_student_id "
+            "ON conversations (student_id)"))
         # Added after the first release; existing installs get it here rather
         # than having to drop their data. Re-ingest to populate it.
         conn.execute(
@@ -288,6 +317,8 @@ def init_db() -> None:
 LINKS = [
     ("attempts", "student_id", "students", "CASCADE", "attempts_student_id_fkey"),
     ("documents", "chapter_id", "chapters", "SET NULL", "documents_chapter_id_fkey"),
+    ("documents", "student_id", "students", "CASCADE", "documents_student_id_fkey"),
+    ("conversations", "student_id", "students", "CASCADE", "conversations_student_id_fkey"),
 ]
 
 

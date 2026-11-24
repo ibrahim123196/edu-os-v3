@@ -27,11 +27,25 @@ from apps.api.db import get_db
 from apps.api.models import Document, DocumentChunk, IngestStatus
 from apps.api.schemas import DocumentOut
 from apps.api.services.ingestion_service import compute_checksum, ingest_document
+from apps.api.student import active_student_id
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 CHUNK_BYTES = 1024 * 1024
+
+
+def _visible(db: Session, document_id: uuid.UUID, *, own_only: bool = False) -> Document:
+    """The document, if this student may see it: their own upload, or (unless
+    own_only) a platform chapter. Anyone else's is "no such document" -- a
+    403 would confirm it exists."""
+    document = db.get(Document, document_id)
+    if document is not None:
+        mine = document.student_id == active_student_id()
+        platform = document.source_kind == SourceKind.platform.value
+        if mine or (platform and not own_only):
+            return document
+    raise HTTPException(status_code=404, detail="No such document.")
 
 
 @router.post("", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)
@@ -92,6 +106,9 @@ async def upload_document(
     duplicate = db.scalar(
         select(Document).where(
             Document.checksum == checksum,
+            # The same file uploaded by someone else is theirs, not this
+            # student's: each upload is only ever its owner's.
+            Document.student_id == active_student_id(),
             Document.status == IngestStatus.ready,
             Document.pipeline_version == PIPELINE_VERSION,
         )
@@ -110,6 +127,7 @@ async def upload_document(
         checksum=checksum,
         subject=(subject or None),
         grade=(grade or None),
+        student_id=active_student_id(),
         status=IngestStatus.pending,
     )
     db.add(document)
@@ -132,18 +150,18 @@ def list_documents(
     them to delete the shared corpus. `include_platform` exists for
     administrative tooling.
     """
+    mine = Document.student_id == active_student_id()
     query = select(Document).order_by(Document.created_at.desc())
-    if not include_platform:
-        query = query.where(Document.source_kind == SourceKind.student_upload.value)
+    if include_platform:
+        query = query.where(mine | (Document.source_kind == SourceKind.platform.value))
+    else:
+        query = query.where(mine, Document.source_kind == SourceKind.student_upload.value)
     return db.scalars(query).all()
 
 
 @router.get("/{document_id}", response_model=DocumentOut)
 def get_document(document_id: uuid.UUID, db: Session = Depends(get_db)):
-    document = db.get(Document, document_id)
-    if document is None:
-        raise HTTPException(status_code=404, detail="No such document.")
-    return document
+    return _visible(db, document_id)
 
 
 @router.post("/{document_id}/reingest", response_model=DocumentOut)
@@ -153,9 +171,7 @@ def reingest(
     db: Session = Depends(get_db),
 ):
     """Re-run ingestion, e.g. after changing the chunking settings."""
-    document = db.get(Document, document_id)
-    if document is None:
-        raise HTTPException(status_code=404, detail="No such document.")
+    document = _visible(db, document_id, own_only=True)
     if not Path(document.storage_path).exists():
         raise HTTPException(status_code=410, detail="The original file is no longer on disk.")
 
@@ -170,9 +186,7 @@ def reingest(
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: uuid.UUID, db: Session = Depends(get_db)):
-    document = db.get(Document, document_id)
-    if document is None:
-        raise HTTPException(status_code=404, detail="No such document.")
+    document = _visible(db, document_id)
     if document.source_kind == SourceKind.platform.value:
         # Shared across every student; removing it is a corpus operation,
         # not something one person's Remove button should do.
@@ -194,8 +208,7 @@ def list_chunks(
     db: Session = Depends(get_db),
 ):
     """Inspect how a document was split. Useful when tuning chunk settings."""
-    if db.get(Document, document_id) is None:
-        raise HTTPException(status_code=404, detail="No such document.")
+    _visible(db, document_id)
 
     total = db.scalar(
         select(func.count())

@@ -13,7 +13,8 @@ from fastapi.staticfiles import StaticFiles
 
 from apps.api.config import settings
 from apps.api.db import init_db
-from apps.api.routes import chat, documents, figures, health, plan, progress, quiz
+from apps.api.auth import LoginMiddleware
+from apps.api.routes import auth, chat, documents, figures, health, plan, progress, quiz
 
 logging.basicConfig(
     level=settings.log_level,
@@ -50,8 +51,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Added after CORS, so it runs first: who is asking is settled before
+# anything else looks at the request.
+app.add_middleware(LoginMiddleware)
 
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(quiz.router)

@@ -115,13 +115,14 @@ def _concept_by_search(db: Session, topic: str) -> Concept | None:
     from ai.embeddings.provider import get_embedding_provider
     from ai.retrieval.hybrid import RetrievalFilters, hybrid_search
     from ai.retrieval.query import to_lexical
+    from apps.api.student import active_student_id
 
     try:
         hits = hybrid_search(
             db,
             query=to_lexical(topic),
             query_embedding=get_embedding_provider().embed_query(topic),
-            filters=RetrievalFilters(),
+            filters=RetrievalFilters(student_id=active_student_id()),
         )[:8]
     except Exception:
         log.warning("Topic search failed for %r", topic, exc_info=True)

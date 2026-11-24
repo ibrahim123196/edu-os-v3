@@ -7,14 +7,22 @@ and a mastery query missing its filter returns a plausible number that is
 silently wrong. That is the failure mode this project has hit repeatedly,
 so the column is here before it is needed.
 
-Until there is authentication, everything belongs to one placeholder
-student. Making that explicit is the point: a row named "local" is obviously
-a stand-in, where an absent column is an assumption nobody remembers making.
+Since accounts (24 Nov), a request from the page belongs to whoever is
+logged in: the login middleware (`apps/api/auth.py`) puts that student into
+`_current`, and `active_student_id()` reads it. Outside a request -- scripts,
+tests, the doctor -- nobody is logged in, and the ACTIVE_STUDENT setting
+picks one of the two stand-ins, as before.
+
+The two stand-ins stay. "local" is the student everything was recorded
+against before accounts, so it becomes Ibrahim's own account (it is given
+an email and password with `python -m scripts.accounts claim local`), and
+"test" stays the place for click-through testing.
 """
 
 from __future__ import annotations
 
 import uuid
+from contextvars import ContextVar
 from datetime import datetime
 
 from sqlalchemy import (
@@ -46,16 +54,30 @@ STUDENTS: dict[str, tuple[uuid.UUID, str]] = {
     "test": (TEST_STUDENT_ID, "Testing (not a real student)"),
 }
 
+# The logged-in student of the request being handled; None outside one.
+# Set by the login middleware for the length of the request only.
+_current: ContextVar[uuid.UUID | None] = ContextVar("eduos_student", default=None)
+
 
 def active_student_id() -> uuid.UUID:
-    """The student this running server records answers against.
+    """The student this request belongs to: the one logged in.
 
-    The one place routes ask. When login arrives this becomes "the student
-    in the session", and nothing that calls it has to change.
+    The one place routes ask. Outside a request (scripts, tests) it is the
+    stand-in that ACTIVE_STUDENT names. A request with nobody logged in
+    never reaches a route -- the middleware answers 401 first -- unless
+    REQUIRE_LOGIN is off, which only the local setup allows.
     """
+    current = _current.get()
+    if current is not None:
+        return current
     from apps.api.config import get_settings
 
     return STUDENTS[get_settings().active_student][0]
+
+
+def current_or_none() -> uuid.UUID | None:
+    """The logged-in student, or None outside a logged-in request."""
+    return _current.get()
 
 
 class Student(Base):
@@ -64,6 +86,12 @@ class Student(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     grade: Mapped[str | None] = mapped_column(String(20))
+    # Login (24 Nov). Null until an account is made for this student, so
+    # the two stand-ins exist without being able to log in. The email is
+    # stored lower-cased; unique among those that have one.
+    email: Mapped[str | None] = mapped_column(String(320))
+    password_hash: Mapped[str | None] = mapped_column(String(300))
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -71,6 +99,9 @@ class Student(Base):
     mastery: Mapped[list["ConceptMastery"]] = relationship(
         back_populates="student", cascade="all, delete-orphan"
     )
+
+    # Named as init_db names it for an older database, so both get one.
+    __table_args__ = (Index("uq_students_email", "email", unique=True),)
 
 
 class ConceptMastery(Base):

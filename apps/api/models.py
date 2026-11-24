@@ -38,6 +38,21 @@ def _uuid() -> uuid.UUID:
     return uuid.uuid4()
 
 
+def _current_student():
+    from apps.api.student import active_student_id
+
+    return active_student_id()
+
+
+def _upload_owner(context):
+    """A student upload belongs to the student adding it, unless the code
+    says otherwise. Platform documents belong to nobody."""
+    params = context.get_current_parameters()
+    if params.get("source_kind", "student_upload") == "platform":
+        return None
+    return _current_student()
+
+
 class IngestStatus(str, enum.Enum):
     pending = "pending"
     processing = "processing"
@@ -62,6 +77,13 @@ class Document(Base):
     # into the graph. Platform documents use chapter_id instead.
     subject: Mapped[str | None] = mapped_column(String(120), index=True)
     grade: Mapped[str | None] = mapped_column(String(40), index=True)
+
+    # Whose upload. Only that student's searches, lists and lessons see it.
+    # Null for platform documents, which every student searches.
+    student_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"),
+        index=True, default=_upload_owner,
+    )
 
     # Curriculum link. Null for an unmapped student upload.
     chapter_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -173,6 +195,11 @@ class Conversation(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     title: Mapped[str | None] = mapped_column(String(400))
+    # Whose chat. Opening, continuing or listing it checks this.
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False, index=True, default=_current_student,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

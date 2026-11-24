@@ -74,7 +74,7 @@ def test_topics_without_questions_are_left_out_and_named():
     plan = build(cs, MON, MON + timedelta(days=20), WEEKDAYS)
     assert "Concept 1" not in [s.label for d in plan.days for s in d.sessions]
     assert plan.no_questions == ["Concept 1"]
-    assert "1 topic has no quiz questions yet" in plan.warnings[0]
+    assert "1 topic has no quiz questions yet, so the plan leaves it out." in plan.warnings[0]
 
 
 def test_one_or_two_answers_mean_not_started():

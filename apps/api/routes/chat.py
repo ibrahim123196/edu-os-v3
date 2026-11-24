@@ -29,6 +29,14 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
+def _own_message(db: Session, message_id: uuid.UUID) -> Message | None:
+    """The message, if it is in one of this student's chats."""
+    message = db.get(Message, message_id)
+    if message is None or message.conversation.student_id != active_student_id():
+        return None
+    return message
+
+
 @router.post("/ask", response_model=AskResponse)
 def ask(payload: AskRequest, db: Session = Depends(get_db)):
     question = payload.question.strip()
@@ -261,7 +269,7 @@ def lesson_feedback(message_id: uuid.UUID, payload: FeedbackRequest, db: Session
     from apps.api.services import rag_service
     from apps.api.services.lesson_sources import load_chunks
 
-    message = db.get(Message, message_id)
+    message = _own_message(db, message_id)
     context = (message.retrieval_trace or {}).get("lesson_context") if message else None
     if not context or not context.get("check"):
         raise HTTPException(status_code=404, detail="No lesson to give feedback on.")
@@ -312,7 +320,7 @@ def socratic_reply(message_id: uuid.UUID, payload: SocraticReply, db: Session = 
     from apps.api.services import rag_service
     from apps.api.services.lesson_sources import load_chunks
 
-    message = db.get(Message, message_id)
+    message = _own_message(db, message_id)
     state = (message.retrieval_trace or {}).get("socratic_state") if message else None
     if not state:
         raise HTTPException(status_code=404, detail="Nothing being worked out here.")
@@ -389,7 +397,7 @@ def _mode_response(db, conversation, mode, reply, started, mode_trace, include_t
 @router.get("/conversations/{conversation_id}")
 def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)):
     conversation = db.get(Conversation, conversation_id)
-    if conversation is None:
+    if conversation is None or conversation.student_id != active_student_id():
         raise HTTPException(status_code=404, detail="No such conversation.")
     return {
         "id": str(conversation.id),
@@ -412,7 +420,8 @@ def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.get("/conversations")
 def list_conversations(limit: int = 20, db: Session = Depends(get_db)):
     rows = db.scalars(
-        select(Conversation).order_by(Conversation.created_at.desc()).limit(limit)
+        select(Conversation).where(Conversation.student_id == active_student_id())
+        .order_by(Conversation.created_at.desc()).limit(min(limit, 100))
     ).all()
     return [
         {"id": str(c.id), "title": c.title, "created_at": c.created_at} for c in rows
@@ -424,12 +433,14 @@ def _resolve_conversation(
 ) -> Conversation:
     if conversation_id is not None:
         conversation = db.get(Conversation, conversation_id)
-        if conversation is None:
+        # Someone else's chat is "no such conversation": continuing it would
+        # hand this student its history.
+        if conversation is None or conversation.student_id != active_student_id():
             raise HTTPException(status_code=404, detail="No such conversation.")
         return conversation
 
     title = question[:80] + ("…" if len(question) > 80 else "")
-    conversation = Conversation(title=title)
+    conversation = Conversation(title=title, student_id=active_student_id())
     db.add(conversation)
     db.commit()
     db.refresh(conversation)

@@ -73,6 +73,10 @@ class RetrievalFilters:
     grade: str | None = None
     # Which pools to search. None means both.
     source_kinds: list[str] | None = None
+    # Whose uploads may be searched: with a student, only that student's
+    # uploads (and every platform document). None searches every upload,
+    # which only scripts and the evaluation harness should ever do.
+    student_id: uuid.UUID | None = None
 
 
 def _filter_sql(
@@ -94,6 +98,9 @@ def _filter_sql(
     if filters.source_kinds is not None:
         clauses.append("d.source_kind = ANY(:source_kinds)")
         params["source_kinds"] = filters.source_kinds
+    if filters.student_id is not None:
+        clauses.append("(d.source_kind = 'platform' OR d.student_id = :owner_id)")
+        params["owner_id"] = filters.student_id
     return " AND ".join(clauses)
 
 
