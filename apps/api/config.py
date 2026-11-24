@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # --- Ingestion --------------------------------------------------------
     upload_dir: str = "./storage/uploads"
     max_upload_mb: int = 25
+    # Per student, now that anyone can sign up: how many files and how much
+    # space their uploads may take in all.
+    max_uploads_per_student: int = 50
+    max_upload_storage_mb: int = 300
     chunk_target_words: int = 220
     chunk_overlap_words: int = 45
     chunk_min_words: int = 25

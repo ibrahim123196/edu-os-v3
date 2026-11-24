@@ -20,6 +20,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ai.ingestion import PIPELINE_VERSION
+from ai.ingestion.scan import UploadRefused
+from ai.ingestion.scan import check as scan_upload
 from apps.api.curriculum import SourceKind
 from ai.ingestion.extract import SUPPORTED_SUFFIXES
 from apps.api.config import settings
@@ -69,6 +71,20 @@ async def upload_document(
             ),
         )
 
+    # This student's share of the server, before reading a byte.
+    count, used = db.execute(
+        select(func.count(), func.coalesce(func.sum(Document.byte_size), 0))
+        .where(Document.student_id == active_student_id(),
+               Document.source_kind == SourceKind.student_upload.value)
+    ).one()
+    if count >= settings.max_uploads_per_student:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(f"You have {count} files, the most allowed. "
+                    "Remove one you no longer need, then upload again."),
+        )
+    room = settings.max_upload_storage_mb * 1024 * 1024 - used
+
     upload_dir = Path(settings.upload_dir)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
@@ -97,6 +113,24 @@ async def upload_document(
     if written == 0:
         destination.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="That file is empty.")
+    if written > room:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(f"Your uploads would go over {settings.max_upload_storage_mb} MB in all. "
+                    "Remove a file you no longer need, then upload again."),
+        )
+
+    # Is it safe and sensible to read? Off the event loop: opening a PDF
+    # takes a moment, and other students' requests should not wait on it.
+    from starlette.concurrency import run_in_threadpool
+
+    try:
+        await run_in_threadpool(scan_upload, destination)
+    except UploadRefused as exc:
+        destination.unlink(missing_ok=True)
+        log.info("Upload refused for %s: %s", filename, exc)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     checksum = compute_checksum(destination)
     # Same file AND same pipeline. Matching on the checksum alone meant that

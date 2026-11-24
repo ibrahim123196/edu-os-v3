@@ -104,8 +104,21 @@ def extract_pdf_pypdf(path: Path) -> list[Page]:
     return pages
 
 
+def read_text_file(path: Path) -> str:
+    """A text file's words, whatever Windows saved it as.
+
+    Notepad's "Unicode" is UTF-16, marked by two bytes at the start; read
+    as UTF-8 it comes out as letters with a nul between each. A UTF-8 file
+    may also start with a mark of its own, which is dropped.
+    """
+    data = path.read_bytes()
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return data.decode("utf-16", errors="replace")
+    return data.decode("utf-8-sig", errors="replace")
+
+
 def extract_plaintext(path: Path) -> list[Page]:
-    raw = path.read_text(encoding="utf-8", errors="replace")
+    raw = read_text_file(path)
     cleaned = clean_text(raw)
     return [Page(number=1, text=cleaned)] if cleaned else []
 
