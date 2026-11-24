@@ -42,12 +42,23 @@ class ModelUsage:
 
 _usage: dict[str, ModelUsage] = defaultdict(ModelUsage)
 
+# Also told about every call: the server records each one against the
+# student who asked (apps/api/ai_limits.py). A script has none.
+_listeners: list = []
+
+
+def add_listener(fn) -> None:
+    if fn not in _listeners:
+        _listeners.append(fn)
+
 
 def record(model: str, input_tokens: int | None, output_tokens: int | None) -> None:
     u = _usage[model]
     u.calls += 1
     u.input_tokens += input_tokens or 0
     u.output_tokens += output_tokens or 0
+    for fn in _listeners:
+        fn(model, input_tokens, output_tokens)
 
 
 def reset() -> None:

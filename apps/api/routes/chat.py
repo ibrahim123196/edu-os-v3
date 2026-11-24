@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from ai.generation.llm import LLMError
 from ai.retrieval.hybrid import RetrievalFilters
+from apps.api.ai_limits import allowance
 from apps.api.db import get_db
 from apps.api.models import Conversation, Message
 from apps.api.schemas import AskRequest, AskResponse
@@ -27,6 +28,8 @@ from apps.api.services.rag_service import resolve_follow_up
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
+# Every route here that calls the AI counts against the student's limits
+# (apps/api/ai_limits.py) and records what it cost.
 
 
 def _own_message(db: Session, message_id: uuid.UUID) -> Message | None:
@@ -37,7 +40,7 @@ def _own_message(db: Session, message_id: uuid.UUID) -> Message | None:
     return message
 
 
-@router.post("/ask", response_model=AskResponse)
+@router.post("/ask", response_model=AskResponse, dependencies=[allowance("ask")])
 def ask(payload: AskRequest, db: Session = Depends(get_db)):
     question = payload.question.strip()
     if not question:
@@ -258,7 +261,7 @@ class FeedbackRequest(BaseModel):
     reply: str = Field(min_length=1, max_length=2000)
 
 
-@router.post("/lessons/{message_id}/feedback")
+@router.post("/lessons/{message_id}/feedback", dependencies=[allowance("lesson_check")])
 def lesson_feedback(message_id: uuid.UUID, payload: FeedbackRequest, db: Session = Depends(get_db)):
     """Feedback on the student's own explanation, judged against the same
     passages the lesson was written from. Saved in the conversation, so a
@@ -309,7 +312,7 @@ class SocraticReply(BaseModel):
     reply: str = Field(min_length=1, max_length=2000)
 
 
-@router.post("/socratic/{message_id}/reply")
+@router.post("/socratic/{message_id}/reply", dependencies=[allowance("work_it_out")])
 def socratic_reply(message_id: uuid.UUID, payload: SocraticReply, db: Session = Depends(get_db)):
     """The student's answer to the step they were asked, judged against the
     same passages the plan came from; the tutor's next turn.

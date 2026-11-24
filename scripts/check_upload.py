@@ -34,7 +34,7 @@ def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__)
         return 2
-    refused = 0
+    refused = missing = 0
     for path, shown in _files(argv):
         try:
             check(path)
@@ -43,10 +43,10 @@ def main(argv: list[str]) -> int:
             refused += 1
             print(f"  REFUSED  {shown}: {exc}")
         except OSError as exc:
-            refused += 1
+            missing += 1
             print(f"  MISSING  {path}: {exc.strerror}")
-    print(f"\n  {refused} refused.")
-    return 1 if refused else 0
+    print(f"\n  {refused} refused." + (f" {missing} not found." if missing else ""))
+    return 1 if refused or missing else 0
 
 
 if __name__ == "__main__":

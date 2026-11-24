@@ -119,6 +119,7 @@ def init_db() -> None:
     infrastructure/migrations/.
     """
     from apps.api import (  # noqa: F401  (register mappers)
+        ai_limits,
         auth,
         curriculum,
         models,

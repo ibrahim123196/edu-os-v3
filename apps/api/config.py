@@ -106,6 +106,15 @@ class Settings(BaseSettings):
     # (DPDP Rules 2025, Rule 10); see the handoff.
     open_signup: bool = True
 
+    # --- Limits on AI use -------------------------------------------------
+    # Per student: requests that call the AI (a question, a lesson step, a
+    # Work-it-out reply). And for all students together: what a day's calls
+    # may cost at list prices, in US dollars, India's day. 0 turns a limit
+    # off. With Haiku 4.5 a question costs very roughly half a US cent.
+    ai_requests_per_hour: int = 30
+    ai_requests_per_day: int = 150
+    ai_daily_budget_usd: float = 2.0
+
     def login_required(self) -> bool:
         return self.require_login or self.environment != "local"
 

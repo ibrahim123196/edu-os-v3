@@ -41,9 +41,12 @@ class FastEmbedProvider(EmbeddingProvider):
         try:
             from fastembed import TextEmbedding
         except ImportError as exc:  # pragma: no cover
+            # Not always "not installed": once it was a server started in a
+            # terminal without the venv, and Smart App Control can block its
+            # compiled parts. The real reason is in the message.
             raise RuntimeError(
-                "fastembed is not installed. Run `pip install fastembed`, or set "
-                "EMBEDDING_PROVIDER=openai."
+                f"fastembed could not be loaded ({exc}). Check the server was started "
+                "with the venv active (.venv); if it was, run `pip install fastembed`."
             ) from exc
 
         self.model_name = model_name

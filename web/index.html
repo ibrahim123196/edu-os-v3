@@ -1152,7 +1152,7 @@ function renderDocuments() {
   for (const doc of documents) {
     const li = document.createElement('li');
     const meta = doc.status === 'ready'
-      ? `${doc.page_count} page${doc.page_count === 1 ? '' : 's'} · ${doc.chunk_count} passages`
+      ? `${doc.page_count} page${doc.page_count === 1 ? '' : 's'} · ${doc.chunk_count} passage${doc.chunk_count === 1 ? '' : 's'}`
       : `${(doc.byte_size / 1024).toFixed(0)} KB`;
     const tags = [doc.subject, doc.grade ? `Class ${doc.grade}` : null].filter(Boolean).join(' · ');
 
