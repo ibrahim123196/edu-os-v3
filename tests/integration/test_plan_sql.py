@@ -319,3 +319,63 @@ def test_the_plan_reads_the_database_a_fixed_number_of_times(world):
     finally:
         event.remove(engine, "before_cursor_execute", tally)
     assert len(sessions) >= 3 and count["n"] <= 10
+
+
+# --- Milestone 6: the calendar ----------------------------------------------
+
+
+def test_the_calendar_reaches_the_exam(world):
+    client, setup, ids, clock, me = world
+    p = setup().json()
+    dates = [d["date"] for d in p["calendar"]]
+    assert dates[0] == (MON + timedelta(days=1)).isoformat()
+    # Past the two-week forecast, up to the exam 30 days away.
+    assert len(dates) > len(p["upcoming"])
+    assert dates[-1] >= (MON + timedelta(days=29)).isoformat()
+
+
+def test_the_calendar_file_has_the_exam_and_the_study_days(world):
+    client, setup, ids, clock, me = world
+    p = setup().json()
+    r = client.get("/plan/calendar.ics")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/calendar")
+    assert "attachment" in r.headers["content-disposition"]
+    body = r.text
+    assert body.startswith("BEGIN:VCALENDAR\r\n") and body.endswith("END:VCALENDAR\r\n")
+    assert "SUMMARY:Exam: Boards" in body
+    assert f"DTSTART;VALUE=DATE:{(MON + timedelta(days=30)).strftime('%Y%m%d')}" in body
+    study_days = sum(1 for d in p["calendar"] if d["sessions"]) + (1 if p["today_sessions"] else 0)
+    assert body.count("BEGIN:VEVENT") == study_days + 1
+    assert all(len(line.encode()) <= 75 for line in body.split("\r\n"))
+
+
+def test_a_calendar_link_works_without_logging_in_until_renewed(world, monkeypatch):
+    from apps.api.config import get_settings
+
+    client, setup, ids, clock, me = world
+    setup()
+    url = client.post("/plan/calendar-link").json()["url"]
+    path = url[url.index("/plan/feed/"):]
+    assert path.endswith(".ics")
+    assert client.post("/plan/calendar-link").json()["url"] == url    # same link again
+
+    monkeypatch.setattr(get_settings(), "require_login", True)
+    stranger = TestClient(app)                     # a calendar app: no cookie
+    assert stranger.get(path).status_code == 200
+    assert "Exam: Boards" in stranger.get(path).text
+    assert stranger.get("/plan/calendar.ics").status_code == 401   # the file needs a login
+    assert stranger.get("/plan/feed/made-up.ics").status_code == 404
+
+    monkeypatch.setattr(get_settings(), "require_login", False)
+    new = client.post("/plan/calendar-link?renew=true").json()["url"]
+    assert new != url
+    assert stranger.get(path).status_code == 404   # the old link stops working
+    assert stranger.get(new[new.index("/plan/feed/"):]).status_code == 200
+
+
+def test_no_plan_no_calendar(world):
+    client, setup, ids, clock, me = world
+    me["id"] = ids["other"]
+    assert client.get("/plan/calendar.ics").status_code == 404
+    assert client.post("/plan/calendar-link").status_code == 404

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 import datetime as dt
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -58,6 +58,43 @@ def save_settings(payload: PlanSettings, db: Session = Depends(get_db)):
     _call(db, plan_service.save_settings, [e.model_dump() for e in payload.exams],
           payload.minutes)
     return get_plan(db)
+
+
+def _ics(db: Session, student_id: uuid.UUID) -> str:
+    from apps.api.services import ics
+
+    view = plan_service.view(db, student_id)
+    if view.get("settings") is None:
+        raise HTTPException(status_code=404, detail="Make a plan first.")
+    plan = plan_service._plan(db, student_id)
+    db.commit()
+    return ics.build(view, str(plan.id))
+
+
+@router.get("/calendar.ics")
+def calendar_file(db: Session = Depends(get_db)):
+    """The plan as a file to import into a calendar app, once."""
+    body = _ics(db, active_student_id())
+    return Response(body, media_type="text/calendar; charset=utf-8", headers={
+        "Content-Disposition": 'attachment; filename="eduos-study-plan.ics"'})
+
+
+@router.post("/calendar-link")
+def calendar_link(request: Request, renew: bool = False, db: Session = Depends(get_db)):
+    """The private address a calendar app can subscribe to. renew=true makes
+    a new one and stops the old one working."""
+    token = _call(db, plan_service.calendar_token, renew)
+    return {"url": str(request.base_url).rstrip("/") + f"/plan/feed/{token}.ics"}
+
+
+@router.get("/feed/{token}.ics")
+def calendar_feed(token: str, db: Session = Depends(get_db)):
+    """Fetched by calendar apps, which cannot log in: the secret in the
+    address is the permission (apps/api/auth.py lets /plan/feed/ through)."""
+    plan = plan_service.plan_for_token(db, token)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="No such calendar.")
+    return Response(_ics(db, plan.student_id), media_type="text/calendar; charset=utf-8")
 
 
 @router.post("/sessions/{session_id}/link")

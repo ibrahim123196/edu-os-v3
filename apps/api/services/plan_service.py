@@ -28,6 +28,8 @@ from apps.api.services.mastery_service import estimates_with_dates
 from apps.api.services.tutor_service import concepts_with_questions
 
 FORECAST_DAYS = 13
+# How far the calendar view and the calendar file look ahead.
+CALENDAR_DAYS = 120
 HISTORY_DAYS = 7
 MAX_MINUTES_PER_DAY = 600
 QUIZ_KINDS = ("quiz", "test", "practice")      # "practice": sessions stored before 18 Nov
@@ -320,7 +322,35 @@ def view(db: Session, student_id: uuid.UUID) -> dict:
             for d in built.days[1:1 + FORECAST_DAYS]
         ],
         "history": _history_out(history, names, now, facts),
+        # Every day after today up to the last exam (at most CALENDAR_DAYS),
+        # for the calendar view and the calendar file. A forecast, like
+        # "upcoming", of which it is the longer version.
+        "calendar": [
+            {"date": d.date.isoformat(), "minutes": d.minutes, "stretch": d.stretch,
+             "sessions": [_forecast_out(s) for s in d.sessions]}
+            for d in built.days[1:1 + CALENDAR_DAYS]
+        ],
     }
+
+
+def calendar_token(db: Session, student_id: uuid.UUID, renew: bool = False) -> str:
+    """The secret for this student's calendar link; a new one if asked, which
+    stops the old link working (for a link shared by mistake)."""
+    import secrets
+
+    plan = _plan(db, student_id)
+    if plan is None:
+        raise PlanError("Make a plan first.", 404)
+    if renew or not plan.calendar_token:
+        plan.calendar_token = secrets.token_urlsafe(24)
+        db.flush()
+    return plan.calendar_token
+
+
+def plan_for_token(db: Session, token: str) -> StudyPlan | None:
+    if not token:
+        return None
+    return db.scalar(select(StudyPlan).where(StudyPlan.calendar_token == token))
 
 
 def _freeze(db: Session, plan: StudyPlan, day: rules.Day, kept: list[PlanSession]) -> None:

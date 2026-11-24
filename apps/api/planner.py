@@ -41,6 +41,10 @@ class StudyPlan(Base):
     # The day whose sessions were last given out. Cleared when the settings
     # change, so today is planned again under the new ones.
     planned_day: Mapped[date | None] = mapped_column(Date)
+    # The secret in the plan's calendar link (/plan/feed/<token>.ics), which
+    # calendar apps fetch without logging in. Null until asked for; a new
+    # one makes the old link stop working.
+    calendar_token: Mapped[str | None] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

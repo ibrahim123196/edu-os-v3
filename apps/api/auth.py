@@ -290,7 +290,9 @@ def sign_up(db: Session, name: str, email: str, password: str, address: str = ""
 # the health check.
 _PUBLIC_EXACT = {"/", "/health", "/auth/login", "/auth/signup", "/auth/logout",
                  "/auth/me", "/favicon.ico"}
-_PUBLIC_PREFIX = ("/static/",)
+# /plan/feed/<secret>.ics: calendar apps fetch it without logging in; the
+# secret in the address is the permission (routes/plan.py).
+_PUBLIC_PREFIX = ("/static/", "/plan/feed/")
 # FastAPI's own API pages: only on a local install.
 _DOCS = {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
 

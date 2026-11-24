@@ -290,6 +290,42 @@
   .plan-day { margin-bottom: 10px; font-family: var(--sans, inherit); }
   .plan-day summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 4px 0; }
   .plan-day ul { margin: 4px 0 8px; padding-left: 20px; font-size: 13px; }
+
+  /* Milestone 6: the plan as a month calendar. */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+              margin-bottom: 8px; }
+  .cal-head h3 { margin: 0; font-size: 15px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .cal-dow { font-size: 11.5px; color: var(--muted); text-align: center; padding: 2px 0; }
+  .cal-cell { min-height: 64px; border: 1px solid var(--line); border-radius: 4px;
+              padding: 4px 5px; font: inherit; font-size: 11.5px; text-align: left;
+              background: var(--surface); color: var(--ink); cursor: pointer;
+              display: flex; flex-direction: column; gap: 2px; font-weight: 400; }
+  .cal-cell:hover:not(:disabled) { background: var(--paper); }
+  .cal-cell:disabled { cursor: default; opacity: 1; }
+  .cal-cell.other { visibility: hidden; }
+  .cal-cell.past { color: var(--muted); background: transparent; border-color: transparent; }
+  .cal-cell.today { border: 2px solid var(--focus); }
+  .cal-cell.picked { background: var(--verified-wash); }
+  .cal-cell .num { font-weight: 600; font-size: 12.5px; }
+  .cal-cell .what { color: var(--muted); line-height: 1.3; }
+  .cal-cell .tag { border-radius: 3px; padding: 0 4px; font-size: 10.5px; line-height: 1.5;
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-cell .tag.exam { background: var(--ink); color: #fff; }
+  .cal-cell .tag.test { background: var(--warn-wash); color: var(--warn); }
+  .cal-cell .tag.done { background: var(--verified-wash); color: var(--verified); }
+  .cal-detail { margin-top: 12px; font-size: 13.5px; }
+  .cal-detail ul { margin: 4px 0 0; padding-left: 20px; }
+  .cal-export { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+                font-size: 13px; }
+  .cal-export .row { flex-wrap: wrap; gap: 8px; }
+  .cal-export .row > * { flex: 0 0 auto; }
+  .cal-export input { width: 100%; margin-top: 8px; padding: 6px 8px; font: inherit;
+                      font-size: 12.5px; border: 1px solid var(--line); border-radius: 4px; }
+  @media (max-width: 560px) {
+    .cal-cell { min-height: 46px; }
+    .cal-cell .what { display: none; }
+  }
   .plan-day .rest { opacity: 0.6; font-weight: 400; }
   .socratic-panel { border-left: 4px solid #2f9e6b; }
   .socratic-progress { font-family: var(--sans, inherit); font-size: 13px; font-weight: 600;
@@ -981,6 +1017,34 @@
           <h2>Coming up</h2>
           <p class="hint">A forecast: it changes as your quiz results come in.</p>
           <div id="planUpcoming"></div>
+        </section>
+        <section class="panel" id="planCalendarPanel">
+          <div class="cal-head">
+            <button class="quiet" id="calPrev" aria-label="Previous month">‹</button>
+            <h3 id="calTitle"></h3>
+            <button class="quiet" id="calNext" aria-label="Next month">›</button>
+          </div>
+          <p class="hint">Days ahead are a forecast: they change as your quiz results come in.
+            Click a day to see what's planned.</p>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-detail" id="calDetail"></div>
+          <div class="cal-export">
+            <strong>Put it in your calendar</strong>
+            <p class="hint" style="margin:4px 0 8px">Your exams and study days, as all-day events
+              in Google, Apple or Outlook calendar. EduOS never changes anything else in your calendar.</p>
+            <div class="row">
+              <button class="quiet" id="calDownload">Download calendar file</button>
+              <button class="quiet" id="calLinkBtn">Get a link that stays up to date</button>
+            </div>
+            <div id="calLinkBox" hidden>
+              <input id="calLink" readonly>
+              <p class="hint" style="margin:6px 0 0">In your calendar app choose <em>Add calendar →
+                From URL</em> (Google) or <em>New calendar subscription</em> (Apple), and paste this.
+                Keep it private: anyone with it can see your plan.
+                <button class="link" id="calRenew">Make a new link</button> (the old one stops working).</p>
+              <p class="hint" id="calLinkNote" style="margin:6px 0 0"></p>
+            </div>
+          </div>
         </section>
         <section class="panel" id="planHistoryPanel" hidden>
           <h2>Last 7 days</h2>
@@ -2692,6 +2756,8 @@ function drawPlan() {
       <ul>${d.sessions.map((s) => `<li>${s.kind === 'test' ? '' : 'Quiz: '}${escapeHtml(s.label)}</li>`).join('')}</ul></details>`;
   }).join('') || `<p class="hint">Nothing more before the exam${ahead.length > 1 ? 's' : ''}.</p>`;
 
+  drawCalendar();
+
   $('planHistoryPanel').hidden = !p.history.length;
   $('planHistory').innerHTML = p.history.slice().reverse().map((d) => {
     const done = d.sessions.filter((s) => s.status === 'done').length;
@@ -2702,6 +2768,122 @@ function drawPlan() {
       }</ul></details>`;
   }).join('');
 }
+
+/* ----------------------------------------------------------- calendar */
+// The month on show, as 'YYYY-MM'; starts at this month.
+let calMonth = null;
+let calPicked = null;
+
+function isoDay(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Everything the plan knows, by date: past week, today, the forecast, exams.
+function calendarDays() {
+  const p = planData;
+  const days = {};
+  const at = (iso) => (days[iso] = days[iso] || { sessions: [], exams: [], when: 'ahead' });
+  for (const d of p.history) Object.assign(at(d.date), { sessions: d.sessions, when: 'past' });
+  Object.assign(at(p.today), { sessions: p.today_sessions, when: 'today' });
+  for (const d of p.calendar || []) Object.assign(at(d.date), { sessions: d.sessions, stretch: d.stretch });
+  for (const e of p.settings.exams) at(e.date).exams.push(e.name);
+  return days;
+}
+
+function drawCalendar() {
+  const p = planData;
+  if (!calMonth) calMonth = p.today.slice(0, 7);
+  const days = calendarDays();
+  const [y, m] = calMonth.split('-').map(Number);
+  const first = new Date(y, m - 1, 1);
+  $('calTitle').textContent = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const head = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    .map((d) => `<div class="cal-dow">${d}</div>`).join('');
+  const blanks = (first.getDay() + 6) % 7;   // Monday first
+  const inMonth = new Date(y, m, 0).getDate();
+  let cells = '';
+  for (let i = 0; i < blanks; i++) cells += '<div class="cal-cell other"></div>';
+  for (let n = 1; n <= inMonth; n++) {
+    const iso = isoDay(new Date(y, m - 1, n));
+    const d = days[iso];
+    const classes = ['cal-cell'];
+    if (iso < p.today) classes.push('past');
+    if (iso === p.today) classes.push('today');
+    if (iso === calPicked) classes.push('picked');
+    let inner = `<span class="num">${n}</span>`;
+    if (d) {
+      for (const e of d.exams) inner += `<span class="tag exam" title="${escapeHtml(e)}">${escapeHtml(e)}</span>`;
+      if (d.sessions.some((s) => s.kind === 'test')) inner += '<span class="tag test">Test</span>';
+      const quizzes = d.sessions.filter((s) => s.kind !== 'test');
+      if (d.when === 'past' || d.when === 'today') {
+        const done = d.sessions.filter((s) => s.status === 'done').length;
+        if (d.sessions.length) {
+          inner += done === d.sessions.length
+            ? `<span class="tag done">${done} done</span>`
+            : `<span class="what">${done} of ${d.sessions.length} done</span>`;
+        }
+      } else if (quizzes.length) {
+        const mins = d.sessions.reduce((t, s) => t + s.minutes, 0);
+        inner += `<span class="what">${quizzes.length} quiz${quizzes.length === 1 ? '' : 'zes'} · ${mins} min</span>`;
+      }
+    }
+    const clickable = d && (d.sessions.length || d.exams.length);
+    cells += `<button class="${classes.join(' ')}" data-day="${iso}" ${clickable ? '' : 'disabled'}
+      aria-label="${niceDate(iso, { weekday: 'long', day: 'numeric', month: 'long' })}">${inner}</button>`;
+  }
+  $('calGrid').innerHTML = head + cells;
+  for (const b of $('calGrid').querySelectorAll('button[data-day]:not(:disabled)')) {
+    b.addEventListener('click', () => { calPicked = b.dataset.day; drawCalendar(); });
+  }
+
+  // Nothing to show before the past week, or after the last planned day.
+  const known = Object.keys(days).sort();
+  $('calPrev').disabled = `${calMonth}-01` <= known[0];
+  $('calNext').disabled = `${calMonth}-31` >= known[known.length - 1];
+
+  const d = calPicked && days[calPicked];
+  if (!d) { $('calDetail').innerHTML = ''; return; }
+  const status = (s) => d.when === 'ahead' ? `${s.minutes} min`
+    : s.status === 'done' ? `done${s.score ? `, ${s.score.right}/${s.score.out_of}` : ''}`
+    : d.when === 'past' ? 'missed' : `${s.minutes} min`;
+  $('calDetail').innerHTML = `<strong>${niceDate(calPicked, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+    ${d.stretch ? '<span class="plan-tag">final stretch</span>' : ''}
+    <ul>${d.exams.map((e) => `<li><strong>Exam: ${escapeHtml(e)}</strong></li>`).join('')}${
+      d.sessions.map((s) => `<li>${s.kind === 'test' ? '' : 'Quiz: '}${escapeHtml(s.label)} — ${status(s)}</li>`).join('')}</ul>
+    ${d.when === 'ahead' ? '<p class="hint" style="margin:4px 0 0">A forecast: it may change before then.</p>' : ''}`;
+}
+
+function shiftMonth(by) {
+  const [y, m] = calMonth.split('-').map(Number);
+  calMonth = isoDay(new Date(y, m - 1 + by, 1)).slice(0, 7);
+  calPicked = null;
+  drawCalendar();
+}
+$('calPrev').addEventListener('click', () => shiftMonth(-1));
+$('calNext').addEventListener('click', () => shiftMonth(1));
+
+$('calDownload').addEventListener('click', () => { location.href = '/plan/calendar.ics'; });
+
+async function calendarLink(renew) {
+  try {
+    const r = await api(`/plan/calendar-link${renew ? '?renew=true' : ''}`, { method: 'POST' });
+    $('calLinkBox').hidden = false;
+    $('calLink').value = r.url;
+    $('calLink').select();
+    // A calendar app fetches the link from the internet; on this computer's
+    // own address only apps on this computer can reach it.
+    const local = /\/\/(127\.0\.0\.1|localhost)[:/]/.test(r.url);
+    $('calLinkNote').textContent = local
+      ? 'Note: EduOS is running on this computer only, so Google Calendar cannot reach this link yet. It will work once EduOS is online. Until then, use "Download calendar file".'
+      : '';
+  } catch (err) {
+    $('calLinkBox').hidden = false;
+    $('calLinkNote').textContent = err.message;
+  }
+}
+$('calLinkBtn').addEventListener('click', () => calendarLink(false));
+$('calRenew').addEventListener('click', () => calendarLink(true));
 
 function sessionRow(s) {
   const done = s.status === 'done';

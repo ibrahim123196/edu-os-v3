@@ -257,6 +257,12 @@ def init_db() -> None:
         for column in ("exam_name", "exam_date", "chapter_ids"):
             conn.execute(text(f"ALTER TABLE study_plans ALTER COLUMN {column} DROP NOT NULL"))
         conn.execute(text("ALTER TABLE plan_exams ADD COLUMN IF NOT EXISTS set_on date"))
+        # The calendar link (24 Nov).
+        conn.execute(text(
+            "ALTER TABLE study_plans ADD COLUMN IF NOT EXISTS calendar_token varchar(64)"))
+        conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS study_plans_calendar_token_key "
+            "ON study_plans (calendar_token)"))
         conn.execute(text(
             "INSERT INTO plan_exams (id, plan_id, name, exam_date, chapter_ids, position, set_on) "
             "SELECT gen_random_uuid(), p.id, COALESCE(NULLIF(p.exam_name, ''), 'My exam'), "
