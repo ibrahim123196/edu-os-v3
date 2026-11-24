@@ -508,6 +508,10 @@
   /* "This question looks wrong": quiet, so it is there when needed and
      never competes with Next question. */
   .report { margin: 12px 0 14px; font-size: 13px; }
+  .report input {
+    width: 100%; margin: 8px 0; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 4px; font: inherit; color: var(--ink);
+  }
   button.link {
     background: none; border: 0; padding: 0; color: var(--muted);
     text-decoration: underline; cursor: pointer; font-size: 13px;
@@ -825,6 +829,15 @@
         <div class="corrected" id="corrected" hidden></div>
         <div class="answer-body" id="answerBody"></div>
         <div class="action-row" id="actionRow" hidden><button id="actionBtn"></button></div>
+        <div class="report" id="answerReport" hidden>
+          <button class="link" id="answerReportOpen">This answer looks wrong</button>
+          <div id="answerReportForm" hidden>
+            <select id="answerReportReason"></select>
+            <input id="answerReportNote" maxlength="500" placeholder="What looks wrong? (optional)">
+            <button class="quiet" id="answerReportSend">Send</button>
+          </div>
+          <p class="hint" id="answerReportDone" hidden></p>
+        </div>
         <div class="sources" id="sourcesWrap" hidden>
           <h3>Where this came from</h3>
           <div id="sourceList"></div>
@@ -1423,6 +1436,7 @@ async function sendSocratic(text) {
     });
     st.turns.push({ who: 'student', text }, { who: 'tutor', text: turn.text });
     st.messageId = turn.socratic.message_id;
+    setReportTarget(st.messageId);
     st.step = turn.socratic.step;
     st.done = turn.socratic.done;
     drawSocratic();
@@ -1449,6 +1463,7 @@ function startLesson(data) {
 function drawLessonStep() {
   const st = lessonState;
   const step = st.steps[st.index];
+  setReportTarget(st.messageId, `Step ${st.index + 1}: ${step.title}`);
   const dots = st.steps.map((s, i) =>
     `<button class="${[st.seen.has(i) ? 'done' : '', i === st.index ? 'current' : ''].join(' ')}"
        data-step="${i}" aria-label="Step ${i + 1}: ${escapeHtml(s.title)}">${i + 1}</button>`).join('');
@@ -1757,6 +1772,7 @@ async function ask(kind = 'ask') {
     shown = { question: asked, answer: data.answer };
     $('youAsked').textContent = asked;
     renderAnswer(data);
+    if (!data.lesson) setReportTarget(data.message_id);
     box.value = '';
     $('questionInput').placeholder = 'Ask a follow-up, e.g. "explain that more simply"';
     $('newChatBtn').hidden = false;
@@ -1767,6 +1783,7 @@ async function ask(kind = 'ask') {
     $('answerWrap').hidden = false;
     $('verdict').className = 'verdict thin';
     $('verdict').textContent = 'That request did not go through';
+    setReportTarget(null);
     $('timing').textContent = '';
     $('answerBody').textContent = err.message;
     // The question stays in the box to retry, and the chat is unchanged:
@@ -2860,6 +2877,63 @@ $('progressMode').addEventListener('click', async (e) => {
     // quietly starting a quiz on something else.
     $('quizNotice').innerHTML =
       '<div class="notice bad">There are no questions for that concept yet.</div>';
+  }
+});
+
+/* --------------------------------------------------- reporting an answer */
+// One link under whatever the answer panel shows: an answer, a lesson
+// (reported with the step being read) or a Work-it-out turn (the newest).
+let reportTarget = null;
+
+function setReportTarget(messageId, part) {
+  const same = reportTarget && reportTarget.messageId === messageId;
+  reportTarget = messageId ? { messageId, part: part || null } : null;
+  $('answerReport').hidden = !messageId;
+  if (same) return;  // a lesson moving to its next step keeps the form as it is
+  $('answerReportOpen').hidden = false;
+  $('answerReportForm').hidden = true;
+  $('answerReportDone').hidden = true;
+  $('answerReportNote').value = '';
+}
+
+$('answerReportOpen').addEventListener('click', async () => {
+  if (!$('answerReportReason').options.length) {
+    try {
+      const reasons = await api('/chat/report-reasons');
+      $('answerReportReason').innerHTML = reasons
+        .map((r) => `<option value="${escapeHtml(r.key)}">${escapeHtml(r.label)}</option>`)
+        .join('');
+    } catch (err) {
+      $('answerReportDone').hidden = false;
+      $('answerReportDone').textContent = `Could not load the form: ${err.message}`;
+      return;
+    }
+  }
+  $('answerReportOpen').hidden = true;
+  $('answerReportForm').hidden = false;
+});
+
+$('answerReportSend').addEventListener('click', async () => {
+  if (!reportTarget) return;
+  $('answerReportSend').disabled = true;
+  try {
+    await api(`/chat/messages/${reportTarget.messageId}/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: $('answerReportReason').value,
+        note: $('answerReportNote').value || null,
+        part: reportTarget.part,
+      }),
+    });
+    $('answerReportForm').hidden = true;
+    $('answerReportDone').hidden = false;
+    $('answerReportDone').textContent = 'Thanks. This answer will be checked.';
+  } catch (err) {
+    $('answerReportDone').hidden = false;
+    $('answerReportDone').textContent = `Not sent: ${err.message}`;
+  } finally {
+    $('answerReportSend').disabled = false;
   }
 });
 

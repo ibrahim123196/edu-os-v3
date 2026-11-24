@@ -120,6 +120,7 @@ def init_db() -> None:
     """
     from apps.api import (  # noqa: F401  (register mappers)
         ai_limits,
+        answer_reports,
         auth,
         curriculum,
         models,

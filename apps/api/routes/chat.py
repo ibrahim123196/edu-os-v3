@@ -397,6 +397,44 @@ def _mode_response(db, conversation, mode, reply, started, mode_trace, include_t
     )
 
 
+class AnswerReportIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=40)
+    note: str | None = Field(default=None, max_length=500)
+    part: str | None = Field(default=None, max_length=200)
+
+
+@router.get("/report-reasons")
+def report_reasons():
+    from apps.api.answer_reports import REASONS
+
+    return [{"key": k, "label": v} for k, v in REASONS.items()]
+
+
+@router.post("/messages/{message_id}/report")
+def report_answer(message_id: uuid.UUID, payload: AnswerReportIn, db: Session = Depends(get_db)):
+    """This answer looks wrong. Kept for review (scripts.review_answers);
+    sending again for the same answer replaces the reason."""
+    from apps.api.answer_reports import REASONS, AnswerReport
+
+    message = _own_message(db, message_id)
+    if message is None or message.role != "assistant":
+        raise HTTPException(status_code=404, detail="No such answer.")
+    if payload.reason not in REASONS:
+        raise HTTPException(status_code=422, detail="Pick one of the reasons.")
+    student_id = active_student_id()
+    report = db.scalar(select(AnswerReport).where(AnswerReport.message_id == message_id,
+                                                  AnswerReport.student_id == student_id))
+    if report is None:
+        report = AnswerReport(message_id=message_id, student_id=student_id, reason=payload.reason)
+        db.add(report)
+    report.reason = payload.reason
+    report.note = (payload.note or "").strip() or None
+    report.part = (payload.part or "").strip() or None
+    report.resolved_at = report.outcome = None  # reported again: open again
+    db.commit()
+    return {"reported": True}
+
+
 @router.get("/conversations/{conversation_id}")
 def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)):
     conversation = db.get(Conversation, conversation_id)
